@@ -1,0 +1,19 @@
+{
+    "name": "@wae-example/frontend-form",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "node ../wae/bin/wae.mjs dev",
+        "build": "node ../wae/bin/wae.mjs build",
+        "check": "tsc -p tsconfig.json --noEmit",
+        "test": "node -e \"console.log('vitest skeleton')\""
+    },
+    "dependencies": {
+        "@wae/client": "workspace:*",
+        "@wae/ui": "workspace:*"
+    },
+    "devDependencies": {
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:"
+    }
+}

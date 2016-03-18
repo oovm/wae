@@ -1,0 +1,20 @@
+{
+    "name": "@wae-example/desktop-webview",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "node ../wae/bin/wae.mjs dev",
+        "build": "node ../wae/bin/wae.mjs build",
+        "check": "tsc -p tsconfig.json --noEmit",
+        "test": "node -e \"console.log('contract skeleton')\""
+    },
+    "dependencies": {
+        "@wae/client": "workspace:*",
+        "@wae/wae-win32-x64": "workspace:*",
+        "@wae/wae-unknown-wasm32": "workspace:*"
+    },
+    "devDependencies": {
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:"
+    }
+}

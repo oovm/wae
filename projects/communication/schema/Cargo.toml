@@ -1,0 +1,15 @@
+[package]
+name = "wae-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+description = "跨语言稳定结构（codegen → @wae/types）"
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }

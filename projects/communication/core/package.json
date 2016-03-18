@@ -1,0 +1,28 @@
+{
+    "name": "@wae/core",
+    "version": "0.1.0",
+    "description": "WAE 共享 TypeScript runtime（跨 client/server；非 UI、非 HTTP）",
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "import": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "files": [
+        "src"
+    ],
+    "scripts": {
+        "check": "tsc -p tsconfig.json --noEmit"
+    },
+    "dependencies": {
+        "@wae/types": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "catalog:"
+    },
+    "license": "MIT"
+}

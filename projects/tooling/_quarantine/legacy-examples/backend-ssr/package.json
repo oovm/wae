@@ -1,0 +1,20 @@
+{
+    "name": "@wae-example/backend-ssr",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "node ../wae/bin/wae.mjs dev",
+        "build": "node ../wae/bin/wae.mjs build",
+        "check": "tsc -p tsconfig.json --noEmit",
+        "test": "node -e \"console.log('vitest skeleton')\""
+    },
+    "dependencies": {
+        "@wae/server": "workspace:*",
+        "@wae/client": "workspace:*",
+        "@wae/server-node": "workspace:*"
+    },
+    "devDependencies": {
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:"
+    }
+}

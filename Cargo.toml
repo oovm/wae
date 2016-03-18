@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "projects/host/bridge",
+    "projects/communication/schema",
+]
+default-members = [
+    "projects/communication/schema",
+    "projects/host/bridge",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["WAE Team <team@wae.dev>"]
+repository = "https://github.com/oovm/wae"
+homepage = "https://github.com/oovm/wae"
+readme = "readme.md"
+keywords = ["wae", "webview", "typescript", "fullstack"]
+categories = ["gui", "web-programming"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wae-types = { path = "projects/communication/schema", version = "0.1.0" }
+wae-bridge = { path = "projects/host/bridge", version = "0.1.0" }
+
+[profile.release]
+lto = true
+panic = "abort"

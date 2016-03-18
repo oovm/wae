@@ -1,0 +1,26 @@
+{
+    "name": "@wae/workspace",
+    "private": true,
+    "packageManager": "pnpm@10.28.0",
+    "description": "WAE：框架无关 client + server + Rust host；adapter 仅 vue/react/svelte/solid；examples 按用途分类",
+    "repository": "https://github.com/oovm/wae",
+    "homepage": "https://github.com/oovm/wae",
+    "license": "MIT",
+    "scripts": {
+        "build": "pnpm -r --if-present build",
+        "check": "pnpm run check:rust && pnpm run check:ts && pnpm run check:boundary",
+        "check:rust": "cargo check --workspace",
+        "check:ts": "node scripts/check-ts.mjs",
+        "check:boundary": "node scripts/check-boundary.mjs",
+        "check:examples": "pnpm --filter \"./projects/examples/**\" run check",
+        "test": "pnpm -r --if-present test && cargo test --workspace",
+        "examples": "pnpm --filter \"./projects/examples/**\" run build",
+        "wae": "pnpm --filter @wae/wae exec node ./bin/wae.mjs",
+        "fmt": "node scripts/format.mjs",
+        "fmt:check": "node scripts/format.mjs --check"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.5.14",
+        "typescript": "catalog:"
+    }
+}

@@ -1,0 +1,24 @@
+{
+    "name": "@wae/types",
+    "version": "0.1.0",
+    "description": "WAE 协议 TypeScript 类型（由 communication/schema codegen；无 runtime）",
+    "type": "module",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "import": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "files": [
+        "src"
+    ],
+    "scripts": {
+        "check": "tsc -p tsconfig.json --noEmit"
+    },
+    "devDependencies": {
+        "typescript": "catalog:"
+    },
+    "license": "MIT"
+}

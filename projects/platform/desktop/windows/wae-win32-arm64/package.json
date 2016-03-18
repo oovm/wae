@@ -1,0 +1,26 @@
+{
+    "name": "@wae/wae-win32-arm64",
+    "version": "0.1.0",
+    "description": "Windows arm64 native host + embedded WASM",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "check": "tsc -p tsconfig.json --noEmit"
+    },
+    "license": "MIT",
+    "wae": {
+        "platform": "win32-arm64"
+    }
+}

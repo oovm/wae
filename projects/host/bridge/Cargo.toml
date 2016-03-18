@@ -1,0 +1,16 @@
+[package]
+name = "wae-bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+description = "原生 WebView 客户端壳（IPC / 窗口 / 能力；不进 TS bundle）"
+publish = false
+
+[dependencies]
+wae-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

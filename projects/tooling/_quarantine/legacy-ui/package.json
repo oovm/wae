@@ -1,0 +1,37 @@
+{
+    "name": "@wae/ui",
+    "version": "0.1.0",
+    "description": "WAE 官方组件库与主题系统（依赖 @wae/client，可替换）",
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "import": "./src/index.ts",
+            "default": "./src/index.ts"
+        },
+        "./styles/reset.css": "./styles/reset.css",
+        "./styles/theme.css": "./styles/theme.css",
+        "./styles/components.css": "./styles/components.css"
+    },
+    "files": [
+        "dist",
+        "src",
+        "styles"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "check": "tsc -p tsconfig.json --noEmit"
+    },
+    "peerDependencies": {
+        "@wae/client": "workspace:*"
+    },
+    "dependencies": {
+        "@wae/client": "workspace:*"
+    },
+    "license": "MIT",
+    "devDependencies": {
+        "typescript": "catalog:"
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "name": "@wae/wae-unknown-wasm32",
+    "version": "0.1.0",
+    "description": "一等 WASM 客户端运行时（最小宿主假设）",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "check": "tsc -p tsconfig.json --noEmit"
+    },
+    "license": "MIT",
+    "wae": {
+        "platform": "unknown-wasm32"
+    }
+}

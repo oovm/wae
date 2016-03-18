@@ -1,0 +1,29 @@
+{
+    "name": "@wae/serverless",
+    "version": "0.1.0",
+    "description": "WAE server 统一运行时适配层（Fetch / lifecycle / bindings 抽象）",
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "import": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "check": "tsc -p tsconfig.json --noEmit"
+    },
+    "dependencies": {
+        "@wae/server": "workspace:*",
+        "@wae/types": "workspace:*",
+        "@wae/protocol": "workspace:*"
+    },
+    "license": "MIT"
+}

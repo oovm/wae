@@ -1,0 +1,19 @@
+{
+    "name": "@wae-example/fullstack-file-upload",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "check": "tsc -p tsconfig.json --noEmit",
+        "build": "node -e \"console.log('example skeleton build')\"",
+        "test": "node -e \"console.log('example skeleton test')\""
+    },
+    "dependencies": {
+        "@wae/client": "workspace:*",
+        "@wae/server": "workspace:*",
+        "@wae/serverless": "workspace:*"
+    },
+    "devDependencies": {
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:"
+    }
+}
