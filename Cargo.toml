@@ -1,12 +1,102 @@
 [workspace]
 resolver = "2"
-members = ["projects/*"]
+members = [
+    "backends/*",
+    "examples/effect-basic",
+    "examples/effect-http-server",
+]
 default-members = [
-    "projects/rau-tools",
+    "backends/wae-server",
+    "backends/wae-types",
 ]
-exclude = [
-    "projects/.DS_Store",
-]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/oovm/wae"
+homepage = "https://github.com/oovm/wae"
+keywords = ["async", "tokio", "microservice", "http", "cloud"]
+categories = ["asynchronous", "web-programming", "network-programming"]
+
+[workspace.dependencies]
+wae-server = { path = "backends/wae-server", version = "0.0.0" }
+wae-ai = { path = "backends/wae-ai", version = "0.0.0" }
+wae-authentication = { path = "backends/wae-authentication", version = "0.0.0" }
+wae-cache = { path = "backends/wae-cache", version = "0.0.0" }
+wae-config = { path = "backends/wae-config", version = "0.0.0" }
+wae-database = { path = "backends/wae-database", version = "0.0.0" }
+wae-distributed = { path = "backends/wae-distributed", version = "0.0.0" }
+wae-effect = { path = "backends/wae-effect", version = "0.0.0" }
+wae-email = { path = "backends/wae-email", version = "0.0.0" }
+wae-event = { path = "backends/wae-event", version = "0.0.0" }
+wae-https = { path = "backends/wae-https", version = "0.0.0" }
+wae-macros = { path = "backends/wae-macros", version = "0.0.0" }
+wae-queue = { path = "backends/wae-queue", version = "0.0.0" }
+wae-request = { path = "backends/wae-request", version = "0.0.0" }
+wae-resilience = { path = "backends/wae-resilience", version = "0.0.0" }
+wae-scheduler = { path = "backends/wae-scheduler", version = "0.0.0" }
+wae-schema = { path = "backends/wae-schema", version = "0.0.0" }
+wae-service = { path = "backends/wae-service", version = "0.0.0" }
+wae-session = { path = "backends/wae-session", version = "0.0.0" }
+wae-storage = { path = "backends/wae-storage", version = "0.0.0" }
+wae-testing = { path = "backends/wae-testing", version = "0.0.0" }
+wae-tools = { path = "backends/wae-tools", version = "0.0.0" }
+wae-types = { path = "backends/wae-types", version = "0.0.0" }
+wae-websocket = { path = "backends/wae-websocket", version = "0.0.0" }
+
+axum = "0.8.8"
+tokio = { version = "1.50.0", features = ["full"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+async-trait = "0.1.89"
+tracing = "0.1.44"
+uuid = { version = "1.22.0", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+parking_lot = "0.12.5"
+rand = "0.10.0"
+futures = "0.3.32"
+futures-util = "0.3.32"
+base64 = "0.22.1"
+hmac = "0.12.1"
+sha1 = "0.10.6"
+sha2 = "0.10.9"
+hex = "0.4.3"
+url = "2.5.8"
+urlencoding = "2.1.3"
+figment = { version = "0.10.19", features = ["toml", "yaml", "env"] }
+rust_decimal = { version = "1.40.0", features = ["serde-float"] }
+rust_decimal_macros = "1.40.0"
+tower = "0.5.3"
+tower-http = { version = "0.6.8", features = ["trace", "cors", "request-id", "compression-gzip", "compression-br", "compression-deflate"] }
+hyper = "1.8.1"
+http = "1.4.0"
+http-body-util = "0.1.3"
+tokio-rustls = { version = "0.26.4", default-features = false, features = ["ring"] }
+rustls-pemfile = "2.2.0"
+webpki-roots = "1.0.6"
+tokio-tungstenite = "0.28.0"
+hickory-resolver = { version = "0.25.2", features = ["system-config"] }
+jsonwebtoken = "10.3.0"
+oauth2 = "5.0.0"
+reqwest = { version = "0.13.2", default-features = false, features = ["rustls", "json"] }
+turso = { version = "0.5.0", default-features = false }
+tokio-postgres = { version = "0.7.16" }
+deadpool-postgres = { version = "0.14.1" }
+mysql_async = { version = "0.36.1" }
+hyper-util = { version = "0.1.20", features = ["tokio", "http1", "http2", "service"] }
+http-body = "1.0.1"
+pin-project-lite = "0.2.17"
+askama = "0.15.4"
+syn = { version = "2.0.117", features = ["full", "parsing", "extra-traits"] }
+quote = "1.0.45"
+proc-macro2 = "1.0.106"
+dashmap = "6.1.0"
+time = { version = "0.3.47", features = ["serde"] }
+cookie = { version = "0.18.1", features = ["percent-encode"] }
+regex = "1.12.3"
+quick-xml = { version = "0.39.2", features = ["serialize"] }
+flate2 = "1.1.9"
 
 [profile.release]
 lto = true

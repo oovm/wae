@@ -1,0 +1,19 @@
+[package]
+name = "wae-cache"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository = "https://github.com/oovm/wae/tree/main/backends/wae-cache"
+homepage = "https://github.com/oovm/wae/tree/main/backends/wae-cache"
+description = "WAE Cache - 缓存服务抽象层，支持内存缓存"
+keywords = ["cache", "memory", "async"]
+categories = ["caching", "asynchronous"]
+documentation = "https://docs.rs/wae-cache"
+
+[dependencies]
+wae-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }

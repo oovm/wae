@@ -1,0 +1,13 @@
+//! JWT (JSON Web Token) 认证模块
+//!
+//! 提供 JWT 令牌的生成、验证和刷新功能。
+
+mod claims;
+mod config;
+mod errors;
+mod service;
+
+pub use claims::*;
+pub use config::*;
+pub use errors::*;
+pub use service::*;

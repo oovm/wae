@@ -1,0 +1,16 @@
+[package]
+name = "wae-schema"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository = "https://github.com/oovm/wae/tree/main/backends/wae-schema"
+homepage = "https://github.com/oovm/wae/tree/main/backends/wae-schema"
+description = "WAE Schema - 数据结构定义与验证"
+keywords = ["schema", "validation", "serde"]
+categories = ["data-structures", "development-tools"]
+documentation = "https://docs.rs/wae-schema"
+
+[dependencies]
+wae-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

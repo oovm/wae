@@ -1,11 +1,24 @@
 {
+    "name": "wae",
     "private": true,
+    "description": "微服务优先的 Rust 异步框架，深度融合 tokio 运行时",
+    "repository": "https://github.com/oovm/wae",
+    "homepage": "https://github.com/oovm/wae",
+    "license": "MIT",
     "scripts": {
+        "check:ci": "node scripts/check.mjs",
         "doc": "cargo doc --no-deps --all-features",
         "test": "cargo test --release",
-        "fmt": "cargo fmt --all",
-        "p": "git push && git push --tags --prune",
+        "fmt": "cargo fmt --all && npx biome format --write .",
+        "push": "git push && git push --tags --prune",
         "reset": "git reset Head~ --soft",
-        "u": "cargo upgrade --workspace"
+        "u": "cargo upgrade --incompatible",
+        "p": "cargo workspaces publish --no-git-commit --allow-dirty --yes",
+        "build:frontend": "pnpm -r run build",
+        "typecheck:frontend": "pnpm -r run typecheck"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "typescript": "^5.7.3"
     }
 }

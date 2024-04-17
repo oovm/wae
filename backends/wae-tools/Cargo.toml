@@ -1,0 +1,31 @@
+[package]
+name = "wae-tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository = "https://github.com/oovm/wae/tree/main/backends/wae-tools"
+homepage = "https://github.com/oovm/wae/tree/main/backends/wae-tools"
+description = "WAE Tools - 开发工具，数据库迁移、自动迁移"
+keywords = ["tools", "migration", "database", "cli"]
+categories = ["development-tools", "database"]
+documentation = "https://docs.rs/wae-tools"
+
+[dependencies]
+wae-types = { workspace = true }
+wae-database = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+
+[features]
+default = []
+database-turso = ["wae-database/turso"]
+database-postgres = ["wae-database/postgres"]
+database-mysql = ["wae-database/mysql"]
+
+[dev-dependencies]
+wae-database = { workspace = true, features = ["turso"] }
+wae-tools = { path = ".", features = ["database-turso"] }

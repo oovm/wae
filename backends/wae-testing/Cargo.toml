@@ -1,0 +1,25 @@
+[package]
+name = "wae-testing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository = "https://github.com/oovm/wae/tree/main/backends/wae-testing"
+homepage = "https://github.com/oovm/wae/tree/main/backends/wae-testing"
+description = "WAE Testing - 测试工具集，断言、Mock、Fixture"
+keywords = ["testing", "mock", "fixture", "assertion"]
+categories = ["development-tools::testing"]
+documentation = "https://docs.rs/wae-testing"
+
+[dependencies]
+wae-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+parking_lot = { workspace = true }
+rand = { workspace = true }
+uuid = { workspace = true }
+futures = { workspace = true }
+regex = { workspace = true }
+
+[features]
+default = []
