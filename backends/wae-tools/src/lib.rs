@@ -14,4 +14,4 @@ pub use auto_migrate::{
     SchemaReflector, TableDiff,
 };
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-pub use migration::{Migration, MigrationError, MigrationResult, Migrator, SimpleMigration};
+pub use migration::{Migration, MigrationResult, Migrator, SimpleMigration};

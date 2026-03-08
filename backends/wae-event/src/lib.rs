@@ -12,64 +12,12 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
     collections::HashMap,
-    fmt,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, instrument, warn};
-
-/// 事件错误类型
-#[derive(Debug)]
-pub enum EventError {
-    /// 事件序列化失败
-    SerializationFailed(String),
-
-    /// 事件反序列化失败
-    DeserializationFailed(String),
-
-    /// 事件处理器执行失败
-    HandlerFailed(String),
-
-    /// 订阅不存在
-    SubscriptionNotFound(String),
-
-    /// 事件类型未注册
-    EventTypeNotRegistered(String),
-
-    /// 事件存储失败
-    StoreFailed(String),
-
-    /// 事件总线已关闭
-    BusClosed,
-
-    /// 操作超时
-    Timeout(String),
-
-    /// 内部错误
-    Internal(String),
-}
-
-impl fmt::Display for EventError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EventError::SerializationFailed(msg) => write!(f, "Event serialization failed: {}", msg),
-            EventError::DeserializationFailed(msg) => write!(f, "Event deserialization failed: {}", msg),
-            EventError::HandlerFailed(msg) => write!(f, "Event handler failed: {}", msg),
-            EventError::SubscriptionNotFound(msg) => write!(f, "Subscription not found: {}", msg),
-            EventError::EventTypeNotRegistered(msg) => write!(f, "Event type not registered: {}", msg),
-            EventError::StoreFailed(msg) => write!(f, "Event store failed: {}", msg),
-            EventError::BusClosed => write!(f, "Event bus is closed"),
-            EventError::Timeout(msg) => write!(f, "Operation timeout: {}", msg),
-            EventError::Internal(msg) => write!(f, "Internal error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for EventError {}
-
-/// 事件操作结果类型
-pub type EventResult<T> = Result<T, EventError>;
+use wae_types::{WaeError, WaeResult};
 
 /// 事件 ID 类型
 pub type EventId = String;
@@ -113,8 +61,8 @@ pub struct EventData {
 
 impl EventData {
     /// 创建新的事件数据
-    pub fn new<E: Event + Serialize>(event: &E) -> EventResult<Self> {
-        let payload = serde_json::to_value(event).map_err(|e| EventError::SerializationFailed(e.to_string()))?;
+    pub fn new<E: Event + Serialize>(event: &E) -> WaeResult<Self> {
+        let payload = serde_json::to_value(event).map_err(|e| WaeError::serialization_failed("Event"))?;
         Ok(Self {
             id: event.event_id().clone(),
             event_type: event.event_type(),
@@ -131,8 +79,8 @@ impl EventData {
     }
 
     /// 反序列化为具体事件类型
-    pub fn into_event<E: DeserializeOwned>(self) -> EventResult<E> {
-        serde_json::from_value(self.payload).map_err(|e| EventError::DeserializationFailed(e.to_string()))
+    pub fn into_event<E: DeserializeOwned>(self) -> WaeResult<E> {
+        serde_json::from_value(self.payload).map_err(|e| WaeError::deserialization_failed("Event"))
     }
 
     /// 获取事件 ID
@@ -157,7 +105,7 @@ impl EventData {
 #[async_trait]
 pub trait EventHandler: Send + Sync {
     /// 处理事件
-    async fn handle(&self, event: EventData) -> EventResult<()>;
+    async fn handle(&self, event: EventData) -> WaeResult<()>;
 
     /// 获取处理器感兴趣的事件类型
     fn event_types(&self) -> Vec<EventTypeName>;
@@ -168,7 +116,7 @@ pub trait EventHandler: Send + Sync {
 /// 定义同步事件处理器的接口。
 pub trait SyncEventHandler: Send + Sync {
     /// 处理事件
-    fn handle(&self, event: EventData) -> EventResult<()>;
+    fn handle(&self, event: EventData) -> WaeResult<()>;
 
     /// 获取处理器感兴趣的事件类型
     fn event_types(&self) -> Vec<EventTypeName>;
@@ -184,7 +132,7 @@ pub struct AsyncEventHandler<F> {
 
 impl<F> AsyncEventHandler<F>
 where
-    F: Fn(EventData) -> std::pin::Pin<Box<dyn std::future::Future<Output = EventResult<()>> + Send + Sync>>
+    F: Fn(EventData) -> std::pin::Pin<Box<dyn std::future::Future<Output = WaeResult<()>> + Send + Sync>>
         + Send
         + Sync
         + 'static,
@@ -198,12 +146,12 @@ where
 #[async_trait]
 impl<F> EventHandler for AsyncEventHandler<F>
 where
-    F: Fn(EventData) -> std::pin::Pin<Box<dyn std::future::Future<Output = EventResult<()>> + Send + Sync>>
+    F: Fn(EventData) -> std::pin::Pin<Box<dyn std::future::Future<Output = WaeResult<()>> + Send + Sync>>
         + Send
         + Sync
         + 'static,
 {
-    async fn handle(&self, event: EventData) -> EventResult<()> {
+    async fn handle(&self, event: EventData) -> WaeResult<()> {
         (self.handler)(event).await
     }
 
@@ -222,7 +170,7 @@ pub struct SyncEventHandlerWrapper<F> {
 
 impl<F> SyncEventHandlerWrapper<F>
 where
-    F: Fn(EventData) -> EventResult<()> + Send + Sync + 'static,
+    F: Fn(EventData) -> WaeResult<()> + Send + Sync + 'static,
 {
     /// 创建新的同步事件处理器
     pub fn new(event_types: Vec<EventTypeName>, handler: F) -> Self {
@@ -232,9 +180,9 @@ where
 
 impl<F> SyncEventHandler for SyncEventHandlerWrapper<F>
 where
-    F: Fn(EventData) -> EventResult<()> + Send + Sync + 'static,
+    F: Fn(EventData) -> WaeResult<()> + Send + Sync + 'static,
 {
-    fn handle(&self, event: EventData) -> EventResult<()> {
+    fn handle(&self, event: EventData) -> WaeResult<()> {
         (self.handler)(event)
     }
 
@@ -325,25 +273,25 @@ impl Subscription {
 #[async_trait]
 pub trait EventStore: Send + Sync {
     /// 追加事件到存储
-    async fn append(&self, event: &EventData) -> EventResult<()>;
+    async fn append(&self, event: &EventData) -> WaeResult<()>;
 
     /// 批量追加事件
-    async fn append_batch(&self, events: &[EventData]) -> EventResult<()>;
+    async fn append_batch(&self, events: &[EventData]) -> WaeResult<()>;
 
     /// 获取指定类型的事件流
-    async fn get_events(&self, event_type: &str) -> EventResult<Vec<EventData>>;
+    async fn get_events(&self, event_type: &str) -> WaeResult<Vec<EventData>>;
 
     /// 获取指定时间范围的事件
-    async fn get_events_by_time(&self, start: u64, end: u64) -> EventResult<Vec<EventData>>;
+    async fn get_events_by_time(&self, start: u64, end: u64) -> WaeResult<Vec<EventData>>;
 
     /// 获取所有事件
-    async fn get_all_events(&self) -> EventResult<Vec<EventData>>;
+    async fn get_all_events(&self) -> WaeResult<Vec<EventData>>;
 
     /// 获取事件数量
-    async fn count(&self) -> EventResult<u64>;
+    async fn count(&self) -> WaeResult<u64>;
 
     /// 清空所有事件
-    async fn clear(&self) -> EventResult<()>;
+    async fn clear(&self) -> WaeResult<()>;
 }
 
 /// 内存事件存储
@@ -373,43 +321,43 @@ impl Default for InMemoryEventStore {
 
 #[async_trait]
 impl EventStore for InMemoryEventStore {
-    async fn append(&self, event: &EventData) -> EventResult<()> {
+    async fn append(&self, event: &EventData) -> WaeResult<()> {
         let mut events = self.events.write();
         events.push(event.clone());
         debug!("Event appended: {} [{}]", event.id, event.event_type);
         Ok(())
     }
 
-    async fn append_batch(&self, new_events: &[EventData]) -> EventResult<()> {
+    async fn append_batch(&self, new_events: &[EventData]) -> WaeResult<()> {
         let mut events = self.events.write();
         events.extend(new_events.iter().cloned());
         debug!("Batch appended: {} events", new_events.len());
         Ok(())
     }
 
-    async fn get_events(&self, event_type: &str) -> EventResult<Vec<EventData>> {
+    async fn get_events(&self, event_type: &str) -> WaeResult<Vec<EventData>> {
         let events = self.events.read();
         let filtered: Vec<EventData> = events.iter().filter(|e| e.event_type == event_type).cloned().collect();
         Ok(filtered)
     }
 
-    async fn get_events_by_time(&self, start: u64, end: u64) -> EventResult<Vec<EventData>> {
+    async fn get_events_by_time(&self, start: u64, end: u64) -> WaeResult<Vec<EventData>> {
         let events = self.events.read();
         let filtered: Vec<EventData> = events.iter().filter(|e| e.timestamp >= start && e.timestamp <= end).cloned().collect();
         Ok(filtered)
     }
 
-    async fn get_all_events(&self) -> EventResult<Vec<EventData>> {
+    async fn get_all_events(&self) -> WaeResult<Vec<EventData>> {
         let events = self.events.read();
         Ok(events.clone())
     }
 
-    async fn count(&self) -> EventResult<u64> {
+    async fn count(&self) -> WaeResult<u64> {
         let events = self.events.read();
         Ok(events.len() as u64)
     }
 
-    async fn clear(&self) -> EventResult<()> {
+    async fn clear(&self) -> WaeResult<()> {
         let mut events = self.events.write();
         events.clear();
         info!("Event store cleared");
@@ -588,11 +536,7 @@ impl EventBus {
     ///
     /// 注册一个事件处理器，订阅指定类型的事件。
     #[instrument(skip(self, handler))]
-    pub fn subscribe<H: EventHandler + 'static>(
-        &self,
-        event_types: Vec<EventTypeName>,
-        handler: H,
-    ) -> EventResult<Subscription> {
+    pub fn subscribe<H: EventHandler + 'static>(&self, event_types: Vec<EventTypeName>, handler: H) -> WaeResult<Subscription> {
         self.subscribe_with_filter(event_types, handler, None::<TypeEventFilter>)
     }
 
@@ -605,7 +549,7 @@ impl EventBus {
         event_types: Vec<EventTypeName>,
         handler: H,
         filter: Option<F>,
-    ) -> EventResult<Subscription> {
+    ) -> WaeResult<Subscription> {
         let subscription_id = uuid::Uuid::new_v4().to_string();
         let subscription = Subscription::new(subscription_id.clone(), event_types.clone());
 
@@ -628,7 +572,7 @@ impl EventBus {
     ///
     /// 移除指定 ID 的订阅。
     #[instrument(skip(self))]
-    pub fn unsubscribe(&self, subscription_id: &str) -> EventResult<bool> {
+    pub fn unsubscribe(&self, subscription_id: &str) -> WaeResult<bool> {
         let mut subs = self.subscriptions.write();
         if subs.remove(subscription_id).is_some() {
             info!("Subscription removed: {}", subscription_id);
@@ -644,7 +588,7 @@ impl EventBus {
     ///
     /// 同步发布事件到事件总线。
     #[instrument(skip(self, event))]
-    pub fn publish<E: Event + Serialize>(&self, event: &E) -> EventResult<()> {
+    pub fn publish<E: Event + Serialize>(&self, event: &E) -> WaeResult<()> {
         let event_data = EventData::new(event)?;
         self.publish_data(event_data)
     }
@@ -653,7 +597,7 @@ impl EventBus {
     ///
     /// 发布已封装的事件数据。
     #[instrument(skip(self, event_data))]
-    pub fn publish_data(&self, event_data: EventData) -> EventResult<()> {
+    pub fn publish_data(&self, event_data: EventData) -> WaeResult<()> {
         match self.event_sender.blocking_send(event_data.clone()) {
             Ok(()) => {
                 debug!("Event published: {} [{}]", event_data.id, event_data.event_type);
@@ -661,7 +605,7 @@ impl EventBus {
             }
             Err(_) => {
                 error!("Event bus channel closed");
-                Err(EventError::BusClosed)
+                Err(WaeError::internal("Event bus channel closed"))
             }
         }
     }
@@ -670,7 +614,7 @@ impl EventBus {
     ///
     /// 异步发布事件到事件总线。
     #[instrument(skip(self, event))]
-    pub async fn publish_async<E: Event + Serialize>(&self, event: &E) -> EventResult<()> {
+    pub async fn publish_async<E: Event + Serialize>(&self, event: &E) -> WaeResult<()> {
         let event_data = EventData::new(event)?;
         self.publish_data_async(event_data).await
     }
@@ -679,7 +623,7 @@ impl EventBus {
     ///
     /// 异步发布已封装的事件数据。
     #[instrument(skip(self, event_data))]
-    pub async fn publish_data_async(&self, event_data: EventData) -> EventResult<()> {
+    pub async fn publish_data_async(&self, event_data: EventData) -> WaeResult<()> {
         match self.event_sender.send(event_data.clone()).await {
             Ok(()) => {
                 debug!("Event published async: {} [{}]", event_data.id, event_data.event_type);
@@ -687,7 +631,7 @@ impl EventBus {
             }
             Err(_) => {
                 error!("Event bus channel closed");
-                Err(EventError::BusClosed)
+                Err(WaeError::internal("Event bus channel closed"))
             }
         }
     }
@@ -704,7 +648,7 @@ impl EventBus {
     }
 
     /// 关闭事件总线
-    pub async fn shutdown(&self) -> EventResult<()> {
+    pub async fn shutdown(&self) -> WaeResult<()> {
         let tx = {
             let mut sender = self.shutdown_sender.write();
             sender.take()
@@ -724,7 +668,7 @@ impl EventBus {
         store: &dyn EventStore,
         handler: &H,
         event_type: Option<&str>,
-    ) -> EventResult<u64> {
+    ) -> WaeResult<u64> {
         let events = match event_type {
             Some(t) => store.get_events(t).await?,
             None => store.get_all_events().await?,

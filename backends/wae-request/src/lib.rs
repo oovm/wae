@@ -6,7 +6,7 @@
 #![warn(missing_docs)]
 
 use serde::{Serialize, de::DeserializeOwned};
-use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
@@ -15,61 +15,7 @@ use tokio::{
 use tokio_rustls::{TlsConnector, rustls::pki_types::ServerName};
 use tracing::{debug, error, info};
 use url::Url;
-use wae_types::{NetworkErrorKind, WaeError, WaeResult};
-
-/// HTTP 客户端错误
-#[derive(Debug)]
-pub enum HttpError {
-    /// URL 解析错误
-    InvalidUrl(String),
-
-    /// DNS 解析错误
-    DnsFailed(String),
-
-    /// 连接错误
-    ConnectionFailed(String),
-
-    /// TLS 错误
-    TlsError(String),
-
-    /// 请求超时
-    Timeout,
-
-    /// HTTP 协议错误
-    ProtocolError(String),
-
-    /// 响应解析错误
-    ParseError(String),
-
-    /// 序列化错误
-    SerializationError(String),
-
-    /// 状态码错误
-    StatusError {
-        /// HTTP 状态码
-        status: u16,
-        /// 响应体
-        body: String,
-    },
-}
-
-impl fmt::Display for HttpError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            HttpError::InvalidUrl(msg) => write!(f, "Invalid URL: {}", msg),
-            HttpError::DnsFailed(msg) => write!(f, "DNS resolution failed: {}", msg),
-            HttpError::ConnectionFailed(msg) => write!(f, "Connection failed: {}", msg),
-            HttpError::TlsError(msg) => write!(f, "TLS error: {}", msg),
-            HttpError::Timeout => write!(f, "Request timeout"),
-            HttpError::ProtocolError(msg) => write!(f, "HTTP protocol error: {}", msg),
-            HttpError::ParseError(msg) => write!(f, "Response parse error: {}", msg),
-            HttpError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
-            HttpError::StatusError { status, body } => write!(f, "HTTP {}: {}", status, body),
-        }
-    }
-}
-
-impl std::error::Error for HttpError {}
+use wae_types::{WaeError, WaeErrorKind, WaeResult};
 
 /// HTTP 客户端配置
 #[derive(Debug, Clone)]
@@ -118,13 +64,13 @@ pub struct HttpResponse {
 
 impl HttpResponse {
     /// 解析 JSON 响应体
-    pub fn json<T: DeserializeOwned>(&self) -> Result<T, HttpError> {
-        serde_json::from_slice(&self.body).map_err(|e| HttpError::ParseError(format!("JSON parse error: {}", e)))
+    pub fn json<T: DeserializeOwned>(&self) -> WaeResult<T> {
+        serde_json::from_slice(&self.body).map_err(|e| WaeError::parse_error("JSON", e.to_string()))
     }
 
     /// 获取文本响应体
-    pub fn text(&self) -> Result<String, HttpError> {
-        String::from_utf8(self.body.clone()).map_err(|e| HttpError::ParseError(format!("UTF-8 decode error: {}", e)))
+    pub fn text(&self) -> WaeResult<String> {
+        String::from_utf8(self.body.clone()).map_err(|e| WaeError::parse_error("UTF-8", e.to_string()))
     }
 
     /// 检查是否成功
@@ -176,18 +122,18 @@ impl HttpClient {
     }
 
     /// 发送 GET 请求
-    pub async fn get(&self, url: &str) -> Result<HttpResponse, HttpError> {
+    pub async fn get(&self, url: &str) -> WaeResult<HttpResponse> {
         self.request("GET", url, None, None).await
     }
 
     /// 发送带请求头的 GET 请求
-    pub async fn get_with_headers(&self, url: &str, headers: HashMap<String, String>) -> Result<HttpResponse, HttpError> {
+    pub async fn get_with_headers(&self, url: &str, headers: HashMap<String, String>) -> WaeResult<HttpResponse> {
         self.request("GET", url, None, Some(headers)).await
     }
 
     /// 发送 POST JSON 请求
-    pub async fn post_json<T: Serialize>(&self, url: &str, body: &T) -> Result<HttpResponse, HttpError> {
-        let json_body = serde_json::to_vec(body).map_err(|e| HttpError::SerializationError(e.to_string()))?;
+    pub async fn post_json<T: Serialize>(&self, url: &str, body: &T) -> WaeResult<HttpResponse> {
+        let json_body = serde_json::to_vec(body).map_err(|e| WaeError::serialization_failed("JSON"))?;
 
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
@@ -201,7 +147,7 @@ impl HttpClient {
         url: &str,
         body: Vec<u8>,
         headers: HashMap<String, String>,
-    ) -> Result<HttpResponse, HttpError> {
+    ) -> WaeResult<HttpResponse> {
         self.request("POST", url, Some(body), Some(headers)).await
     }
 
@@ -212,7 +158,7 @@ impl HttpClient {
         url: &str,
         body: Option<Vec<u8>>,
         headers: Option<HashMap<String, String>>,
-    ) -> Result<HttpResponse, HttpError> {
+    ) -> WaeResult<HttpResponse> {
         let mut last_error = None;
 
         for attempt in 0..=self.config.max_retries {
@@ -230,17 +176,17 @@ impl HttpClient {
                     }
 
                     if Self::is_retryable_status(response.status) && attempt < self.config.max_retries {
-                        last_error = Some(HttpError::StatusError {
-                            status: response.status,
-                            body: String::from_utf8_lossy(&response.body).to_string(),
-                        });
+                        last_error = Some(WaeError::new(WaeErrorKind::RequestError {
+                            url: url.to_string(),
+                            reason: format!("HTTP {}: {}", response.status, String::from_utf8_lossy(&response.body)),
+                        }));
                         continue;
                     }
 
-                    return Err(HttpError::StatusError {
-                        status: response.status,
-                        body: String::from_utf8_lossy(&response.body).to_string(),
-                    });
+                    return Err(WaeError::new(WaeErrorKind::RequestError {
+                        url: url.to_string(),
+                        reason: format!("HTTP {}: {}", response.status, String::from_utf8_lossy(&response.body)),
+                    }));
                 }
                 Err(e) => {
                     error!("Request error on attempt {}: {}", attempt, e);
@@ -253,7 +199,7 @@ impl HttpClient {
             }
         }
 
-        Err(last_error.unwrap_or(HttpError::Timeout))
+        Err(last_error.unwrap_or_else(|| WaeError::operation_timeout("request", self.config.timeout.as_millis() as u64)))
     }
 
     /// 发送单次请求
@@ -263,10 +209,10 @@ impl HttpClient {
         url_str: &str,
         body: Option<Vec<u8>>,
         extra_headers: Option<HashMap<String, String>>,
-    ) -> Result<HttpResponse, HttpError> {
-        let url = Url::parse(url_str).map_err(|e| HttpError::InvalidUrl(e.to_string()))?;
+    ) -> WaeResult<HttpResponse> {
+        let url = Url::parse(url_str).map_err(|e| WaeError::invalid_params("url", e.to_string()))?;
 
-        let host = url.host_str().ok_or_else(|| HttpError::InvalidUrl("Missing host".into()))?;
+        let host = url.host_str().ok_or_else(|| WaeError::invalid_params("url", "Missing host"))?;
         let port = url.port().unwrap_or(if url.scheme() == "https" { 443 } else { 80 });
         let path = url.path();
         let query = url.query().map(|q| format!("?{}", q)).unwrap_or_default();
@@ -274,22 +220,23 @@ impl HttpClient {
 
         let is_https = url.scheme() == "https";
 
-        let connect_result =
-            timeout(self.config.connect_timeout, TcpStream::connect((host, port))).await.map_err(|_| HttpError::Timeout)?;
+        let connect_result = timeout(self.config.connect_timeout, TcpStream::connect((host, port)))
+            .await
+            .map_err(|_| WaeError::operation_timeout("connect", self.config.connect_timeout.as_millis() as u64))?;
 
-        let tcp_stream = connect_result.map_err(|e| HttpError::ConnectionFailed(format!("TCP connect failed: {}", e)))?;
+        let tcp_stream = connect_result.map_err(|e| WaeError::connection_failed(format!("{}:{}: {}", host, port, e)))?;
 
         tcp_stream.set_nodelay(true).ok();
 
         let response = if is_https {
             let connector = get_tls_connector();
             let server_name = ServerName::try_from(host.to_string())
-                .map_err(|e| HttpError::TlsError(format!("Invalid server name: {}", e)))?;
+                .map_err(|e| WaeError::new(WaeErrorKind::TlsError { reason: e.to_string() }))?;
 
             let tls_stream = connector
                 .connect(server_name, tcp_stream)
                 .await
-                .map_err(|e| HttpError::TlsError(format!("TLS handshake failed: {}", e)))?;
+                .map_err(|e| WaeError::new(WaeErrorKind::TlsError { reason: e.to_string() }))?;
 
             let (reader, writer) = tokio::io::split(tls_stream);
             self.send_http_request(reader, writer, method, host, &uri, body, extra_headers).await?
@@ -313,7 +260,7 @@ impl HttpClient {
         uri: &str,
         body: Option<Vec<u8>>,
         extra_headers: Option<HashMap<String, String>>,
-    ) -> Result<HttpResponse, HttpError>
+    ) -> WaeResult<HttpResponse>
     where
         R: AsyncReadExt + Unpin,
         W: AsyncWriteExt + Unpin,
@@ -348,44 +295,58 @@ impl HttpClient {
             writer
                 .write_all(&request_bytes)
                 .await
-                .map_err(|e| HttpError::ConnectionFailed(format!("Write request failed: {}", e)))?;
-            writer.flush().await.map_err(|e| HttpError::ConnectionFailed(format!("Flush failed: {}", e)))?;
-            Ok::<_, HttpError>(())
+                .map_err(|e| WaeError::connection_failed(format!("{}: Write failed: {}", host, e)))?;
+            writer.flush().await.map_err(|e| WaeError::connection_failed(format!("{}: Flush failed: {}", host, e)))?;
+            Ok::<_, WaeError>(())
         })
         .await
-        .map_err(|_| HttpError::Timeout)??;
+        .map_err(|_| WaeError::operation_timeout("write_request", self.config.timeout.as_millis() as u64))??;
 
-        let response = timeout(self.config.timeout, self.read_response(reader)).await.map_err(|_| HttpError::Timeout)??;
+        let response = timeout(self.config.timeout, self.read_response(reader))
+            .await
+            .map_err(|_| WaeError::operation_timeout("read_response", self.config.timeout.as_millis() as u64))??;
 
         Ok(response)
     }
 
     /// 读取 HTTP 响应
-    async fn read_response<R: AsyncReadExt + Unpin>(&self, reader: R) -> Result<HttpResponse, HttpError> {
+    async fn read_response<R: AsyncReadExt + Unpin>(&self, reader: R) -> WaeResult<HttpResponse> {
         let mut buf_reader = BufReader::new(reader);
         let mut status_line = String::new();
 
-        buf_reader
-            .read_line(&mut status_line)
-            .await
-            .map_err(|e| HttpError::ProtocolError(format!("Read status line failed: {}", e)))?;
+        buf_reader.read_line(&mut status_line).await.map_err(|e| {
+            WaeError::new(WaeErrorKind::ProtocolError {
+                protocol: "HTTP".to_string(),
+                reason: format!("Read status line failed: {}", e),
+            })
+        })?;
 
         let status_parts: Vec<&str> = status_line.trim().splitn(3, ' ').collect();
         if status_parts.len() < 2 {
-            return Err(HttpError::ProtocolError("Invalid status line".into()));
+            return Err(WaeError::new(WaeErrorKind::ProtocolError {
+                protocol: "HTTP".to_string(),
+                reason: "Invalid status line".to_string(),
+            }));
         }
 
         let version = status_parts[0].to_string();
-        let status: u16 = status_parts[1].parse().map_err(|_| HttpError::ProtocolError("Invalid status code".into()))?;
+        let status: u16 = status_parts[1].parse().map_err(|_| {
+            WaeError::new(WaeErrorKind::ProtocolError {
+                protocol: "HTTP".to_string(),
+                reason: "Invalid status code".to_string(),
+            })
+        })?;
         let status_text = status_parts.get(2).unwrap_or(&"").to_string();
 
         let mut headers = HashMap::new();
         loop {
             let mut line = String::new();
-            buf_reader
-                .read_line(&mut line)
-                .await
-                .map_err(|e| HttpError::ProtocolError(format!("Read header failed: {}", e)))?;
+            buf_reader.read_line(&mut line).await.map_err(|e| {
+                WaeError::new(WaeErrorKind::ProtocolError {
+                    protocol: "HTTP".to_string(),
+                    reason: format!("Read header failed: {}", e),
+                })
+            })?;
 
             if line == "\r\n" || line.is_empty() {
                 break;
@@ -402,13 +363,20 @@ impl HttpClient {
 
         if let Some(len) = content_length {
             body.resize(len, 0);
-            buf_reader.read_exact(&mut body).await.map_err(|e| HttpError::ProtocolError(format!("Read body failed: {}", e)))?;
+            buf_reader.read_exact(&mut body).await.map_err(|e| {
+                WaeError::new(WaeErrorKind::ProtocolError {
+                    protocol: "HTTP".to_string(),
+                    reason: format!("Read body failed: {}", e),
+                })
+            })?;
         }
         else {
-            buf_reader
-                .read_to_end(&mut body)
-                .await
-                .map_err(|e| HttpError::ProtocolError(format!("Read body failed: {}", e)))?;
+            buf_reader.read_to_end(&mut body).await.map_err(|e| {
+                WaeError::new(WaeErrorKind::ProtocolError {
+                    protocol: "HTTP".to_string(),
+                    reason: format!("Read body failed: {}", e),
+                })
+            })?;
         }
 
         Ok(HttpResponse { version, status, status_text, headers, body })
@@ -420,8 +388,13 @@ impl HttpClient {
     }
 
     /// 判断错误是否可重试
-    fn is_retryable_error(error: &HttpError) -> bool {
-        matches!(error, HttpError::Timeout | HttpError::ConnectionFailed(_) | HttpError::DnsFailed(_))
+    fn is_retryable_error(error: &WaeError) -> bool {
+        matches!(
+            error.kind.as_ref(),
+            WaeErrorKind::OperationTimeout { .. }
+                | WaeErrorKind::ConnectionFailed { .. }
+                | WaeErrorKind::DnsResolutionFailed { .. }
+        )
     }
 }
 
@@ -467,12 +440,12 @@ impl RequestBuilder {
     }
 
     /// 发送请求
-    pub async fn send(self) -> Result<HttpResponse, HttpError> {
+    pub async fn send(self) -> WaeResult<HttpResponse> {
         self.client.request(&self.method, &self.url, self.body, Some(self.headers)).await
     }
 
     /// 发送请求并解析 JSON
-    pub async fn send_json<T: DeserializeOwned>(self) -> Result<T, HttpError> {
+    pub async fn send_json<T: DeserializeOwned>(self) -> WaeResult<T> {
         let response = self.send().await?;
         response.json()
     }
@@ -486,27 +459,6 @@ pub fn get(url: &str) -> RequestBuilder {
 /// 便捷函数：创建 POST 请求
 pub fn post(url: &str) -> RequestBuilder {
     RequestBuilder::new(HttpClient::default(), "POST", url)
-}
-
-/// 将 HttpError 转换为 WaeError
-impl From<HttpError> for WaeError {
-    fn from(error: HttpError) -> Self {
-        match error {
-            HttpError::InvalidUrl(msg) => WaeError::network(NetworkErrorKind::ConnectionFailed).with_param("message", msg),
-            HttpError::Timeout => WaeError::network(NetworkErrorKind::Timeout),
-            HttpError::ConnectionFailed(msg) => {
-                WaeError::network(NetworkErrorKind::ConnectionFailed).with_param("message", msg)
-            }
-            HttpError::DnsFailed(msg) => WaeError::network(NetworkErrorKind::DnsFailed).with_param("detail", msg),
-            HttpError::TlsError(msg) => WaeError::network(NetworkErrorKind::TlsError).with_param("message", msg),
-            HttpError::StatusError { status, body } => WaeError::network(NetworkErrorKind::ProtocolError)
-                .with_param("status", status.to_string())
-                .with_param("body", body),
-            HttpError::ProtocolError(msg) => WaeError::network(NetworkErrorKind::ProtocolError).with_param("message", msg),
-            HttpError::ParseError(msg) => WaeError::internal(format!("Response parse error: {}", msg)),
-            HttpError::SerializationError(msg) => WaeError::internal(format!("Serialization error: {}", msg)),
-        }
-    }
 }
 
 /// 兼容旧 API 的 RequestClient
@@ -569,24 +521,24 @@ impl RequestClient {
 
     /// 发送 GET 请求并解析 JSON
     pub async fn get<T: DeserializeOwned>(&self, url: &str) -> WaeResult<T> {
-        let response = self.client.get(url).await.map_err(WaeError::from)?;
-        response.json().map_err(WaeError::from)
+        let response = self.client.get(url).await?;
+        response.json()
     }
 
     /// 发送 GET 请求返回原始响应
     pub async fn get_raw(&self, url: &str) -> WaeResult<HttpResponse> {
-        self.client.get(url).await.map_err(WaeError::from)
+        self.client.get(url).await
     }
 
     /// 发送 POST JSON 请求并解析响应
     pub async fn post<T: DeserializeOwned, B: Serialize>(&self, url: &str, body: &B) -> WaeResult<T> {
-        let response = self.client.post_json(url, body).await.map_err(WaeError::from)?;
-        response.json().map_err(WaeError::from)
+        let response = self.client.post_json(url, body).await?;
+        response.json()
     }
 
     /// 发送 POST JSON 请求返回原始响应
     pub async fn post_raw<B: Serialize>(&self, url: &str, body: &B) -> WaeResult<HttpResponse> {
-        self.client.post_json(url, body).await.map_err(WaeError::from)
+        self.client.post_json(url, body).await
     }
 
     /// 创建请求构建器

@@ -1,7 +1,7 @@
 //! 从数据库值转换的 trait 实现
 
 use crate::connection::config::DatabaseResult;
-use wae_types::{ValidationErrorKind, WaeError};
+use wae_types::WaeError;
 
 /// 从数据库值转换的 trait
 pub trait FromDatabaseValue: Sized {
@@ -28,10 +28,7 @@ mod database_value_impl {
                 fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
                     match value {
                         $pattern => Ok($expr),
-                        _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                            field: stringify!($type).to_string(),
-                            expected: format!("{:?}", value),
-                        })),
+                        _ => Err(WaeError::invalid_format(stringify!($type), format!("{:?}", value))),
                     }
                 }
             }
@@ -49,16 +46,10 @@ mod database_value_impl {
         fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
             match value {
                 turso::Value::Integer(i) => Ok(i as f64),
-                turso::Value::Text(s) => s.parse().map_err(|_| {
-                    WaeError::validation(ValidationErrorKind::InvalidFormat {
-                        field: "f64".to_string(),
-                        expected: format!("Cannot parse '{}' as float", s),
-                    })
-                }),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "f64".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                turso::Value::Text(s) => {
+                    s.parse().map_err(|_| WaeError::invalid_format("f64", format!("Cannot parse '{}' as float", s)))
+                }
+                _ => Err(WaeError::invalid_format("f64", format!("{:?}", value))),
             }
         }
     }
@@ -68,10 +59,7 @@ mod database_value_impl {
             match value {
                 turso::Value::Text(s) => Ok(s),
                 turso::Value::Integer(i) => Ok(i.to_string()),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "String".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                _ => Err(WaeError::invalid_format("String", format!("{:?}", value))),
             }
         }
     }
@@ -80,10 +68,7 @@ mod database_value_impl {
         fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
             match value {
                 turso::Value::Integer(i) => Ok(i != 0),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "bool".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                _ => Err(WaeError::invalid_format("bool", format!("{:?}", value))),
             }
         }
     }
@@ -271,15 +256,9 @@ mod database_value_impl {
                     match value {
                         turso::Value::Integer(i) => Ok(i as $type),
                         turso::Value::Text(s) => s.parse().map_err(|_| {
-                            WaeError::validation(ValidationErrorKind::InvalidFormat {
-                                field: stringify!($type).to_string(),
-                                expected: format!("Cannot parse as {}", stringify!($type)),
-                            })
+                            WaeError::invalid_format(stringify!($type), format!("Cannot parse as {}", stringify!($type)))
                         }),
-                        _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                            field: stringify!($type).to_string(),
-                            expected: format!("{:?}", value),
-                        })),
+                        _ => Err(WaeError::invalid_format(stringify!($type), format!("{:?}", value))),
                     }
                 }
 
@@ -310,10 +289,7 @@ mod database_value_impl {
             match value {
                 turso::Value::Text(s) => Ok(s),
                 turso::Value::Integer(i) => Ok(i.to_string()),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "String".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                _ => Err(WaeError::invalid_format("String", format!("{:?}", value))),
             }
         }
 
@@ -336,10 +312,7 @@ mod database_value_impl {
         fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
             match value {
                 turso::Value::Blob(b) => Ok(b),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "Vec<u8>".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                _ => Err(WaeError::invalid_format("Vec<u8>", format!("{:?}", value))),
             }
         }
 
@@ -362,10 +335,7 @@ mod database_value_impl {
         fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
             match value {
                 turso::Value::Integer(i) => Ok(i != 0),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "bool".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                _ => Err(WaeError::invalid_format("bool", format!("{:?}", value))),
             }
         }
 
@@ -388,10 +358,7 @@ mod database_value_impl {
         fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
             match value {
                 turso::Value::Integer(i) => Ok(i as u64),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "u64".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                _ => Err(WaeError::invalid_format("u64", format!("{:?}", value))),
             }
         }
 
@@ -418,10 +385,7 @@ mod database_value_impl {
         fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
             match value {
                 turso::Value::Integer(i) => Ok(i as u32),
-                _ => Err(WaeError::validation(ValidationErrorKind::InvalidFormat {
-                    field: "u32".to_string(),
-                    expected: format!("{:?}", value),
-                })),
+                _ => Err(WaeError::invalid_format("u32", format!("{:?}", value))),
             }
         }
 

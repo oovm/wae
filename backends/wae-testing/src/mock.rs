@@ -1,8 +1,8 @@
 //! Mock 工具模块
 
-use crate::error::{TestingError, TestingResult};
 use parking_lot::RwLock;
 use std::sync::Arc;
+use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
 
 /// Mock 调用记录
 #[derive(Debug, Clone)]
@@ -156,7 +156,7 @@ impl<T: Clone> MockFn<T> {
 
         match &self.result {
             Some(MockResult::Return(v)) => Ok(v.clone()),
-            Some(MockResult::Error(e)) => Err(TestingError::MockError(e.clone())),
+            Some(MockResult::Error(e)) => Err(WaeError::new(WaeErrorKind::MockError { reason: e.clone() })),
             Some(MockResult::Sequence(values)) => {
                 let mut idx = self.sequence_index.write();
                 if *idx < values.len() {
@@ -165,10 +165,10 @@ impl<T: Clone> MockFn<T> {
                     Ok(value)
                 }
                 else {
-                    Err(TestingError::MockError("Mock sequence exhausted".to_string()))
+                    Err(WaeError::new(WaeErrorKind::MockError { reason: "Mock sequence exhausted".to_string() }))
                 }
             }
-            None => Err(TestingError::MockError("No mock result configured".to_string())),
+            None => Err(WaeError::new(WaeErrorKind::MockError { reason: "No mock result configured".to_string() })),
         }
     }
 
@@ -193,7 +193,9 @@ impl<T: Clone + Send + Sync + 'static> Mock for MockFn<T> {
         if let Some(expected) = self.expectation.expected_calls
             && actual_calls != expected
         {
-            return Err(TestingError::AssertionFailed(format!("Expected {} calls, but got {}", expected, actual_calls)));
+            return Err(WaeError::new(WaeErrorKind::AssertionFailed {
+                message: format!("Expected {} calls, but got {}", expected, actual_calls),
+            }));
         }
 
         Ok(())

@@ -22,7 +22,7 @@ use std::{net::SocketAddr, time::Duration};
 use tokio::net::TcpListener;
 use tracing::info;
 
-pub use wae_types::{CloudError, CloudResult, WaeError, WaeResult};
+pub use wae_types::{WaeError, WaeResult};
 
 /// HTTPS 服务结果类型
 pub type HttpsResult<T> = WaeResult<T>;

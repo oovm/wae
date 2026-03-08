@@ -8,47 +8,11 @@
 #![warn(missing_docs)]
 
 use serde::{Serialize, de::DeserializeOwned};
-use std::{fmt, time::Duration};
-
-/// 缓存错误类型
-#[derive(Debug)]
-pub enum CacheError {
-    /// 连接失败
-    ConnectionFailed(String),
-
-    /// 序列化失败
-    SerializationFailed(String),
-
-    /// 反序列化失败
-    DeserializationFailed(String),
-
-    /// 键不存在
-    KeyNotFound(String),
-
-    /// 操作超时
-    Timeout(String),
-
-    /// 服务内部错误
-    Internal(String),
-}
-
-impl fmt::Display for CacheError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CacheError::ConnectionFailed(msg) => write!(f, "Cache connection failed: {}", msg),
-            CacheError::SerializationFailed(msg) => write!(f, "Serialization failed: {}", msg),
-            CacheError::DeserializationFailed(msg) => write!(f, "Deserialization failed: {}", msg),
-            CacheError::KeyNotFound(msg) => write!(f, "Key not found: {}", msg),
-            CacheError::Timeout(msg) => write!(f, "Operation timeout: {}", msg),
-            CacheError::Internal(msg) => write!(f, "Cache internal error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for CacheError {}
+use std::time::Duration;
+use wae_types::WaeError;
 
 /// 缓存操作结果类型
-pub type CacheResult<T> = Result<T, CacheError>;
+pub type CacheResult<T> = Result<T, WaeError>;
 
 /// 缓存配置
 #[derive(Debug, Clone)]
@@ -136,7 +100,8 @@ impl CacheService {
         let bytes = self.backend.get_bytes(key).await?;
         match bytes {
             Some(data) => {
-                let value = serde_json::from_slice(&data).map_err(|e| CacheError::DeserializationFailed(e.to_string()))?;
+                let value =
+                    serde_json::from_slice(&data).map_err(|_| WaeError::deserialization_failed(std::any::type_name::<T>()))?;
                 Ok(Some(value))
             }
             None => Ok(None),
@@ -145,7 +110,7 @@ impl CacheService {
 
     /// 设置缓存值
     pub async fn set<T: Serialize + ?Sized>(&self, key: &str, value: &T, ttl: Option<Duration>) -> CacheResult<()> {
-        let data = serde_json::to_vec(value).map_err(|e| CacheError::SerializationFailed(e.to_string()))?;
+        let data = serde_json::to_vec(value).map_err(|_| WaeError::serialization_failed(std::any::type_name::<T>()))?;
         self.backend.set_bytes(key, &data, ttl).await
     }
 
@@ -176,7 +141,8 @@ impl CacheService {
         for bytes in bytes_list {
             match bytes {
                 Some(data) => {
-                    let value = serde_json::from_slice(&data).map_err(|e| CacheError::DeserializationFailed(e.to_string()))?;
+                    let value = serde_json::from_slice(&data)
+                        .map_err(|_| WaeError::deserialization_failed(std::any::type_name::<T>()))?;
                     results.push(Some(value));
                 }
                 None => results.push(None),
@@ -190,7 +156,7 @@ impl CacheService {
         let byte_items: Vec<(&str, Vec<u8>)> = items
             .iter()
             .map(|(k, v)| {
-                let data = serde_json::to_vec(v).map_err(|e| CacheError::SerializationFailed(e.to_string()))?;
+                let data = serde_json::to_vec(v).map_err(|_| WaeError::serialization_failed(std::any::type_name::<T>()))?;
                 Ok((*k, data))
             })
             .collect::<CacheResult<_>>()?;

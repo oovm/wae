@@ -4,10 +4,8 @@
 
 mod claims;
 mod config;
-mod errors;
 mod service;
 
 pub use claims::*;
 pub use config::*;
-pub use errors::*;
 pub use service::*;

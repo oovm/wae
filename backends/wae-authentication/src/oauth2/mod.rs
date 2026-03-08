@@ -4,12 +4,10 @@
 
 mod client;
 mod config;
-mod errors;
 mod providers;
 mod types;
 
 pub use client::*;
 pub use config::*;
-pub use errors::*;
 pub use providers::*;
 pub use types::*;

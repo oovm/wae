@@ -15,6 +15,7 @@
         "u": "cargo upgrade --incompatible",
         "p": "cargo workspaces publish --no-git-commit --allow-dirty --yes",
         "build:frontend": "pnpm -r run build",
+        "build:doc": "pnpm --filter wae-docs run build",
         "typecheck:frontend": "pnpm -r run typecheck"
     },
     "devDependencies": {

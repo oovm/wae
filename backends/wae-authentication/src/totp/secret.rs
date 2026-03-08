@@ -1,8 +1,11 @@
 //! TOTP 密钥管理
 
-use crate::totp::{TotpError, TotpResult};
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use rand::Rng;
+use wae_types::{WaeError, WaeErrorKind};
+
+/// TOTP 结果类型
+pub type TotpResult<T> = Result<T, WaeError>;
 
 /// Base32 字符集
 const BASE32_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -134,7 +137,7 @@ impl TotpSecret {
         match c {
             'A'..='Z' => Ok((c as u8) - b'A'),
             '2'..='7' => Ok((c as u8) - b'2' + 26),
-            _ => Err(TotpError::Base32Error(format!("Invalid character: {}", c))),
+            _ => Err(WaeError::new(WaeErrorKind::Base32Error { reason: format!("Invalid character: {}", c) })),
         }
     }
 }

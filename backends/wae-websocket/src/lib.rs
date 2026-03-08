@@ -10,69 +10,10 @@
 use async_trait::async_trait;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Serialize, de::DeserializeOwned};
-use std::{collections::HashMap, fmt, net::SocketAddr, sync::Arc, time::Duration};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::{RwLock, broadcast, mpsc};
 use tokio_tungstenite::tungstenite::protocol::Message as WsMessage;
-
-/// WebSocket 错误类型
-#[derive(Debug)]
-pub enum WebSocketError {
-    /// 连接失败
-    ConnectionFailed(String),
-
-    /// 连接已关闭
-    ConnectionClosed,
-
-    /// 发送消息失败
-    SendFailed(String),
-
-    /// 接收消息失败
-    ReceiveFailed(String),
-
-    /// 序列化失败
-    SerializationFailed(String),
-
-    /// 反序列化失败
-    DeserializationFailed(String),
-
-    /// 房间不存在
-    RoomNotFound(String),
-
-    /// 连接不存在
-    ConnectionNotFound(String),
-
-    /// 连接数超限
-    MaxConnectionsExceeded(u32),
-
-    /// 操作超时
-    Timeout(String),
-
-    /// 服务内部错误
-    Internal(String),
-}
-
-impl fmt::Display for WebSocketError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            WebSocketError::ConnectionFailed(msg) => write!(f, "WebSocket connection failed: {}", msg),
-            WebSocketError::ConnectionClosed => write!(f, "WebSocket connection closed"),
-            WebSocketError::SendFailed(msg) => write!(f, "Failed to send message: {}", msg),
-            WebSocketError::ReceiveFailed(msg) => write!(f, "Failed to receive message: {}", msg),
-            WebSocketError::SerializationFailed(msg) => write!(f, "Serialization failed: {}", msg),
-            WebSocketError::DeserializationFailed(msg) => write!(f, "Deserialization failed: {}", msg),
-            WebSocketError::RoomNotFound(msg) => write!(f, "Room not found: {}", msg),
-            WebSocketError::ConnectionNotFound(msg) => write!(f, "Connection not found: {}", msg),
-            WebSocketError::MaxConnectionsExceeded(max) => write!(f, "Maximum connections exceeded: {}", max),
-            WebSocketError::Timeout(msg) => write!(f, "Operation timeout: {}", msg),
-            WebSocketError::Internal(msg) => write!(f, "WebSocket internal error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for WebSocketError {}
-
-/// WebSocket 操作结果类型
-pub type WebSocketResult<T> = Result<T, WebSocketError>;
+use wae_types::{WaeError, WaeErrorKind, WaeResult};
 
 /// 连接 ID 类型
 pub type ConnectionId = String;
@@ -204,10 +145,13 @@ impl ConnectionManager {
     }
 
     /// 添加连接
-    pub async fn add(&self, connection: Connection) -> WebSocketResult<()> {
+    pub async fn add(&self, connection: Connection) -> WaeResult<()> {
         let mut connections = self.connections.write().await;
         if connections.len() >= self.max_connections as usize {
-            return Err(WebSocketError::MaxConnectionsExceeded(self.max_connections));
+            return Err(WaeError::new(WaeErrorKind::ResourceConflict {
+                resource: "Connection".to_string(),
+                reason: format!("Maximum connections ({}) exceeded", self.max_connections),
+            }));
         }
         connections.insert(connection.id.clone(), connection);
         Ok(())
@@ -244,7 +188,7 @@ impl ConnectionManager {
     }
 
     /// 更新连接的房间列表
-    pub async fn join_room(&self, id: &str, room: &str) -> WebSocketResult<()> {
+    pub async fn join_room(&self, id: &str, room: &str) -> WaeResult<()> {
         let mut connections = self.connections.write().await;
         if let Some(conn) = connections.get_mut(id) {
             if !conn.rooms.contains(&room.to_string()) {
@@ -252,17 +196,17 @@ impl ConnectionManager {
             }
             return Ok(());
         }
-        Err(WebSocketError::ConnectionNotFound(id.to_string()))
+        Err(WaeError::not_found("Connection", id))
     }
 
     /// 离开房间
-    pub async fn leave_room(&self, id: &str, room: &str) -> WebSocketResult<()> {
+    pub async fn leave_room(&self, id: &str, room: &str) -> WaeResult<()> {
         let mut connections = self.connections.write().await;
         if let Some(conn) = connections.get_mut(id) {
             conn.rooms.retain(|r| r != room);
             return Ok(());
         }
-        Err(WebSocketError::ConnectionNotFound(id.to_string()))
+        Err(WaeError::not_found("Connection", id))
     }
 }
 
@@ -334,7 +278,7 @@ impl RoomManager {
     }
 
     /// 广播消息到房间
-    pub async fn broadcast(&self, room_id: &str, sender: &Sender, message: &Message) -> WebSocketResult<Vec<ConnectionId>> {
+    pub async fn broadcast(&self, room_id: &str, sender: &Sender, message: &Message) -> WaeResult<Vec<ConnectionId>> {
         let members = self.get_members(room_id).await;
         let mut sent_to = Vec::new();
         for conn_id in &members {
@@ -377,17 +321,19 @@ impl Sender {
     }
 
     /// 发送消息到指定连接
-    pub async fn send_to(&self, connection_id: &str, message: Message) -> WebSocketResult<()> {
+    pub async fn send_to(&self, connection_id: &str, message: Message) -> WaeResult<()> {
         let senders = self.senders.read().await;
         if let Some(sender) = senders.get(connection_id) {
-            sender.send(message).map_err(|e| WebSocketError::SendFailed(e.to_string()))?;
+            sender
+                .send(message)
+                .map_err(|e| WaeError::new(WaeErrorKind::InternalError { reason: format!("Send failed: {}", e) }))?;
             return Ok(());
         }
-        Err(WebSocketError::ConnectionNotFound(connection_id.to_string()))
+        Err(WaeError::not_found("Connection", connection_id))
     }
 
     /// 广播消息到所有连接
-    pub async fn broadcast(&self, message: Message) -> WebSocketResult<usize> {
+    pub async fn broadcast(&self, message: Message) -> WaeResult<usize> {
         let senders = self.senders.read().await;
         let mut count = 0;
         for sender in senders.values() {
@@ -473,10 +419,10 @@ impl ServerConfig {
 #[async_trait]
 pub trait ClientHandler: Send + Sync {
     /// 连接建立时调用
-    async fn on_connect(&self, connection: &Connection) -> WebSocketResult<()>;
+    async fn on_connect(&self, connection: &Connection) -> WaeResult<()>;
 
     /// 收到消息时调用
-    async fn on_message(&self, connection: &Connection, message: Message) -> WebSocketResult<()>;
+    async fn on_message(&self, connection: &Connection, message: Message) -> WaeResult<()>;
 
     /// 连接关闭时调用
     async fn on_disconnect(&self, connection: &Connection);
@@ -487,11 +433,11 @@ pub struct DefaultClientHandler;
 
 #[async_trait]
 impl ClientHandler for DefaultClientHandler {
-    async fn on_connect(&self, _connection: &Connection) -> WebSocketResult<()> {
+    async fn on_connect(&self, _connection: &Connection) -> WaeResult<()> {
         Ok(())
     }
 
-    async fn on_message(&self, _connection: &Connection, _message: Message) -> WebSocketResult<()> {
+    async fn on_message(&self, _connection: &Connection, _message: Message) -> WaeResult<()> {
         Ok(())
     }
 
@@ -541,10 +487,11 @@ impl WebSocketServer {
     }
 
     /// 启动服务端
-    pub async fn start<H: ClientHandler + 'static>(&self, handler: H) -> WebSocketResult<()> {
+    pub async fn start<H: ClientHandler + 'static>(&self, handler: H) -> WaeResult<()> {
         let addr = format!("{}:{}", self.config.host, self.config.port);
-        let listener =
-            tokio::net::TcpListener::bind(&addr).await.map_err(|e| WebSocketError::ConnectionFailed(e.to_string()))?;
+        let listener = tokio::net::TcpListener::bind(&addr)
+            .await
+            .map_err(|_e| WaeError::new(WaeErrorKind::ConnectionFailed { target: addr.clone() }))?;
 
         tracing::info!("WebSocket server listening on {}", addr);
 
@@ -599,15 +546,19 @@ impl WebSocketServer {
         sender: Sender,
         handler: Arc<H>,
         config: ServerConfig,
-    ) -> WebSocketResult<()> {
-        let ws_stream =
-            tokio_tungstenite::accept_async(stream).await.map_err(|e| WebSocketError::ConnectionFailed(e.to_string()))?;
+    ) -> WaeResult<()> {
+        let ws_stream = tokio_tungstenite::accept_async(stream)
+            .await
+            .map_err(|_e| WaeError::new(WaeErrorKind::ConnectionFailed { target: addr.to_string() }))?;
 
         let connection_id = uuid::Uuid::new_v4().to_string();
         let connection = Connection::new(connection_id.clone(), addr);
 
         if connection_manager.add(connection.clone()).await.is_err() {
-            return Err(WebSocketError::MaxConnectionsExceeded(config.max_connections));
+            return Err(WaeError::new(WaeErrorKind::ResourceConflict {
+                resource: "Connection".to_string(),
+                reason: format!("Maximum connections ({}) exceeded", config.max_connections),
+            }));
         }
 
         handler.on_connect(&connection).await?;
@@ -675,12 +626,12 @@ impl WebSocketServer {
     }
 
     /// 广播消息到所有连接
-    pub async fn broadcast(&self, message: Message) -> WebSocketResult<usize> {
+    pub async fn broadcast(&self, message: Message) -> WaeResult<usize> {
         self.sender.broadcast(message).await
     }
 
     /// 广播消息到房间
-    pub async fn broadcast_to_room(&self, room_id: &str, message: Message) -> WebSocketResult<Vec<ConnectionId>> {
+    pub async fn broadcast_to_room(&self, room_id: &str, message: Message) -> WaeResult<Vec<ConnectionId>> {
         self.room_manager.broadcast(room_id, &self.sender, &message).await
     }
 }
@@ -813,23 +764,25 @@ impl WebSocketClient {
     }
 
     /// 发送消息
-    pub async fn send(&self, message: Message) -> WebSocketResult<()> {
-        self.sender.send(message).map_err(|e| WebSocketError::SendFailed(e.to_string()))
+    pub async fn send(&self, message: Message) -> WaeResult<()> {
+        self.sender
+            .send(message)
+            .map_err(|e| WaeError::new(WaeErrorKind::InternalError { reason: format!("Send failed: {}", e) }))
     }
 
     /// 发送文本消息
-    pub async fn send_text(&self, text: impl Into<String>) -> WebSocketResult<()> {
+    pub async fn send_text(&self, text: impl Into<String>) -> WaeResult<()> {
         self.send(Message::text(text)).await
     }
 
     /// 发送二进制消息
-    pub async fn send_binary(&self, data: impl Into<Vec<u8>>) -> WebSocketResult<()> {
+    pub async fn send_binary(&self, data: impl Into<Vec<u8>>) -> WaeResult<()> {
         self.send(Message::binary(data)).await
     }
 
     /// 发送 JSON 消息
-    pub async fn send_json<T: Serialize + ?Sized>(&self, value: &T) -> WebSocketResult<()> {
-        let json = serde_json::to_string(value).map_err(|e| WebSocketError::SerializationFailed(e.to_string()))?;
+    pub async fn send_json<T: Serialize + ?Sized>(&self, value: &T) -> WaeResult<()> {
+        let json = serde_json::to_string(value).map_err(|_e| WaeError::serialization_failed("JSON"))?;
         self.send_text(json).await
     }
 
@@ -839,12 +792,11 @@ impl WebSocketClient {
     }
 
     /// 接收并解析 JSON 消息
-    pub async fn receive_json<T: DeserializeOwned>(&mut self) -> WebSocketResult<Option<T>> {
+    pub async fn receive_json<T: DeserializeOwned>(&mut self) -> WaeResult<Option<T>> {
         match self.receive().await {
             Some(msg) => {
-                let text =
-                    msg.as_text().ok_or_else(|| WebSocketError::DeserializationFailed("Expected text message".into()))?;
-                let value: T = serde_json::from_str(text).map_err(|e| WebSocketError::DeserializationFailed(e.to_string()))?;
+                let text = msg.as_text().ok_or_else(|| WaeError::deserialization_failed("Expected text message"))?;
+                let value: T = serde_json::from_str(text).map_err(|_e| WaeError::deserialization_failed("JSON"))?;
                 Ok(Some(value))
             }
             None => Ok(None),
@@ -857,7 +809,7 @@ impl WebSocketClient {
     }
 
     /// 关闭连接
-    pub async fn close(&self) -> WebSocketResult<()> {
+    pub async fn close(&self) -> WaeResult<()> {
         self.send(Message::Close).await
     }
 }

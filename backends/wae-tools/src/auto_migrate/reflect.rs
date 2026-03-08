@@ -2,9 +2,9 @@
 //!
 //! 从数据库读取现有表结构信息。
 
-use crate::migration::MigrationError;
 use std::collections::HashMap;
 use wae_database::{ColumnDef, ColumnType, DatabaseConnection, DatabaseResult, IndexDef, TableSchema};
+use wae_types::WaeResult;
 
 /// Schema 反射器
 pub struct SchemaReflector<'a> {
@@ -99,7 +99,7 @@ impl<'a> SchemaReflector<'a> {
     }
 
     /// 获取所有表的 Schema
-    pub async fn get_all_schemas(&self) -> Result<HashMap<String, TableSchema>, MigrationError> {
+    pub async fn get_all_schemas(&self) -> WaeResult<HashMap<String, TableSchema>> {
         let table_names = self.get_table_names().await?;
         let mut schemas = HashMap::new();
 

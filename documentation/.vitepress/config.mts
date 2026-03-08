@@ -4,8 +4,9 @@ export default defineConfig({
     title: 'WAE',
     description: '微服务优先的 Rust 异步框架',
     lang: 'zh-CN',
-    outDir: '../dist',
-    cacheDir: '../node_modules/.vitepress-cache',
+    srcDir: 'zh-hans',
+    outDir: 'dist',
+    cacheDir: 'node_modules/.vitepress-cache',
     themeConfig: {
         logo: '/logo.svg',
         nav: [

@@ -17,13 +17,13 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
-pub use wae_types::{CloudError, CloudResult};
+pub use wae_types::{WaeError, WaeResult};
 
 /// 服务发现结果类型
-pub type ServiceResult<T> = CloudResult<T>;
+pub type ServiceResult<T> = WaeResult<T>;
 
 /// 服务发现错误类型
-pub type ServiceError = CloudError;
+pub type ServiceError = WaeError;
 
 /// 服务实例信息
 #[derive(Debug, Clone, Serialize, Deserialize)]

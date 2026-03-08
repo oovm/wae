@@ -1,8 +1,8 @@
 //! 测试环境管理模块
 
-use crate::error::{TestingError, TestingResult};
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc, time::Duration};
+use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
 
 /// 测试环境配置
 #[derive(Debug, Clone)]
@@ -112,7 +112,9 @@ impl TestEnv {
     pub fn setup(&self) -> TestingResult<()> {
         let mut state = self.state.write();
         if *state != TestEnvState::Uninitialized {
-            return Err(TestingError::EnvironmentError("Environment already initialized".to_string()));
+            return Err(WaeError::new(WaeErrorKind::EnvironmentError {
+                reason: "Environment already initialized".to_string(),
+            }));
         }
 
         *state = TestEnvState::Initialized;
@@ -123,7 +125,7 @@ impl TestEnv {
     pub fn teardown(&self) -> TestingResult<()> {
         let mut state = self.state.write();
         if *state != TestEnvState::Initialized {
-            return Err(TestingError::EnvironmentError("Environment not initialized".to_string()));
+            return Err(WaeError::new(WaeErrorKind::EnvironmentError { reason: "Environment not initialized".to_string() }));
         }
 
         let handlers = self.cleanup_handlers.write();

@@ -13,10 +13,10 @@ use tracing::{debug, error, info};
 use uuid::Uuid;
 
 use crate::{
-    error::{SchedulerError, SchedulerResult},
     interval::IntervalScheduler,
     task::{ScheduledTask, TaskHandle, TaskId, TaskState},
 };
+use wae_types::{WaeError, WaeResult};
 
 /// Cron 字段
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,12 +77,10 @@ impl CronExpression {
     /// - `0 0 0 * * *` - 每天执行
     /// - `0 30 14 * * *` - 每天 14:30 执行
     /// - `0 0 9-17 * * 1-5` - 周一到周五 9点到17点每小时执行
-    pub fn parse(expression: &str) -> SchedulerResult<Self> {
+    pub fn parse(expression: &str) -> WaeResult<Self> {
         let parts: Vec<&str> = expression.split_whitespace().collect();
         if parts.len() != 6 {
-            return Err(SchedulerError::InvalidCronExpression(
-                "Expected 6 fields: second minute hour day month weekday".to_string(),
-            ));
+            return Err(WaeError::invalid_cron_expression("Expected 6 fields: second minute hour day month weekday"));
         }
 
         Ok(Self {
@@ -95,7 +93,7 @@ impl CronExpression {
         })
     }
 
-    fn parse_field(s: &str, min: u32, max: u32) -> SchedulerResult<CronField> {
+    fn parse_field(s: &str, min: u32, max: u32) -> WaeResult<CronField> {
         if s == "*" {
             return Ok(CronField::Any);
         }
@@ -103,7 +101,7 @@ impl CronExpression {
         if s.contains('/') {
             let parts: Vec<&str> = s.split('/').collect();
             if parts.len() != 2 {
-                return Err(SchedulerError::InvalidCronExpression(format!("Invalid step expression: {}", s)));
+                return Err(WaeError::invalid_cron_expression(format!("Invalid step expression: {}", s)));
             }
             let start = if parts[0] == "*" {
                 min
@@ -111,38 +109,37 @@ impl CronExpression {
             else {
                 parts[0]
                     .parse::<u32>()
-                    .map_err(|_| SchedulerError::InvalidCronExpression(format!("Invalid value: {}", parts[0])))?
+                    .map_err(|_| WaeError::invalid_cron_expression(format!("Invalid value: {}", parts[0])))?
             };
             let step = parts[1]
                 .parse::<u32>()
-                .map_err(|_| SchedulerError::InvalidCronExpression(format!("Invalid step: {}", parts[1])))?;
+                .map_err(|_| WaeError::invalid_cron_expression(format!("Invalid step: {}", parts[1])))?;
             return Ok(CronField::Step(start, step));
         }
 
         if s.contains('-') {
             let parts: Vec<&str> = s.split('-').collect();
             if parts.len() != 2 {
-                return Err(SchedulerError::InvalidCronExpression(format!("Invalid range expression: {}", s)));
+                return Err(WaeError::invalid_cron_expression(format!("Invalid range expression: {}", s)));
             }
             let start = parts[0]
                 .parse::<u32>()
-                .map_err(|_| SchedulerError::InvalidCronExpression(format!("Invalid start: {}", parts[0])))?;
-            let end = parts[1]
-                .parse::<u32>()
-                .map_err(|_| SchedulerError::InvalidCronExpression(format!("Invalid end: {}", parts[1])))?;
+                .map_err(|_| WaeError::invalid_cron_expression(format!("Invalid start: {}", parts[0])))?;
+            let end =
+                parts[1].parse::<u32>().map_err(|_| WaeError::invalid_cron_expression(format!("Invalid end: {}", parts[1])))?;
             return Ok(CronField::Range(start, end));
         }
 
         if s.contains(',') {
             let values: Result<Vec<u32>, _> = s.split(',').map(|v| v.parse::<u32>()).collect();
-            let values = values.map_err(|_| SchedulerError::InvalidCronExpression(format!("Invalid list: {}", s)))?;
+            let values = values.map_err(|_| WaeError::invalid_cron_expression(format!("Invalid list: {}", s)))?;
             return Ok(CronField::List(values));
         }
 
-        let value = s.parse::<u32>().map_err(|_| SchedulerError::InvalidCronExpression(format!("Invalid value: {}", s)))?;
+        let value = s.parse::<u32>().map_err(|_| WaeError::invalid_cron_expression(format!("Invalid value: {}", s)))?;
 
         if value < min || value > max {
-            return Err(SchedulerError::InvalidCronExpression(format!("Value {} out of range [{}, {}]", value, min, max)));
+            return Err(WaeError::invalid_cron_expression(format!("Value {} out of range [{}, {}]", value, min, max)));
         }
 
         Ok(CronField::Value(value))
@@ -345,9 +342,9 @@ impl CronScheduler {
     /// # 返回值
     ///
     /// 返回任务句柄。
-    pub async fn schedule_cron(&self, task: Arc<dyn ScheduledTask>, expression: &str) -> SchedulerResult<TaskHandle> {
+    pub async fn schedule_cron(&self, task: Arc<dyn ScheduledTask>, expression: &str) -> WaeResult<TaskHandle> {
         if self.is_shutdown.load(Ordering::SeqCst) {
-            return Err(SchedulerError::Shutdown);
+            return Err(WaeError::scheduler_shutdown());
         }
 
         let cron_expr = CronExpression::parse(expression)?;
@@ -356,7 +353,7 @@ impl CronScheduler {
 
         let next_execution = cron_expr
             .next_execution(Utc::now())
-            .ok_or_else(|| SchedulerError::InvalidCronExpression("Cannot determine next execution time".to_string()))?;
+            .ok_or_else(|| WaeError::invalid_cron_expression("Cannot determine next execution time"))?;
 
         {
             let mut handles = self.handles.write().await;
@@ -379,7 +376,7 @@ impl CronScheduler {
     }
 
     /// 取消任务
-    pub async fn cancel_task(&self, task_id: &str) -> SchedulerResult<bool> {
+    pub async fn cancel_task(&self, task_id: &str) -> WaeResult<bool> {
         {
             let mut tasks = self.cron_tasks.write().await;
             tasks.remove(task_id);
@@ -398,7 +395,7 @@ impl CronScheduler {
             Ok(true)
         }
         else {
-            Err(SchedulerError::TaskNotFound(task_id.to_string()))
+            Err(WaeError::task_not_found(task_id))
         }
     }
 

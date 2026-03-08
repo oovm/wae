@@ -66,11 +66,11 @@ fn sha1_hex(msg: &str) -> String {
 impl StorageProvider for CosProvider {
     fn sign_url(&self, path: &str, config: &StorageConfig) -> StorageResult<Url> {
         if path.is_empty() {
-            return Err(WaeError::invalid_params("Empty path"));
+            return Err(WaeError::invalid_params("path", "Empty path"));
         }
 
         if path.starts_with("http://") || path.starts_with("https://") {
-            return Url::parse(path).map_err(|e| WaeError::invalid_params(e.to_string()));
+            return Url::parse(path).map_err(|e| WaeError::invalid_params("path", e.to_string()));
         }
 
         let base_url_str =
@@ -82,9 +82,10 @@ impl StorageProvider for CosProvider {
         else {
             Url::parse(&format!("https://{}", base_url_str))
         }
-        .map_err(|e| WaeError::invalid_params(e.to_string()))?;
+        .map_err(|e| WaeError::invalid_params("base_url", e.to_string()))?;
 
-        let mut url = base_url.join(path.trim_start_matches('/')).map_err(|e| WaeError::invalid_params(e.to_string()))?;
+        let mut url =
+            base_url.join(path.trim_start_matches('/')).map_err(|e| WaeError::invalid_params("path", e.to_string()))?;
 
         let http_method = "get";
         let http_uri = ensure_lowercase_hex(url.path());
@@ -162,9 +163,9 @@ impl StorageProvider for CosProvider {
         let key_time = format!("{};{}", start_time, end_time);
 
         let base_url = if host.starts_with("http") { Url::parse(&host) } else { Url::parse(&format!("https://{}", host)) }
-            .map_err(|e| WaeError::invalid_params(e.to_string()))?;
+            .map_err(|e| WaeError::invalid_params("base_url", e.to_string()))?;
 
-        let mut url = base_url.join(key.trim_start_matches('/')).map_err(|e| WaeError::invalid_params(e.to_string()))?;
+        let mut url = base_url.join(key.trim_start_matches('/')).map_err(|e| WaeError::invalid_params("url", e.to_string()))?;
 
         let host_only = url.host_str().unwrap_or("").to_lowercase();
 

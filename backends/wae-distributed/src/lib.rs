@@ -8,209 +8,17 @@
 #![warn(missing_docs)]
 
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, fmt, sync::Arc, time::Duration};
+use std::{collections::HashSet, sync::Arc, time::Duration};
+use wae_types::{WaeError, WaeResult};
 
 pub use feature_flag::{FeatureFlag, FeatureFlagManager, FlagDefinition, Strategy, evaluate};
-pub use id_generator::{IdGenerator, SnowflakeGenerator, UuidGenerator};
-pub use lock::{DistributedLock, InMemoryLock, InMemoryLockManager, LockError, LockOptions};
+pub use id_generator::{IdGenerator, SnowflakeGenerator, UuidGenerator, UuidVersion};
+pub use lock::{DistributedLock, InMemoryLock, InMemoryLockManager, LockOptions};
 
-mod lock {
+/// 功能开关模块
+pub mod feature_flag {
     use super::*;
-
-    /// 分布式锁错误类型
-    #[derive(Debug)]
-    pub enum LockError {
-        /// 获取锁失败
-        AcquireFailed(String),
-
-        /// 锁已过期
-        Expired(String),
-
-        /// 锁不存在
-        NotFound(String),
-
-        /// 释放锁失败
-        ReleaseFailed(String),
-
-        /// 等待超时
-        WaitTimeout(String),
-
-        /// 内部错误
-        Internal(String),
-    }
-
-    impl fmt::Display for LockError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                LockError::AcquireFailed(msg) => write!(f, "Failed to acquire lock: {}", msg),
-                LockError::Expired(msg) => write!(f, "Lock expired: {}", msg),
-                LockError::NotFound(msg) => write!(f, "Lock not found: {}", msg),
-                LockError::ReleaseFailed(msg) => write!(f, "Failed to release lock: {}", msg),
-                LockError::WaitTimeout(msg) => write!(f, "Wait timeout: {}", msg),
-                LockError::Internal(msg) => write!(f, "Lock internal error: {}", msg),
-            }
-        }
-    }
-
-    impl std::error::Error for LockError {}
-
-    /// 锁操作结果类型
-    pub type LockResult<T> = Result<T, LockError>;
-
-    /// 锁选项
-    #[derive(Debug, Clone)]
-    pub struct LockOptions {
-        /// 锁的生存时间
-        pub ttl: Duration,
-        /// 等待获取锁的超时时间
-        pub wait_timeout: Duration,
-    }
-
-    impl Default for LockOptions {
-        fn default() -> Self {
-            Self { ttl: Duration::from_secs(30), wait_timeout: Duration::from_secs(10) }
-        }
-    }
-
-    impl LockOptions {
-        /// 创建新的锁选项
-        pub fn new() -> Self {
-            Self::default()
-        }
-
-        /// 设置锁的生存时间
-        pub fn with_ttl(mut self, ttl: Duration) -> Self {
-            self.ttl = ttl;
-            self
-        }
-
-        /// 设置等待获取锁的超时时间
-        pub fn with_wait_timeout(mut self, timeout: Duration) -> Self {
-            self.wait_timeout = timeout;
-            self
-        }
-    }
-
-    /// 分布式锁 trait (dyn 兼容)
-    #[allow(async_fn_in_trait)]
-    pub trait DistributedLock: Send + Sync {
-        /// 获取锁 (阻塞直到获取成功或超时)
-        async fn lock(&self) -> LockResult<()>;
-
-        /// 尝试获取锁 (非阻塞)
-        async fn try_lock(&self) -> LockResult<bool>;
-
-        /// 释放锁
-        async fn unlock(&self) -> LockResult<()>;
-
-        /// 带超时的获取锁
-        async fn lock_with_timeout(&self, timeout: Duration) -> LockResult<()>;
-
-        /// 获取锁的键名
-        fn key(&self) -> &str;
-
-        /// 检查锁是否被持有
-        async fn is_locked(&self) -> bool;
-    }
-
-    /// 内存锁实现 (用于单机测试)
-    pub struct InMemoryLock {
-        key: String,
-        manager: Arc<InMemoryLockManager>,
-    }
-
-    impl InMemoryLock {
-        /// 创建新的内存锁
-        pub fn new(key: impl Into<String>, manager: Arc<InMemoryLockManager>) -> Self {
-            Self { key: key.into(), manager }
-        }
-    }
-
-    impl DistributedLock for InMemoryLock {
-        async fn lock(&self) -> LockResult<()> {
-            self.lock_with_timeout(Duration::from_secs(30)).await
-        }
-
-        async fn try_lock(&self) -> LockResult<bool> {
-            self.manager.acquire_lock(&self.key, Duration::from_secs(30)).await
-        }
-
-        async fn unlock(&self) -> LockResult<()> {
-            self.manager.release_lock(&self.key).await
-        }
-
-        async fn lock_with_timeout(&self, timeout: Duration) -> LockResult<()> {
-            let start = std::time::Instant::now();
-            loop {
-                if self.manager.acquire_lock(&self.key, Duration::from_secs(30)).await? {
-                    return Ok(());
-                }
-                if start.elapsed() >= timeout {
-                    return Err(LockError::WaitTimeout(format!("Lock key: {}", self.key)));
-                }
-                tokio::time::sleep(Duration::from_millis(50)).await;
-            }
-        }
-
-        fn key(&self) -> &str {
-            &self.key
-        }
-
-        async fn is_locked(&self) -> bool {
-            self.manager.is_locked(&self.key).await
-        }
-    }
-
-    /// 内存锁管理器
-    pub struct InMemoryLockManager {
-        locks: parking_lot::RwLock<HashSet<String>>,
-    }
-
-    impl InMemoryLockManager {
-        /// 创建新的内存锁管理器
-        pub fn new() -> Self {
-            Self { locks: parking_lot::RwLock::new(HashSet::new()) }
-        }
-
-        /// 创建锁实例
-        pub fn create_lock(&self, key: impl Into<String>) -> InMemoryLock {
-            InMemoryLock::new(key, Arc::new(self.clone()))
-        }
-
-        async fn acquire_lock(&self, key: &str, _ttl: Duration) -> LockResult<bool> {
-            let mut locks = self.locks.write();
-            if locks.contains(key) {
-                return Ok(false);
-            }
-            locks.insert(key.to_string());
-            Ok(true)
-        }
-
-        async fn release_lock(&self, key: &str) -> LockResult<()> {
-            let mut locks = self.locks.write();
-            if locks.remove(key) { Ok(()) } else { Err(LockError::NotFound(key.to_string())) }
-        }
-
-        async fn is_locked(&self, key: &str) -> bool {
-            self.locks.read().contains(key)
-        }
-    }
-
-    impl Default for InMemoryLockManager {
-        fn default() -> Self {
-            Self::new()
-        }
-    }
-
-    impl Clone for InMemoryLockManager {
-        fn clone(&self) -> Self {
-            Self { locks: parking_lot::RwLock::new(self.locks.read().clone()) }
-        }
-    }
-}
-
-mod feature_flag {
-    use super::*;
+    use std::collections::HashMap;
 
     /// 功能开关策略
     #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -279,13 +87,13 @@ mod feature_flag {
 
     /// 功能开关管理器
     pub struct FeatureFlagManager {
-        flags: parking_lot::RwLock<std::collections::HashMap<String, FlagDefinition>>,
+        flags: parking_lot::RwLock<HashMap<String, FlagDefinition>>,
     }
 
     impl FeatureFlagManager {
         /// 创建新的功能开关管理器
         pub fn new() -> Self {
-            Self { flags: parking_lot::RwLock::new(std::collections::HashMap::new()) }
+            Self { flags: parking_lot::RwLock::new(HashMap::new()) }
         }
 
         /// 注册功能开关
@@ -341,17 +149,13 @@ mod feature_flag {
         async fn is_enabled_for_user(&self, key: &str, user_id: &str) -> bool {
             let flags = self.flags.read();
             if let Some(flag) = flags.get(key) {
-                if !flag.enabled {
-                    return false;
-                }
                 return evaluate(&flag.strategy, user_id);
             }
             false
         }
 
-        async fn get_variant(&self, key: &str) -> Option<String> {
-            let flags = self.flags.read();
-            flags.get(key).and_then(|f| if f.enabled { Some(f.name.clone()) } else { None })
+        async fn get_variant(&self, _key: &str) -> Option<String> {
+            None
         }
     }
 
@@ -378,7 +182,8 @@ mod feature_flag {
     }
 }
 
-mod id_generator {
+/// ID 生成器模块
+pub mod id_generator {
     use parking_lot::Mutex;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -405,11 +210,9 @@ mod id_generator {
         const WORKER_ID_BITS: u64 = 5;
         const DATACENTER_ID_BITS: u64 = 5;
         const SEQUENCE_BITS: u64 = 12;
-
         const MAX_WORKER_ID: u64 = (1 << Self::WORKER_ID_BITS) - 1;
         const MAX_DATACENTER_ID: u64 = (1 << Self::DATACENTER_ID_BITS) - 1;
         const SEQUENCE_MASK: u64 = (1 << Self::SEQUENCE_BITS) - 1;
-
         const WORKER_ID_SHIFT: u64 = Self::SEQUENCE_BITS;
         const DATACENTER_ID_SHIFT: u64 = Self::SEQUENCE_BITS + Self::WORKER_ID_BITS;
         const TIMESTAMP_SHIFT: u64 = Self::SEQUENCE_BITS + Self::WORKER_ID_BITS + Self::DATACENTER_ID_BITS;
@@ -476,11 +279,6 @@ mod id_generator {
         }
     }
 
-    /// UUID 生成器
-    pub struct UuidGenerator {
-        version: UuidVersion,
-    }
-
     /// UUID 版本
     #[derive(Debug, Clone, Copy, Default)]
     pub enum UuidVersion {
@@ -489,6 +287,11 @@ mod id_generator {
         V4,
         /// V7 时间排序 UUID
         V7,
+    }
+
+    /// UUID 生成器
+    pub struct UuidGenerator {
+        version: UuidVersion,
     }
 
     impl UuidGenerator {
@@ -558,5 +361,164 @@ mod id_generator {
         let mut hasher = state.build_hasher();
         hasher.write_u64(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64);
         (hasher.finish() & 0xFF) as u8
+    }
+}
+
+/// 分布式锁模块
+pub mod lock {
+    use super::*;
+
+    /// 锁选项
+    #[derive(Debug, Clone)]
+    pub struct LockOptions {
+        /// 锁的生存时间
+        pub ttl: Duration,
+        /// 等待获取锁的超时时间
+        pub wait_timeout: Duration,
+    }
+
+    impl Default for LockOptions {
+        fn default() -> Self {
+            Self { ttl: Duration::from_secs(30), wait_timeout: Duration::from_secs(10) }
+        }
+    }
+
+    impl LockOptions {
+        /// 创建新的锁选项
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        /// 设置锁的生存时间
+        pub fn with_ttl(mut self, ttl: Duration) -> Self {
+            self.ttl = ttl;
+            self
+        }
+
+        /// 设置等待获取锁的超时时间
+        pub fn with_wait_timeout(mut self, timeout: Duration) -> Self {
+            self.wait_timeout = timeout;
+            self
+        }
+    }
+
+    /// 分布式锁 trait (dyn 兼容)
+    #[allow(async_fn_in_trait)]
+    pub trait DistributedLock: Send + Sync {
+        /// 获取锁 (阻塞直到获取成功或超时)
+        async fn lock(&self) -> WaeResult<()>;
+
+        /// 尝试获取锁 (非阻塞)
+        async fn try_lock(&self) -> WaeResult<bool>;
+
+        /// 释放锁
+        async fn unlock(&self) -> WaeResult<()>;
+
+        /// 带超时的获取锁
+        async fn lock_with_timeout(&self, timeout: Duration) -> WaeResult<()>;
+
+        /// 获取锁的键名
+        fn key(&self) -> &str;
+
+        /// 检查锁是否被持有
+        async fn is_locked(&self) -> bool;
+    }
+
+    /// 内存锁管理器
+    pub struct InMemoryLockManager {
+        locks: parking_lot::RwLock<HashSet<String>>,
+    }
+
+    impl InMemoryLockManager {
+        /// 创建新的内存锁管理器
+        pub fn new() -> Self {
+            Self { locks: parking_lot::RwLock::new(HashSet::new()) }
+        }
+
+        /// 创建锁实例
+        pub fn create_lock(&self, key: impl Into<String>) -> InMemoryLock {
+            InMemoryLock::new(key, Arc::new(self.clone()))
+        }
+
+        async fn acquire_lock(&self, key: &str, _ttl: Duration) -> WaeResult<bool> {
+            let mut locks = self.locks.write();
+            if locks.contains(key) {
+                return Ok(false);
+            }
+            locks.insert(key.to_string());
+            Ok(true)
+        }
+
+        async fn release_lock(&self, key: &str) -> WaeResult<()> {
+            let mut locks = self.locks.write();
+            if locks.remove(key) {
+                return Ok(());
+            }
+            Err(WaeError::not_found("Lock", key))
+        }
+
+        async fn is_locked(&self, key: &str) -> bool {
+            self.locks.read().contains(key)
+        }
+    }
+
+    impl Default for InMemoryLockManager {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl Clone for InMemoryLockManager {
+        fn clone(&self) -> Self {
+            Self { locks: parking_lot::RwLock::new(self.locks.read().clone()) }
+        }
+    }
+
+    /// 内存锁实现
+    pub struct InMemoryLock {
+        key: String,
+        manager: Arc<InMemoryLockManager>,
+    }
+
+    impl InMemoryLock {
+        /// 创建新的内存锁
+        pub fn new(key: impl Into<String>, manager: Arc<InMemoryLockManager>) -> Self {
+            Self { key: key.into(), manager }
+        }
+    }
+
+    impl DistributedLock for InMemoryLock {
+        async fn lock(&self) -> WaeResult<()> {
+            self.lock_with_timeout(Duration::from_secs(30)).await
+        }
+
+        async fn try_lock(&self) -> WaeResult<bool> {
+            self.manager.acquire_lock(&self.key, Duration::from_secs(30)).await
+        }
+
+        async fn unlock(&self) -> WaeResult<()> {
+            self.manager.release_lock(&self.key).await
+        }
+
+        async fn lock_with_timeout(&self, timeout: Duration) -> WaeResult<()> {
+            let start = std::time::Instant::now();
+            loop {
+                if self.manager.acquire_lock(&self.key, Duration::from_secs(30)).await? {
+                    return Ok(());
+                }
+                if start.elapsed() >= timeout {
+                    return Err(WaeError::operation_timeout(format!("Lock key: {}", self.key), timeout.as_millis() as u64));
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        }
+
+        fn key(&self) -> &str {
+            &self.key
+        }
+
+        async fn is_locked(&self) -> bool {
+            self.manager.is_locked(&self.key).await
+        }
     }
 }

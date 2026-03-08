@@ -13,7 +13,7 @@ use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use wae_request::HttpClient;
-use wae_types::{BillingDimensions, CloudError, hex_encode};
+use wae_types::{BillingDimensions, WaeError, hex_encode};
 
 /// 火山引擎服务提供商
 ///
@@ -111,22 +111,19 @@ impl ChatCapability for VolcengineProvider {
             .http_client
             .post_with_headers(url, serde_json::to_vec(&body).unwrap(), headers)
             .await
-            .map_err(|e| CloudError::internal(e.to_string()))?;
+            .map_err(|e| WaeError::internal(e.to_string()))?;
 
         if !response.is_success() {
             let error_text = response.text().unwrap_or_default();
-            return Err(CloudError::internal(format!(
-                "Volcengine Doubao API error: HTTP {} - {}",
-                response.status, error_text
-            )));
+            return Err(WaeError::internal(format!("Volcengine Doubao API error: HTTP {} - {}", response.status, error_text)));
         }
 
         let result: serde_json::Value =
-            response.json().map_err(|e| CloudError::internal(format!("Failed to parse response: {}", e)))?;
+            response.json().map_err(|e| WaeError::internal(format!("Failed to parse response: {}", e)))?;
 
         let content = result["choices"][0]["message"]["content"]
             .as_str()
-            .ok_or_else(|| CloudError::internal("Failed to parse Doubao response".to_string()))?;
+            .ok_or_else(|| WaeError::internal("Failed to parse Doubao response".to_string()))?;
 
         Ok(content.to_string())
     }
@@ -170,15 +167,15 @@ impl AiImageCapability for VolcengineProvider {
             .http_client
             .post_with_headers(&url, payload_bytes, headers)
             .await
-            .map_err(|e| CloudError::internal(e.to_string()))?;
+            .map_err(|e| WaeError::internal(e.to_string()))?;
 
         if !response.is_success() {
             let error_text = response.text().unwrap_or_default();
-            return Err(CloudError::internal(format!("Volcengine Image V3 error: HTTP {} - {}", response.status, error_text)));
+            return Err(WaeError::internal(format!("Volcengine Image V3 error: HTTP {} - {}", response.status, error_text)));
         }
 
         let result: serde_json::Value =
-            response.json().map_err(|e| CloudError::internal(format!("Failed to parse response: {}", e)))?;
+            response.json().map_err(|e| WaeError::internal(format!("Failed to parse response: {}", e)))?;
 
         let mut image_urls = Vec::new();
 
@@ -201,7 +198,7 @@ impl AiImageCapability for VolcengineProvider {
         }
 
         if image_urls.is_empty() {
-            return Err(CloudError::internal(format!("Volcengine Image V3 returned no images. Response: {}", result)));
+            return Err(WaeError::internal(format!("Volcengine Image V3 returned no images. Response: {}", result)));
         }
 
         Ok(AiImageOutput {
@@ -219,11 +216,11 @@ impl AiImageCapability for VolcengineProvider {
 
 impl VideoGenerationCapability for VolcengineProvider {
     async fn generate_video(&self, _task: &AiVideoTask, _config: &AiConfig) -> AiResult<AiVideoOutput> {
-        Err(CloudError::internal("Volcengine video generation not implemented yet".to_string()))
+        Err(WaeError::internal("Volcengine video generation not implemented yet".to_string()))
     }
 
     async fn get_video_task_status(&self, _task_id: &str, _config: &AiConfig) -> AiResult<AiVideoOutput> {
-        Err(CloudError::internal("Volcengine video status check not implemented yet".to_string()))
+        Err(WaeError::internal("Volcengine video status check not implemented yet".to_string()))
     }
 }
 

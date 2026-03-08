@@ -10,39 +10,7 @@ use figment::{
     providers::{Env, Format, Toml, Yaml},
 };
 use serde::de::DeserializeOwned;
-use std::fmt;
-
-/// 配置错误类型
-#[derive(Debug)]
-pub enum ConfigError {
-    /// 配置加载失败
-    LoadFailed(String),
-
-    /// 配置解析失败
-    ParseFailed(String),
-
-    /// 配置验证失败
-    ValidationFailed(String),
-
-    /// 缺少必需配置
-    MissingConfig(String),
-}
-
-impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ConfigError::LoadFailed(msg) => write!(f, "Failed to load config: {}", msg),
-            ConfigError::ParseFailed(msg) => write!(f, "Failed to parse config: {}", msg),
-            ConfigError::ValidationFailed(msg) => write!(f, "Config validation failed: {}", msg),
-            ConfigError::MissingConfig(msg) => write!(f, "Missing required config: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for ConfigError {}
-
-/// 配置加载结果类型
-pub type ConfigResult<T> = Result<T, ConfigError>;
+use wae_types::{WaeError, WaeResult};
 
 /// 配置加载器
 ///
@@ -114,10 +82,10 @@ impl ConfigLoader {
     ///
     /// # Type Parameters
     /// * `T` - 配置类型，需实现 `DeserializeOwned`
-    pub fn extract<T: DeserializeOwned>(self) -> ConfigResult<T> {
+    pub fn extract<T: DeserializeOwned>(self) -> WaeResult<T> {
         self.figment.extract().map_err(|e| {
             let msg = e.to_string();
-            if msg.contains("missing field") { ConfigError::MissingConfig(msg) } else { ConfigError::ParseFailed(msg) }
+            if msg.contains("missing field") { WaeError::config_missing(msg) } else { WaeError::config_invalid("config", msg) }
         })
     }
 
@@ -126,8 +94,8 @@ impl ConfigLoader {
     /// # Type Parameters
     /// * `T` - 配置类型，需实现 `DeserializeOwned`
     /// * `context` - 错误上下文信息
-    pub fn extract_with_context<T: DeserializeOwned>(self, context: &str) -> ConfigResult<T> {
-        self.extract().map_err(|e| ConfigError::LoadFailed(format!("{}: {}", context, e)))
+    pub fn extract_with_context<T: DeserializeOwned>(self, context: &str) -> WaeResult<T> {
+        self.extract().map_err(|e| WaeError::internal(format!("{}: {}", context, e)))
     }
 }
 
@@ -141,7 +109,7 @@ impl ConfigLoader {
 /// # Arguments
 /// * `config_path` - 配置文件路径
 /// * `env_prefix` - 环境变量前缀
-pub fn load_config<T: DeserializeOwned>(config_path: &str, env_prefix: &str) -> ConfigResult<T> {
+pub fn load_config<T: DeserializeOwned>(config_path: &str, env_prefix: &str) -> WaeResult<T> {
     ConfigLoader::new().with_toml(config_path).with_env(env_prefix).extract()
 }
 
@@ -152,6 +120,6 @@ pub fn load_config<T: DeserializeOwned>(config_path: &str, env_prefix: &str) -> 
 ///
 /// # Arguments
 /// * `prefix` - 环境变量前缀
-pub fn from_env<T: DeserializeOwned>(prefix: &str) -> ConfigResult<T> {
+pub fn from_env<T: DeserializeOwned>(prefix: &str) -> WaeResult<T> {
     ConfigLoader::new().with_env(prefix).extract()
 }

@@ -3,8 +3,50 @@
 //! 提供 axum 的 Session 提取器实现。
 
 use crate::Session;
-use axum::{extract::FromRequestParts, http::request::Parts};
+use axum::{
+    body::Body,
+    extract::FromRequestParts,
+    http::{StatusCode, request::Parts},
+    response::{IntoResponse, Response},
+};
 use std::sync::Arc;
+use wae_types::WaeError;
+
+/// Session 提取器拒绝错误
+#[derive(Debug, Clone)]
+pub struct SessionRejection {
+    inner: WaeError,
+}
+
+impl SessionRejection {
+    fn new(error: WaeError) -> Self {
+        Self { inner: error }
+    }
+
+    /// 获取内部错误
+    pub fn into_inner(self) -> WaeError {
+        self.inner
+    }
+}
+
+impl std::fmt::Display for SessionRejection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+impl std::error::Error for SessionRejection {}
+
+impl IntoResponse for SessionRejection {
+    fn into_response(self) -> Response {
+        let status = self.inner.http_status();
+        let body = Body::from(self.inner.to_string());
+        Response::builder()
+            .status(StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR))
+            .body(body)
+            .unwrap()
+    }
+}
 
 /// Session 提取器
 ///
@@ -100,30 +142,6 @@ where
             .get::<Arc<Session>>()
             .cloned()
             .map(|session| SessionExtractor { session })
-            .ok_or(SessionRejection::MissingSession)
-    }
-}
-
-/// Session 提取器拒绝错误
-#[derive(Debug, Clone)]
-pub enum SessionRejection {
-    /// Session 不存在
-    MissingSession,
-}
-
-impl std::fmt::Display for SessionRejection {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SessionRejection::MissingSession => write!(f, "Session not found in request extensions"),
-        }
-    }
-}
-
-impl std::error::Error for SessionRejection {}
-
-impl axum::response::IntoResponse for SessionRejection {
-    fn into_response(self) -> axum::response::Response {
-        let body = axum::body::Body::from(self.to_string());
-        axum::http::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(body).unwrap()
+            .ok_or_else(|| SessionRejection::new(WaeError::internal("Session not found in request extensions")))
     }
 }

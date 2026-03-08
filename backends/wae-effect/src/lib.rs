@@ -4,7 +4,7 @@
 
 #![warn(missing_docs)]
 
-use std::{collections::HashMap, fmt, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     body::Body,
@@ -12,6 +12,7 @@ use axum::{
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
 };
+use wae_types::{WaeError, WaeResult};
 
 /// 依赖容器
 ///
@@ -33,12 +34,12 @@ impl Dependencies {
     }
 
     /// 获取服务
-    pub fn get<T: Clone + Send + Sync + 'static>(&self, name: &str) -> Result<T, EffectError> {
+    pub fn get<T: Clone + Send + Sync + 'static>(&self, name: &str) -> WaeResult<T> {
         self.services
             .get(name)
             .and_then(|s| s.downcast_ref::<T>())
             .cloned()
-            .ok_or_else(|| EffectError::NotFound(name.to_string()))
+            .ok_or_else(|| WaeError::not_found("Dependency", name))
     }
 }
 
@@ -57,7 +58,7 @@ impl Effectful {
     }
 
     /// 获取依赖
-    pub fn get<T: Clone + Send + Sync + 'static>(&self, name: &str) -> Result<T, EffectError> {
+    pub fn get<T: Clone + Send + Sync + 'static>(&self, name: &str) -> WaeResult<T> {
         self.deps.get(name)
     }
 
@@ -114,58 +115,14 @@ impl AlgebraicEffect {
     }
 }
 
-/// 效应错误类型
-#[derive(Debug)]
-pub enum EffectError {
-    /// 依赖未找到
-    NotFound(String),
+/// WaeError 的包装类型，用于解决 orphan rule 问题
+pub struct WaeErrorResponse(pub WaeError);
 
-    /// 类型转换失败
-    TypeMismatch {
-        /// 依赖名称
-        name: String,
-        /// 期望类型
-        expected: String,
-        /// 实际类型
-        actual: String,
-    },
-
-    /// 配置加载失败
-    ConfigError(wae_config::ConfigError),
-
-    /// 数据库错误
-    DatabaseError(String),
-}
-
-impl fmt::Display for EffectError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EffectError::NotFound(msg) => write!(f, "Dependency not found: {}", msg),
-            EffectError::TypeMismatch { name, expected, actual } => {
-                write!(f, "Type mismatch for {}: expected {}, got {}", name, expected, actual)
-            }
-            EffectError::ConfigError(err) => write!(f, "Config error: {}", err),
-            EffectError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for EffectError {}
-
-impl From<wae_config::ConfigError> for EffectError {
-    fn from(err: wae_config::ConfigError) -> Self {
-        EffectError::ConfigError(err)
-    }
-}
-
-impl IntoResponse for EffectError {
+impl IntoResponse for WaeErrorResponse {
     fn into_response(self) -> Response {
-        let (status, message) = match &self {
-            EffectError::NotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
-            EffectError::TypeMismatch { .. } => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            EffectError::ConfigError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            EffectError::DatabaseError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-        };
-        (status, message).into_response()
+        let status = self.0.http_status();
+        let body = Body::from(self.0.to_string());
+        let status_code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        axum::http::Response::builder().status(status_code).body(body).unwrap()
     }
 }

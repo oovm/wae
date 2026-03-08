@@ -18,12 +18,12 @@ pub use capabilities::{
 };
 
 use serde::{Deserialize, Serialize};
-pub use wae_types::{CloudError, CloudResult};
+pub use wae_types::{WaeError, WaeResult};
 
 /// AI 操作结果类型
-pub type AiResult<T> = CloudResult<T>;
+pub type AiResult<T> = WaeResult<T>;
 /// AI 错误类型
-pub type AiError = CloudError;
+pub type AiError = WaeError;
 
 /// AI 服务配置
 #[derive(Clone, Debug, Serialize, Deserialize)]

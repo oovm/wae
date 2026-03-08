@@ -2,7 +2,6 @@
 //!
 //! 提供令牌桶和滑动窗口两种限流算法实现。
 
-use crate::error::{ResilienceError, ResilienceResult};
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -11,15 +10,16 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use wae_types::WaeError;
 
 /// 限流器 trait
 #[async_trait]
 pub trait RateLimiter: Send + Sync {
     /// 获取许可 (阻塞直到获取成功)
-    async fn acquire(&self) -> ResilienceResult<()>;
+    async fn acquire(&self) -> Result<(), WaeError>;
 
     /// 尝试获取许可 (非阻塞)
-    fn try_acquire(&self) -> ResilienceResult<()>;
+    fn try_acquire(&self) -> Result<(), WaeError>;
 
     /// 获取当前可用许可数
     fn available_permits(&self) -> u64;
@@ -85,7 +85,7 @@ impl TokenBucket {
 
 #[async_trait]
 impl RateLimiter for TokenBucket {
-    async fn acquire(&self) -> ResilienceResult<()> {
+    async fn acquire(&self) -> Result<(), WaeError> {
         loop {
             self.refill();
 
@@ -105,7 +105,7 @@ impl RateLimiter for TokenBucket {
         }
     }
 
-    fn try_acquire(&self) -> ResilienceResult<()> {
+    fn try_acquire(&self) -> Result<(), WaeError> {
         self.refill();
 
         let mut tokens = self.tokens.lock();
@@ -114,7 +114,7 @@ impl RateLimiter for TokenBucket {
             Ok(())
         }
         else {
-            Err(ResilienceError::RateLimitExceeded)
+            Err(WaeError::rate_limit_exceeded(self.config.capacity))
         }
     }
 
@@ -194,7 +194,7 @@ impl SlidingWindow {
 
 #[async_trait]
 impl RateLimiter for SlidingWindow {
-    async fn acquire(&self) -> ResilienceResult<()> {
+    async fn acquire(&self) -> Result<(), WaeError> {
         loop {
             self.cleanup();
 
@@ -222,7 +222,7 @@ impl RateLimiter for SlidingWindow {
         }
     }
 
-    fn try_acquire(&self) -> ResilienceResult<()> {
+    fn try_acquire(&self) -> Result<(), WaeError> {
         self.cleanup();
 
         let mut timestamps = self.timestamps.lock();
@@ -231,7 +231,7 @@ impl RateLimiter for SlidingWindow {
             Ok(())
         }
         else {
-            Err(ResilienceError::RateLimitExceeded)
+            Err(WaeError::rate_limit_exceeded(self.config.max_requests))
         }
     }
 

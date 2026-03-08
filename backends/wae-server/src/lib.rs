@@ -21,4 +21,4 @@ pub use wae_tools as tools;
 pub use wae_types as types;
 pub use wae_websocket as websocket;
 
-pub use types::{CloudError, CloudResult};
+pub use types::{WaeError, WaeResult};

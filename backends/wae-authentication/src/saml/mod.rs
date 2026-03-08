@@ -4,7 +4,6 @@
 
 mod assertion;
 mod config;
-mod errors;
 mod metadata;
 mod request;
 mod response;
@@ -12,7 +11,6 @@ mod service;
 
 pub use assertion::*;
 pub use config::*;
-pub use errors::*;
 pub use metadata::*;
 pub use request::*;
 pub use response::*;

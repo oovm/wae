@@ -1,9 +1,13 @@
 //! JWT 服务实现
 
-use crate::jwt::{AccessTokenClaims, JwtAlgorithm, JwtClaims, JwtConfig, JwtError, JwtResult, RefreshTokenClaims};
+use crate::jwt::{AccessTokenClaims, JwtAlgorithm, JwtClaims, JwtConfig, RefreshTokenClaims};
 use chrono::Utc;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Serialize, de::DeserializeOwned};
+use wae_types::{WaeError, WaeErrorKind};
+
+/// JWT 结果类型
+pub type JwtResult<T> = Result<T, WaeError>;
 
 /// JWT 服务
 #[derive(Debug, Clone)]
@@ -32,15 +36,12 @@ impl JwtService {
             }
             JwtAlgorithm::RS256 | JwtAlgorithm::RS384 | JwtAlgorithm::RS512 | JwtAlgorithm::ES256 | JwtAlgorithm::ES384 => {
                 let encoding_key =
-                    EncodingKey::from_rsa_pem(config.secret.as_bytes()).map_err(|e| JwtError::KeyError(e.to_string()))?;
+                    EncodingKey::from_rsa_pem(config.secret.as_bytes()).map_err(|_e| WaeError::new(WaeErrorKind::KeyError))?;
 
-                let public_key = config
-                    .public_key
-                    .as_ref()
-                    .ok_or_else(|| JwtError::KeyError("public key is required for asymmetric algorithms".into()))?;
+                let public_key = config.public_key.as_ref().ok_or_else(|| WaeError::new(WaeErrorKind::KeyError))?;
 
                 let decoding_key =
-                    DecodingKey::from_rsa_pem(public_key.as_bytes()).map_err(|e| JwtError::KeyError(e.to_string()))?;
+                    DecodingKey::from_rsa_pem(public_key.as_bytes()).map_err(|_e| WaeError::new(WaeErrorKind::KeyError))?;
 
                 Ok((encoding_key, decoding_key))
             }
@@ -53,7 +54,21 @@ impl JwtService {
     /// * `claims` - JWT Claims
     pub fn generate_token<T: Serialize>(&self, claims: &T) -> JwtResult<String> {
         let header = Header::new(self.config.algorithm.into());
-        encode(&header, claims, &self.encoding_key).map_err(Into::into)
+        encode(&header, claims, &self.encoding_key).map_err(|e| {
+            use jsonwebtoken::errors::ErrorKind;
+            match e.kind() {
+                ErrorKind::InvalidToken => WaeError::invalid_token("malformed token"),
+                ErrorKind::InvalidSignature => WaeError::invalid_signature(),
+                ErrorKind::ExpiredSignature => WaeError::token_expired(),
+                ErrorKind::ImmatureSignature => WaeError::token_not_valid_yet(),
+                ErrorKind::InvalidAlgorithm => WaeError::new(WaeErrorKind::InvalidAlgorithm),
+                ErrorKind::MissingRequiredClaim(claim) => WaeError::missing_claim(claim),
+                ErrorKind::InvalidIssuer => WaeError::invalid_claim("issuer"),
+                ErrorKind::InvalidAudience => WaeError::invalid_audience(),
+                ErrorKind::InvalidSubject => WaeError::invalid_claim("subject"),
+                _ => WaeError::invalid_token(e.to_string()),
+            }
+        })
     }
 
     /// 验证令牌
@@ -77,7 +92,21 @@ impl JwtService {
 
         validation.leeway = self.config.leeway_seconds as u64;
 
-        let token_data = decode::<T>(token, &self.decoding_key, &validation)?;
+        let token_data = decode::<T>(token, &self.decoding_key, &validation).map_err(|e| {
+            use jsonwebtoken::errors::ErrorKind;
+            match e.kind() {
+                ErrorKind::InvalidToken => WaeError::invalid_token("malformed token"),
+                ErrorKind::InvalidSignature => WaeError::invalid_signature(),
+                ErrorKind::ExpiredSignature => WaeError::token_expired(),
+                ErrorKind::ImmatureSignature => WaeError::token_not_valid_yet(),
+                ErrorKind::InvalidAlgorithm => WaeError::new(WaeErrorKind::InvalidAlgorithm),
+                ErrorKind::MissingRequiredClaim(claim) => WaeError::missing_claim(claim),
+                ErrorKind::InvalidIssuer => WaeError::invalid_claim("issuer"),
+                ErrorKind::InvalidAudience => WaeError::invalid_audience(),
+                ErrorKind::InvalidSubject => WaeError::invalid_claim("subject"),
+                _ => WaeError::invalid_token(e.to_string()),
+            }
+        })?;
         Ok(token_data.claims)
     }
 
@@ -156,14 +185,14 @@ impl JwtService {
         let token_type: Option<String> = claims.custom.get("token_type").and_then(|v| serde_json::from_value(v.clone()).ok());
 
         if token_type.as_deref() != Some("refresh") {
-            return Err(JwtError::InvalidToken("not a refresh token".into()));
+            return Err(WaeError::invalid_token("not a refresh token"));
         }
 
         let session_id: String = claims
             .custom
             .get("session_id")
             .and_then(|v| serde_json::from_value(v.clone()).ok())
-            .ok_or_else(|| JwtError::MissingClaim("session_id".into()))?;
+            .ok_or_else(|| WaeError::missing_claim("session_id"))?;
 
         let version: u32 = claims.custom.get("version").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or(0);
 
@@ -178,7 +207,21 @@ impl JwtService {
         let mut validation = Validation::new(self.config.algorithm.into());
         validation.insecure_disable_signature_validation();
 
-        let token_data = decode::<T>(token, &self.decoding_key, &validation)?;
+        let token_data = decode::<T>(token, &self.decoding_key, &validation).map_err(|e| {
+            use jsonwebtoken::errors::ErrorKind;
+            match e.kind() {
+                ErrorKind::InvalidToken => WaeError::invalid_token("malformed token"),
+                ErrorKind::InvalidSignature => WaeError::invalid_signature(),
+                ErrorKind::ExpiredSignature => WaeError::token_expired(),
+                ErrorKind::ImmatureSignature => WaeError::token_not_valid_yet(),
+                ErrorKind::InvalidAlgorithm => WaeError::new(WaeErrorKind::InvalidAlgorithm),
+                ErrorKind::MissingRequiredClaim(claim) => WaeError::missing_claim(claim),
+                ErrorKind::InvalidIssuer => WaeError::invalid_claim("issuer"),
+                ErrorKind::InvalidAudience => WaeError::invalid_audience(),
+                ErrorKind::InvalidSubject => WaeError::invalid_claim("subject"),
+                _ => WaeError::invalid_token(e.to_string()),
+            }
+        })?;
         Ok(token_data.claims)
     }
 

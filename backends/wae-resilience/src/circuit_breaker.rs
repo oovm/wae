@@ -2,7 +2,6 @@
 //!
 //! 实现熔断器模式，防止级联故障，提供系统保护。
 
-use crate::error::ResilienceError;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -11,6 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracing::{debug, warn};
+use wae_types::WaeError;
 
 /// 熔断器状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -235,14 +235,14 @@ impl CircuitBreaker {
     }
 
     /// 执行受保护的异步操作
-    pub async fn execute<F, T, E, Fut>(&self, operation: F) -> Result<T, ResilienceError>
+    pub async fn execute<F, T, E, Fut>(&self, operation: F) -> Result<T, WaeError>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, E>>,
         E: std::fmt::Display,
     {
         if !self.is_call_allowed() {
-            return Err(ResilienceError::CircuitBreakerOpen);
+            return Err(WaeError::circuit_breaker_open(&self.name));
         }
 
         match operation().await {
@@ -252,7 +252,7 @@ impl CircuitBreaker {
             }
             Err(e) => {
                 self.record_failure();
-                Err(ResilienceError::MaxRetriesExceeded(e.to_string()))
+                Err(WaeError::internal(e.to_string()))
             }
         }
     }

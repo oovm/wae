@@ -1,10 +1,14 @@
 //! OAuth2 客户端实现
 
-use crate::oauth2::{AuthorizationUrl, OAuth2ClientConfig, OAuth2Error, OAuth2Result, TokenResponse, UserInfo};
+use crate::oauth2::{AuthorizationUrl, OAuth2ClientConfig, TokenResponse, UserInfo};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use wae_request::{HttpClient, HttpClientConfig, HttpError};
+use wae_request::{HttpClient, HttpClientConfig};
+use wae_types::{WaeError, WaeErrorKind};
+
+/// OAuth2 结果类型
+pub type OAuth2Result<T> = Result<T, WaeError>;
 
 /// OAuth2 客户端
 #[derive(Debug, Clone)]
@@ -99,14 +103,14 @@ impl OAuth2Client {
             .http_client
             .post_with_headers(&self.config.provider.token_url, form_body.into_bytes(), self.form_headers())
             .await
-            .map_err(OAuth2Error::from)?;
+            .map_err(WaeError::from)?;
 
         if !response.is_success() {
             let error_text = response.text().unwrap_or_default();
-            return Err(OAuth2Error::ProviderError(error_text));
+            return Err(WaeError::new(WaeErrorKind::OAuth2ProviderError { message: error_text }));
         }
 
-        let token_response: TokenResponse = response.json().map_err(OAuth2Error::from)?;
+        let token_response: TokenResponse = response.json().map_err(WaeError::from)?;
         Ok(token_response)
     }
 
@@ -127,14 +131,14 @@ impl OAuth2Client {
             .http_client
             .post_with_headers(&self.config.provider.token_url, form_body.into_bytes(), self.form_headers())
             .await
-            .map_err(OAuth2Error::from)?;
+            .map_err(WaeError::from)?;
 
         if !response.is_success() {
             let error_text = response.text().unwrap_or_default();
-            return Err(OAuth2Error::ProviderError(error_text));
+            return Err(WaeError::new(WaeErrorKind::OAuth2ProviderError { message: error_text }));
         }
 
-        let token_response: TokenResponse = response.json().map_err(OAuth2Error::from)?;
+        let token_response: TokenResponse = response.json().map_err(WaeError::from)?;
         Ok(token_response)
     }
 
@@ -148,19 +152,19 @@ impl OAuth2Client {
             .provider
             .userinfo_url
             .as_ref()
-            .ok_or_else(|| OAuth2Error::ConfigurationError("userinfo_url not configured".into()))?;
+            .ok_or_else(|| WaeError::config_invalid("userinfo_url", "not configured"))?;
 
         let mut headers = HashMap::new();
         headers.insert("Authorization".to_string(), format!("Bearer {}", access_token));
 
-        let response = self.http_client.get_with_headers(userinfo_url, headers).await.map_err(OAuth2Error::from)?;
+        let response = self.http_client.get_with_headers(userinfo_url, headers).await.map_err(WaeError::from)?;
 
         if !response.is_success() {
             let error_text = response.text().unwrap_or_default();
-            return Err(OAuth2Error::ProviderError(error_text));
+            return Err(WaeError::new(WaeErrorKind::OAuth2ProviderError { message: error_text }));
         }
 
-        let user_info: UserInfo = response.json().map_err(OAuth2Error::from)?;
+        let user_info: UserInfo = response.json().map_err(WaeError::from)?;
         Ok(user_info)
     }
 
@@ -175,7 +179,7 @@ impl OAuth2Client {
             .provider
             .revocation_url
             .as_ref()
-            .ok_or_else(|| OAuth2Error::ConfigurationError("revocation_url not configured".into()))?;
+            .ok_or_else(|| WaeError::config_invalid("revocation_url", "not configured"))?;
 
         let mut params = HashMap::new();
         params.insert("token", token.to_string());
@@ -192,11 +196,11 @@ impl OAuth2Client {
             .http_client
             .post_with_headers(revocation_url, form_body.into_bytes(), self.form_headers())
             .await
-            .map_err(OAuth2Error::from)?;
+            .map_err(WaeError::from)?;
 
         if !response.is_success() {
             let error_text = response.text().unwrap_or_default();
-            return Err(OAuth2Error::ProviderError(error_text));
+            return Err(WaeError::new(WaeErrorKind::OAuth2ProviderError { message: error_text }));
         }
 
         Ok(())
@@ -212,7 +216,7 @@ impl OAuth2Client {
             return Ok(());
         }
 
-        if expected == received { Ok(()) } else { Err(OAuth2Error::StateMismatch) }
+        if expected == received { Ok(()) } else { Err(WaeError::new(WaeErrorKind::StateMismatch)) }
     }
 
     fn generate_state(&self) -> String {
@@ -253,24 +257,6 @@ impl OAuth2Client {
     /// 获取配置
     pub fn config(&self) -> &OAuth2ClientConfig {
         &self.config
-    }
-}
-
-impl From<HttpError> for OAuth2Error {
-    fn from(err: HttpError) -> Self {
-        match err {
-            HttpError::InvalidUrl(msg) => OAuth2Error::ConfigurationError(msg),
-            HttpError::Timeout => OAuth2Error::RequestError("Request timeout".into()),
-            HttpError::ConnectionFailed(msg) => OAuth2Error::RequestError(msg),
-            HttpError::DnsFailed(msg) => OAuth2Error::RequestError(msg),
-            HttpError::TlsError(msg) => OAuth2Error::RequestError(msg),
-            HttpError::StatusError { status, body } => match status {
-                401 => OAuth2Error::AccessDenied(body),
-                403 => OAuth2Error::AccessDenied(body),
-                _ => OAuth2Error::ProviderError(format!("HTTP {}: {}", status, body)),
-            },
-            _ => OAuth2Error::RequestError(err.to_string()),
-        }
     }
 }
 

@@ -1,30 +1,30 @@
 use hyper::StatusCode;
 use wae_https::error::*;
+use wae_types::ErrorCategory;
 
 #[test]
-fn test_http_error_status_code() {
-    assert_eq!(HttpError::BadRequest("test".to_string()).status_code(), StatusCode::BAD_REQUEST);
-    assert_eq!(HttpError::Unauthorized("test".to_string()).status_code(), StatusCode::UNAUTHORIZED);
-    assert_eq!(HttpError::NotFound("test".to_string()).status_code(), StatusCode::NOT_FOUND);
-    assert_eq!(HttpError::InternalServerError("test".to_string()).status_code(), StatusCode::INTERNAL_SERVER_ERROR);
-}
+fn test_http_error_category() {
+    let error = HttpError::invalid_params("test", "test reason");
+    assert_eq!(error.category(), ErrorCategory::Validation);
 
-#[test]
-fn test_http_error_error_code() {
-    assert_eq!(HttpError::BadRequest("test".to_string()).error_code(), "BAD_REQUEST");
-    assert_eq!(HttpError::Unauthorized("test".to_string()).error_code(), "UNAUTHORIZED");
-    assert_eq!(HttpError::NotFound("test".to_string()).error_code(), "NOT_FOUND");
+    let error = HttpError::invalid_token("test reason");
+    assert_eq!(error.category(), ErrorCategory::Auth);
+
+    let error = HttpError::not_found("resource", "id");
+    assert_eq!(error.category(), ErrorCategory::NotFound);
+
+    let error = HttpError::internal("test reason");
+    assert_eq!(error.category(), ErrorCategory::Internal);
 }
 
 #[test]
 fn test_error_response() {
-    let error = HttpError::NotFound("资源不存在".to_string());
+    let error = HttpError::not_found("资源", "123");
     let response = ErrorResponse::from_error(&error);
 
     assert!(!response.success);
-    assert_eq!(response.code, "NOT_FOUND");
-    assert_eq!(response.message, "资源不存在");
-    assert!(response.details.is_none());
+    assert_eq!(response.code, "wae.error.not_found.resource");
+    assert!(response.details.is_some());
     assert!(response.trace_id.is_none());
 }
 
@@ -34,15 +34,24 @@ fn test_error_ext() {
     let http_result = result.bad_request();
 
     match http_result {
-        Err(HttpError::BadRequest(msg)) => assert_eq!(msg, "test error"),
-        _ => panic!("Expected BadRequest error"),
+        Err(e) => assert_eq!(e.category(), ErrorCategory::Validation),
+        _ => panic!("Expected Validation error"),
     }
 }
 
 #[test]
 fn test_from_wae_error() {
-    let wae_error = wae_types::WaeError::not_found("资源不存在");
+    let wae_error = wae_types::WaeError::not_found("资源", "123");
     let http_error: HttpError = wae_error.into();
 
-    assert!(matches!(http_error, HttpError::NotFound(_)));
+    assert_eq!(http_error.category(), ErrorCategory::NotFound);
+}
+
+#[test]
+fn test_http_error_from_wae_error() {
+    let wae_error = wae_types::WaeError::invalid_token("test");
+    let http_error = HttpError::new(wae_error);
+
+    assert_eq!(http_error.category(), ErrorCategory::Auth);
+    assert_eq!(http_error.i18n_key(), "wae.error.auth.invalid_token");
 }

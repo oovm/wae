@@ -78,7 +78,7 @@ impl PostgresConnection {
 impl DatabaseConnection for PostgresConnection {
     async fn query(&self, sql: &str) -> DatabaseResult<DatabaseRows> {
         let rows = self.client.query(sql, &[]).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed { query: Some(sql.to_string()), message: e.to_string() })
+            WaeError::database(DatabaseErrorKind::QueryFailed { query: Some(sql.to_string()), reason: e.to_string() })
         })?;
         Ok(DatabaseRows::new_postgres(rows))
     }
@@ -87,14 +87,14 @@ impl DatabaseConnection for PostgresConnection {
         let postgres_params: Vec<PostgresParam> = params.into_iter().map(value_to_postgres_param).collect();
         let postgres_refs: Vec<&(dyn ToSql + Sync)> = postgres_params.iter().map(|p| p as &(dyn ToSql + Sync)).collect();
         let rows = self.client.query(sql, postgres_refs.as_slice()).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed { query: Some(sql.to_string()), message: e.to_string() })
+            WaeError::database(DatabaseErrorKind::QueryFailed { query: Some(sql.to_string()), reason: e.to_string() })
         })?;
         Ok(DatabaseRows::new_postgres(rows))
     }
 
     async fn execute(&self, sql: &str) -> DatabaseResult<u64> {
         let affected = self.client.execute(sql, &[]).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed { query: Some(sql.to_string()), message: e.to_string() })
+            WaeError::database(DatabaseErrorKind::ExecuteFailed { statement: Some(sql.to_string()), reason: e.to_string() })
         })?;
         Ok(affected as u64)
     }
@@ -103,7 +103,7 @@ impl DatabaseConnection for PostgresConnection {
         let postgres_params: Vec<PostgresParam> = params.into_iter().map(value_to_postgres_param).collect();
         let postgres_refs: Vec<&(dyn ToSql + Sync)> = postgres_params.iter().map(|p| p as &(dyn ToSql + Sync)).collect();
         let affected = self.client.execute(sql, postgres_refs.as_slice()).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed { query: Some(sql.to_string()), message: e.to_string() })
+            WaeError::database(DatabaseErrorKind::ExecuteFailed { statement: Some(sql.to_string()), reason: e.to_string() })
         })?;
         Ok(affected as u64)
     }
@@ -123,30 +123,38 @@ impl PostgresDatabaseService {
     pub async fn new(config: &DatabaseConfig) -> DatabaseResult<Self> {
         match config {
             #[cfg(feature = "turso")]
-            DatabaseConfig::Turso { .. } => Err(WaeError::internal("Use DatabaseService for Turso")),
+            DatabaseConfig::Turso { .. } => Err(WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                reason: "Use DatabaseService for Turso".to_string(),
+            })),
             DatabaseConfig::Postgres { connection_string, max_connections } => {
                 let config: Config = connection_string.parse().map_err(|e| {
-                    WaeError::database(DatabaseErrorKind::ConnectionFailed {
-                        message: format!("Invalid connection string: {}", e),
+                    WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                        reason: format!("Invalid connection string: {}", e),
                     })
                 })?;
                 let manager_config = ManagerConfig { recycling_method: RecyclingMethod::Fast };
                 let manager = Manager::from_config(config, NoTls, manager_config);
                 let max_size = max_connections.unwrap_or(10);
                 let pool = Pool::builder(manager).max_size(max_size).build().map_err(|e| {
-                    WaeError::database(DatabaseErrorKind::ConnectionFailed { message: format!("Failed to create pool: {}", e) })
+                    WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                        reason: format!("Failed to create pool: {}", e),
+                    })
                 })?;
                 Ok(Self { pool })
             }
             #[cfg(feature = "mysql")]
-            DatabaseConfig::MySql { .. } => Err(WaeError::internal("Use MySqlDatabaseService for MySQL")),
+            DatabaseConfig::MySql { .. } => Err(WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                reason: "Use MySqlDatabaseService for MySQL".to_string(),
+            })),
         }
     }
 
     /// 从连接池获取数据库连接
     pub async fn connect(&self) -> DatabaseResult<PostgresConnection> {
         let client = self.pool.get().await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ConnectionFailed { message: format!("Failed to get connection: {}", e) })
+            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                reason: format!("Failed to get connection: {}", e),
+            })
         })?;
         Ok(PostgresConnection::new(client))
     }

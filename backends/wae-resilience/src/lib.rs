@@ -9,13 +9,15 @@
 
 mod bulkhead;
 mod circuit_breaker;
-mod error;
 mod pipeline;
 mod rate_limiter;
 mod retry;
 mod timeout;
 
-pub use error::{ResilienceError, ResilienceResult};
+pub use wae_types::{WaeError, WaeResult};
+
+/// 弹性容错操作结果类型
+pub type ResilienceResult<T> = WaeResult<T>;
 
 pub use circuit_breaker::{CircuitBreaker, CircuitBreakerConfig, CircuitState};
 

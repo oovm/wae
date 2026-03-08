@@ -12,7 +12,7 @@ use tokio_rustls::{
     },
 };
 
-use crate::{CloudError, CloudResult};
+use crate::{WaeError, WaeResult};
 
 /// ALPN 协议标识符
 pub mod alpn {
@@ -26,7 +26,7 @@ pub mod alpn {
 ///
 /// 从 PEM 格式的证书和私钥文件创建 TLS 接受器。
 /// 默认支持 HTTP/1.1 协议。
-pub fn create_tls_acceptor(cert_path: &str, key_path: &str) -> CloudResult<TlsAcceptor> {
+pub fn create_tls_acceptor(cert_path: &str, key_path: &str) -> WaeResult<TlsAcceptor> {
     create_tls_acceptor_with_http2(cert_path, key_path, false)
 }
 
@@ -39,7 +39,7 @@ pub fn create_tls_acceptor(cert_path: &str, key_path: &str) -> CloudResult<TlsAc
 /// - `cert_path`: 证书文件路径
 /// - `key_path`: 私钥文件路径
 /// - `enable_http2`: 是否启用 HTTP/2 支持
-pub fn create_tls_acceptor_with_http2(cert_path: &str, key_path: &str, enable_http2: bool) -> CloudResult<TlsAcceptor> {
+pub fn create_tls_acceptor_with_http2(cert_path: &str, key_path: &str, enable_http2: bool) -> WaeResult<TlsAcceptor> {
     let certs = load_certs(cert_path)?;
     let key = load_private_key(key_path)?;
 
@@ -49,7 +49,7 @@ pub fn create_tls_acceptor_with_http2(cert_path: &str, key_path: &str, enable_ht
     let config = ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(certs, key)
-        .map_err(|e| CloudError::internal(format!("Failed to create TLS config: {}", e)))?;
+        .map_err(|e| WaeError::internal(format!("Failed to create TLS config: {}", e)))?;
 
     let mut config = Arc::new(config);
     Arc::get_mut(&mut config).expect("Config should be unique").alpn_protocols = alpn_protocols;
@@ -72,19 +72,19 @@ pub fn create_tls_acceptor_with_client_auth(
     key_path: &str,
     ca_path: &str,
     enable_http2: bool,
-) -> CloudResult<TlsAcceptor> {
+) -> WaeResult<TlsAcceptor> {
     let certs = load_certs(cert_path)?;
     let key = load_private_key(key_path)?;
     let ca_certs = load_certs(ca_path)?;
 
     let mut root_cert_store = RootCertStore::empty();
     for cert in ca_certs {
-        root_cert_store.add(cert).map_err(|e| CloudError::internal(format!("Failed to add CA cert: {}", e)))?;
+        root_cert_store.add(cert).map_err(|e| WaeError::internal(format!("Failed to add CA cert: {}", e)))?;
     }
 
     let client_verifier = WebPkiClientVerifier::builder(Arc::new(root_cert_store))
         .build()
-        .map_err(|e| CloudError::internal(format!("Failed to create client verifier: {}", e)))?;
+        .map_err(|e| WaeError::internal(format!("Failed to create client verifier: {}", e)))?;
 
     let alpn_protocols =
         if enable_http2 { vec![alpn::HTTP_2.to_vec(), alpn::HTTP_1_1.to_vec()] } else { vec![alpn::HTTP_1_1.to_vec()] };
@@ -92,7 +92,7 @@ pub fn create_tls_acceptor_with_client_auth(
     let config = ServerConfig::builder()
         .with_client_cert_verifier(client_verifier)
         .with_single_cert(certs, key)
-        .map_err(|e| CloudError::internal(format!("Failed to create TLS config: {}", e)))?;
+        .map_err(|e| WaeError::internal(format!("Failed to create TLS config: {}", e)))?;
 
     let mut config = Arc::new(config);
     Arc::get_mut(&mut config).expect("Config should be unique").alpn_protocols = alpn_protocols;
@@ -101,26 +101,26 @@ pub fn create_tls_acceptor_with_client_auth(
 }
 
 /// 从 PEM 文件加载证书
-fn load_certs(path: &str) -> CloudResult<Vec<CertificateDer<'static>>> {
-    let file = File::open(path).map_err(|e| CloudError::internal(format!("Failed to open cert file {}: {}", path, e)))?;
+fn load_certs(path: &str) -> WaeResult<Vec<CertificateDer<'static>>> {
+    let file = File::open(path).map_err(|e| WaeError::internal(format!("Failed to open cert file {}: {}", path, e)))?;
     let mut reader = BufReader::new(file);
 
     rustls_pemfile::certs(&mut reader)
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| CloudError::internal(format!("Failed to parse cert file {}: {}", path, e)))
+        .map_err(|e| WaeError::internal(format!("Failed to parse cert file {}: {}", path, e)))
 }
 
 /// 从 PEM 文件加载私钥
-fn load_private_key(path: &str) -> CloudResult<PrivateKeyDer<'static>> {
-    let file = File::open(path).map_err(|e| CloudError::internal(format!("Failed to open key file {}: {}", path, e)))?;
+fn load_private_key(path: &str) -> WaeResult<PrivateKeyDer<'static>> {
+    let file = File::open(path).map_err(|e| WaeError::internal(format!("Failed to open key file {}: {}", path, e)))?;
     let mut reader = BufReader::new(file);
 
     let keys: Vec<PrivateKeyDer<'static>> = rustls_pemfile::private_key(&mut reader)
-        .map_err(|e| CloudError::internal(format!("Failed to parse key file {}: {}", path, e)))?
+        .map_err(|e| WaeError::internal(format!("Failed to parse key file {}: {}", path, e)))?
         .into_iter()
         .collect();
 
-    keys.into_iter().next().ok_or_else(|| CloudError::internal(format!("No private key found in {}", path)))
+    keys.into_iter().next().ok_or_else(|| WaeError::internal(format!("No private key found in {}", path)))
 }
 
 /// TLS 配置构建器
@@ -162,9 +162,9 @@ impl TlsConfigBuilder {
     }
 
     /// 构建 TLS 接受器
-    pub fn build(self) -> CloudResult<TlsAcceptor> {
-        let cert_path = self.cert_path.ok_or_else(|| CloudError::internal("Certificate path is required"))?;
-        let key_path = self.key_path.ok_or_else(|| CloudError::internal("Key path is required"))?;
+    pub fn build(self) -> WaeResult<TlsAcceptor> {
+        let cert_path = self.cert_path.ok_or_else(|| WaeError::internal("Certificate path is required"))?;
+        let key_path = self.key_path.ok_or_else(|| WaeError::internal("Key path is required"))?;
 
         match self.ca_path {
             Some(ca_path) => create_tls_acceptor_with_client_auth(&cert_path, &key_path, &ca_path, self.enable_http2),

@@ -4,12 +4,10 @@
 
 mod algorithm;
 mod config;
-mod errors;
 mod secret;
 mod service;
 
 pub use algorithm::*;
 pub use config::*;
-pub use errors::*;
 pub use secret::*;
 pub use service::*;

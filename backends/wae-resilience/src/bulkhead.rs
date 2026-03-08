@@ -2,11 +2,11 @@
 //!
 //! 使用信号量限制并发调用数量，防止资源耗尽。
 
-use crate::error::{ResilienceError, ResilienceResult};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::Semaphore, time::timeout as tokio_timeout};
+use wae_types::{WaeError, WaeErrorKind};
 
 /// 舱壁配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,18 +72,15 @@ impl Bulkhead {
     }
 
     /// 尝试获取许可
-    pub async fn acquire(&self) -> ResilienceResult<BulkheadPermit> {
+    pub async fn acquire(&self) -> Result<BulkheadPermit, WaeError> {
         let acquire_result = if self.config.max_wait_duration.is_zero() {
-            self.semaphore
-                .clone()
-                .try_acquire_owned()
-                .map_err(|_| ResilienceError::BulkheadFull(self.config.max_concurrent_calls))
+            self.semaphore.clone().try_acquire_owned().map_err(|_| WaeError::bulkhead_full(self.config.max_concurrent_calls))
         }
         else {
             match tokio_timeout(self.config.max_wait_duration, self.semaphore.clone().acquire_owned()).await {
                 Ok(Ok(permit)) => Ok(permit),
-                Ok(Err(_)) => Err(ResilienceError::BulkheadFull(self.config.max_concurrent_calls)),
-                Err(_) => Err(ResilienceError::BulkheadWaitTimeout),
+                Ok(Err(_)) => Err(WaeError::bulkhead_full(self.config.max_concurrent_calls)),
+                Err(_) => Err(WaeError::new(WaeErrorKind::BulkheadWaitTimeout)),
             }
         };
 
@@ -98,14 +95,14 @@ impl Bulkhead {
     }
 
     /// 尝试获取许可 (非阻塞)
-    pub fn try_acquire(&self) -> ResilienceResult<BulkheadPermit> {
+    pub fn try_acquire(&self) -> Result<BulkheadPermit, WaeError> {
         match self.semaphore.clone().try_acquire_owned() {
             Ok(permit) => {
                 let mut count = self.concurrent_count.lock();
                 *count += 1;
                 Ok(BulkheadPermit { permit: Some(permit), concurrent_count: self.concurrent_count.clone() })
             }
-            Err(_) => Err(ResilienceError::BulkheadFull(self.config.max_concurrent_calls)),
+            Err(_) => Err(WaeError::bulkhead_full(self.config.max_concurrent_calls)),
         }
     }
 
@@ -126,14 +123,14 @@ impl Bulkhead {
     }
 
     /// 执行受保护的异步操作
-    pub async fn execute<F, T, E, Fut>(&self, operation: F) -> Result<T, ResilienceError>
+    pub async fn execute<F, T, E, Fut>(&self, operation: F) -> Result<T, WaeError>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, E>>,
         E: std::fmt::Display,
     {
         let _permit = self.acquire().await?;
-        operation().await.map_err(|e| ResilienceError::MaxRetriesExceeded(e.to_string()))
+        operation().await.map_err(|_e| WaeError::internal("Operation failed"))
     }
 
     /// 获取配置

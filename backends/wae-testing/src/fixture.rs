@@ -1,7 +1,7 @@
 //! 测试数据生成器模块
 
-use crate::error::{TestingError, TestingResult};
 use rand::{RngExt, distr::Alphanumeric, prelude::IndexedRandom};
+use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
 
 /// Fixture trait - 测试数据接口
 pub trait Fixture: Sized {
@@ -266,7 +266,10 @@ impl<T: Clone> RandomChoice<T> {
     /// 生成随机选择
     pub fn generate(&self) -> TestingResult<T> {
         let mut rng = rand::rng();
-        self.items.choose(&mut rng).cloned().ok_or_else(|| TestingError::FixtureError("No items to choose from".to_string()))
+        self.items
+            .choose(&mut rng)
+            .cloned()
+            .ok_or_else(|| WaeError::new(WaeErrorKind::FixtureError { reason: "No items to choose from".to_string() }))
     }
 }
 

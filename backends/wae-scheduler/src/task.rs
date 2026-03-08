@@ -6,8 +6,7 @@ use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use tokio::sync::RwLock;
-
-use crate::error::SchedulerResult;
+use wae_types::WaeResult;
 
 /// 任务 ID 类型
 pub type TaskId = String;
@@ -52,7 +51,7 @@ pub trait ScheduledTask: Send + Sync {
     /// # 返回值
     ///
     /// 返回 `Ok(())` 表示任务执行成功，返回 `Err` 表示任务执行失败。
-    async fn execute(&self) -> SchedulerResult<()>;
+    async fn execute(&self) -> WaeResult<()>;
 
     /// 获取任务名称
     fn name(&self) -> &str;

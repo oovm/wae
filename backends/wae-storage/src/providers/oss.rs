@@ -17,11 +17,11 @@ pub struct OssProvider;
 impl StorageProvider for OssProvider {
     fn sign_url(&self, path: &str, config: &StorageConfig) -> StorageResult<Url> {
         if path.is_empty() {
-            return Err(WaeError::invalid_params("Empty path"));
+            return Err(WaeError::invalid_params("path", "Empty path"));
         }
 
         if path.starts_with("http://") || path.starts_with("https://") {
-            return Url::parse(path).map_err(|e| WaeError::invalid_params(e.to_string()));
+            return Url::parse(path).map_err(|e| WaeError::invalid_params("path", e.to_string()));
         }
 
         let clean_path = path.trim_start_matches('/');
@@ -32,9 +32,9 @@ impl StorageProvider for OssProvider {
 
         let host_url =
             if host_str.starts_with("http") { Url::parse(&host_str) } else { Url::parse(&format!("https://{}", host_str)) }
-                .map_err(|e| WaeError::invalid_params(e.to_string()))?;
+                .map_err(|e| WaeError::invalid_params("host", e.to_string()))?;
 
-        let mut url = host_url.join(clean_path).map_err(|e| WaeError::invalid_params(e.to_string()))?;
+        let mut url = host_url.join(clean_path).map_err(|e| WaeError::invalid_params("path", e.to_string()))?;
 
         let string_to_sign = format!("GET\n\n\n{}\n/{}/{}", expires, config.bucket, clean_path);
 
@@ -60,9 +60,9 @@ impl StorageProvider for OssProvider {
 
         let host_url =
             if host_str.starts_with("http") { Url::parse(&host_str) } else { Url::parse(&format!("https://{}", host_str)) }
-                .map_err(|e| WaeError::invalid_params(e.to_string()))?;
+                .map_err(|e| WaeError::invalid_params("host", e.to_string()))?;
 
-        let mut url = host_url.join(clean_key).map_err(|e| WaeError::invalid_params(e.to_string()))?;
+        let mut url = host_url.join(clean_key).map_err(|e| WaeError::invalid_params("key", e.to_string()))?;
 
         let string_to_sign = format!("PUT\n\n\n{}\n/{}/{}", expires, config.bucket, clean_key);
 

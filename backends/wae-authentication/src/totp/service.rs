@@ -1,10 +1,13 @@
 //! TOTP 服务实现
 
 use crate::totp::{
-    HotpConfig, SecretFormat, TotpAlgorithm, TotpConfig, TotpResult, TotpSecret, generate_hotp, generate_totp, verify_hotp,
-    verify_totp,
+    HotpConfig, SecretFormat, TotpAlgorithm, TotpConfig, TotpSecret, generate_hotp, generate_totp, verify_hotp, verify_totp,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
+use wae_types::WaeError;
+
+/// TOTP 结果类型
+pub type TotpResult<T> = Result<T, WaeError>;
 
 /// TOTP 服务
 #[derive(Debug, Clone)]

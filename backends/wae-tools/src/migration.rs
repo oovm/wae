@@ -10,51 +10,7 @@ mod inner {
     use std::{collections::BTreeMap, sync::Arc};
     use tracing::{info, warn};
     use wae_database::DatabaseConnection;
-    use wae_types::{Value, WaeError};
-
-    type DatabaseResult<T> = Result<T, WaeError>;
-    type DatabaseError = WaeError;
-
-    /// 迁移错误类型
-    #[derive(Debug)]
-    pub enum MigrationError {
-        /// 迁移执行失败
-        ExecutionFailed(String),
-        /// 迁移版本冲突
-        VersionConflict(String),
-        /// 迁移不存在
-        NotFound(String),
-        /// 迁移记录损坏
-        CorruptedRecord(String),
-        /// 数据库错误
-        DatabaseError(DatabaseError),
-    }
-
-    impl std::fmt::Display for MigrationError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match self {
-                MigrationError::ExecutionFailed(msg) => write!(f, "Migration execution failed: {}", msg),
-                MigrationError::VersionConflict(msg) => write!(f, "Migration version conflict: {}", msg),
-                MigrationError::NotFound(name) => write!(f, "Migration not found: {}", name),
-                MigrationError::CorruptedRecord(msg) => write!(f, "Corrupted migration record: {}", msg),
-                MigrationError::DatabaseError(e) => write!(f, "Database error: {}", e),
-            }
-        }
-    }
-
-    impl std::error::Error for MigrationError {}
-
-    impl From<DatabaseError> for MigrationError {
-        fn from(e: DatabaseError) -> Self {
-            MigrationError::DatabaseError(e)
-        }
-    }
-
-    impl From<MigrationError> for WaeError {
-        fn from(e: MigrationError) -> Self {
-            WaeError::internal(e.to_string())
-        }
-    }
+    use wae_types::{Value, WaeError, WaeResult};
 
     /// 迁移执行结果
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,10 +61,10 @@ mod inner {
         }
 
         /// 执行迁移
-        async fn up(&self, conn: &dyn DatabaseConnection) -> DatabaseResult<()>;
+        async fn up(&self, conn: &dyn DatabaseConnection) -> WaeResult<()>;
 
         /// 回滚迁移 (可选)
-        async fn down(&self, _conn: &dyn DatabaseConnection) -> DatabaseResult<()> {
+        async fn down(&self, _conn: &dyn DatabaseConnection) -> WaeResult<()> {
             Err(WaeError::internal("Rollback not supported".to_string()))
         }
 
@@ -176,13 +132,13 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 确保迁移表存在
-        async fn ensure_migration_table(conn: &dyn DatabaseConnection) -> DatabaseResult<()> {
+        async fn ensure_migration_table(conn: &dyn DatabaseConnection) -> WaeResult<()> {
             conn.execute(CREATE_MIGRATION_TABLE).await?;
             Ok(())
         }
 
         /// 获取已执行的迁移记录
-        async fn get_executed_migrations(conn: &dyn DatabaseConnection) -> DatabaseResult<BTreeMap<i64, MigrationRecord>> {
+        async fn get_executed_migrations(conn: &dyn DatabaseConnection) -> WaeResult<BTreeMap<i64, MigrationRecord>> {
             let sql = format!(
                 "SELECT version, name, executed_at, duration_ms, checksum FROM {} ORDER BY version",
                 MIGRATION_TABLE_NAME
@@ -208,11 +164,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 记录迁移执行
-        async fn record_migration(
-            conn: &dyn DatabaseConnection,
-            migration: &dyn Migration,
-            duration_ms: u64,
-        ) -> DatabaseResult<()> {
+        async fn record_migration(conn: &dyn DatabaseConnection, migration: &dyn Migration, duration_ms: u64) -> WaeResult<()> {
             let sql = format!(
                 "INSERT INTO {} (version, name, executed_at, duration_ms, checksum) VALUES (?, ?, ?, ?, NULL)",
                 MIGRATION_TABLE_NAME
@@ -234,14 +186,14 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 删除迁移记录
-        async fn remove_migration_record(conn: &dyn DatabaseConnection, version: i64) -> DatabaseResult<()> {
+        async fn remove_migration_record(conn: &dyn DatabaseConnection, version: i64) -> WaeResult<()> {
             let sql = format!("DELETE FROM {} WHERE version = ?", MIGRATION_TABLE_NAME);
             conn.execute_with(&sql, vec![wae_types::Value::Integer(version)]).await?;
             Ok(())
         }
 
         /// 执行所有待执行的迁移
-        pub async fn migrate(&self, conn: &dyn DatabaseConnection) -> Result<Vec<MigrationResult>, MigrationError> {
+        pub async fn migrate(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -297,7 +249,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
                 };
 
                 if !result.success {
-                    return Err(MigrationError::ExecutionFailed(format!(
+                    return Err(WaeError::internal(format!(
                         "Migration '{}' failed: {}",
                         result.name,
                         result.error.unwrap_or_default()
@@ -311,11 +263,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 回滚到指定版本
-        pub async fn rollback_to(
-            &self,
-            conn: &dyn DatabaseConnection,
-            target_version: i64,
-        ) -> Result<Vec<MigrationResult>, MigrationError> {
+        pub async fn rollback_to(&self, conn: &dyn DatabaseConnection, target_version: i64) -> WaeResult<Vec<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -328,10 +276,10 @@ CREATE TABLE IF NOT EXISTS _migrations (
                 let migration = self
                     .migrations
                     .get(&version)
-                    .ok_or_else(|| MigrationError::NotFound(format!("Migration version {}", version)))?;
+                    .ok_or_else(|| WaeError::not_found("migration", format!("Migration version {}", version)))?;
 
                 if !migration.reversible() {
-                    return Err(MigrationError::ExecutionFailed(format!("Migration '{}' is not reversible", migration.name())));
+                    return Err(WaeError::internal(format!("Migration '{}' is not reversible", migration.name())));
                 }
 
                 info!(version = version, name = migration.name(), "Rolling back migration");
@@ -378,7 +326,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
                 };
 
                 if !result.success {
-                    return Err(MigrationError::ExecutionFailed(format!(
+                    return Err(WaeError::internal(format!(
                         "Rollback of migration '{}' failed: {}",
                         result.name,
                         result.error.unwrap_or_default()
@@ -392,7 +340,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 回滚最后一次迁移
-        pub async fn rollback(&self, conn: &dyn DatabaseConnection) -> Result<Option<MigrationResult>, MigrationError> {
+        pub async fn rollback(&self, conn: &dyn DatabaseConnection) -> WaeResult<Option<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -411,18 +359,18 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 重置数据库 (回滚所有迁移)
-        pub async fn reset(&self, conn: &dyn DatabaseConnection) -> Result<Vec<MigrationResult>, MigrationError> {
+        pub async fn reset(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationResult>> {
             self.rollback_to(conn, 0).await
         }
 
         /// 刷新数据库 (重置后重新执行所有迁移)
-        pub async fn refresh(&self, conn: &dyn DatabaseConnection) -> Result<Vec<MigrationResult>, MigrationError> {
+        pub async fn refresh(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationResult>> {
             self.reset(conn).await?;
             self.migrate(conn).await
         }
 
         /// 获取迁移状态
-        pub async fn status(&self, conn: &dyn DatabaseConnection) -> DatabaseResult<Vec<MigrationStatus>> {
+        pub async fn status(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationStatus>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -517,12 +465,12 @@ CREATE TABLE IF NOT EXISTS _migrations (
             self.description.as_deref()
         }
 
-        async fn up(&self, conn: &dyn DatabaseConnection) -> DatabaseResult<()> {
+        async fn up(&self, conn: &dyn DatabaseConnection) -> WaeResult<()> {
             conn.execute(&self.up_sql).await?;
             Ok(())
         }
 
-        async fn down(&self, conn: &dyn DatabaseConnection) -> DatabaseResult<()> {
+        async fn down(&self, conn: &dyn DatabaseConnection) -> WaeResult<()> {
             match &self.down_sql {
                 Some(sql) => {
                     conn.execute(sql).await?;

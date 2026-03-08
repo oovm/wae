@@ -6,7 +6,7 @@ license.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-authentication"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-authentication"
 description = "WAE Authentication - 认证服务模块，支持 JWT、OAuth2、TOTP、SAML"
-keywords = ["authentication", "jwt", "oauth2", "totp", "saml", "auth"]
+keywords = ["authentication", "jwt", "oauth2", "totp", "saml"]
 categories = ["authentication", "web-programming"]
 documentation = "https://docs.rs/wae-authentication"
 

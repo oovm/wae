@@ -8,59 +8,8 @@
 #![warn(missing_docs)]
 
 use serde::{Serialize, de::DeserializeOwned};
-use std::{fmt, time::Duration};
-
-/// 消息队列错误类型
-#[derive(Debug)]
-pub enum QueueError {
-    /// 连接失败
-    ConnectionFailed(String),
-
-    /// 序列化失败
-    SerializationFailed(String),
-
-    /// 反序列化失败
-    DeserializationFailed(String),
-
-    /// 队列不存在
-    QueueNotFound(String),
-
-    /// 消息发送失败
-    SendFailed(String),
-
-    /// 消息接收失败
-    ReceiveFailed(String),
-
-    /// 消息确认失败
-    AckFailed(String),
-
-    /// 操作超时
-    Timeout(String),
-
-    /// 服务内部错误
-    Internal(String),
-}
-
-impl fmt::Display for QueueError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            QueueError::ConnectionFailed(msg) => write!(f, "Queue connection failed: {}", msg),
-            QueueError::SerializationFailed(msg) => write!(f, "Serialization failed: {}", msg),
-            QueueError::DeserializationFailed(msg) => write!(f, "Deserialization failed: {}", msg),
-            QueueError::QueueNotFound(msg) => write!(f, "Queue not found: {}", msg),
-            QueueError::SendFailed(msg) => write!(f, "Failed to send message: {}", msg),
-            QueueError::ReceiveFailed(msg) => write!(f, "Failed to receive message: {}", msg),
-            QueueError::AckFailed(msg) => write!(f, "Failed to acknowledge message: {}", msg),
-            QueueError::Timeout(msg) => write!(f, "Operation timeout: {}", msg),
-            QueueError::Internal(msg) => write!(f, "Queue internal error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for QueueError {}
-
-/// 消息队列操作结果类型
-pub type QueueResult<T> = Result<T, QueueError>;
+use std::time::Duration;
+use wae_types::{WaeError, WaeResult};
 
 /// 消息 ID 类型
 pub type MessageId = String;
@@ -181,28 +130,28 @@ impl<T> Message<T> {
     }
 
     /// 序列化为原始消息
-    pub fn into_raw(self) -> QueueResult<RawMessage>
+    pub fn into_raw(self) -> WaeResult<RawMessage>
     where
         T: Serialize,
     {
-        let data = serde_json::to_vec(&self.payload).map_err(|e| QueueError::SerializationFailed(e.to_string()))?;
+        let data = serde_json::to_vec(&self.payload).map_err(|e| WaeError::serialization_failed("Message"))?;
         Ok(RawMessage { data, metadata: self.metadata })
     }
 
     /// 序列化为原始消息 (引用版本)
-    pub fn to_raw(&self) -> QueueResult<RawMessage>
+    pub fn to_raw(&self) -> WaeResult<RawMessage>
     where
         T: Serialize,
     {
-        let data = serde_json::to_vec(&self.payload).map_err(|e| QueueError::SerializationFailed(e.to_string()))?;
+        let data = serde_json::to_vec(&self.payload).map_err(|e| WaeError::serialization_failed("Message"))?;
         Ok(RawMessage { data, metadata: self.metadata.clone() })
     }
 }
 
 impl RawMessage {
     /// 反序列化为泛型消息
-    pub fn into_typed<T: DeserializeOwned>(self) -> QueueResult<Message<T>> {
-        let payload = serde_json::from_slice(&self.data).map_err(|e| QueueError::DeserializationFailed(e.to_string()))?;
+    pub fn into_typed<T: DeserializeOwned>(self) -> WaeResult<Message<T>> {
+        let payload = serde_json::from_slice(&self.data).map_err(|e| WaeError::deserialization_failed("Message"))?;
         Ok(Message { payload, metadata: self.metadata })
     }
 }
@@ -355,16 +304,16 @@ impl ConsumerConfig {
 #[async_trait::async_trait]
 pub trait ProducerBackend: Send + Sync {
     /// 发送原始消息到指定队列
-    async fn send_raw(&self, queue: &str, message: &RawMessage) -> QueueResult<MessageId>;
+    async fn send_raw(&self, queue: &str, message: &RawMessage) -> WaeResult<MessageId>;
 
     /// 发送原始消息到默认队列
-    async fn send_raw_default(&self, message: &RawMessage) -> QueueResult<MessageId>;
+    async fn send_raw_default(&self, message: &RawMessage) -> WaeResult<MessageId>;
 
     /// 发送延迟消息
-    async fn send_raw_delayed(&self, queue: &str, message: &RawMessage, delay: Duration) -> QueueResult<MessageId>;
+    async fn send_raw_delayed(&self, queue: &str, message: &RawMessage, delay: Duration) -> WaeResult<MessageId>;
 
     /// 批量发送消息
-    async fn send_raw_batch(&self, queue: &str, messages: &[RawMessage]) -> QueueResult<Vec<MessageId>>;
+    async fn send_raw_batch(&self, queue: &str, messages: &[RawMessage]) -> WaeResult<Vec<MessageId>>;
 
     /// 获取生产者配置
     fn config(&self) -> &ProducerConfig;
@@ -382,13 +331,13 @@ impl MessageProducer {
     }
 
     /// 发送消息到指定队列
-    pub async fn send<T: Serialize + Send + Sync>(&self, queue: &str, message: &Message<T>) -> QueueResult<MessageId> {
+    pub async fn send<T: Serialize + Send + Sync>(&self, queue: &str, message: &Message<T>) -> WaeResult<MessageId> {
         let raw = message.to_raw()?;
         self.backend.send_raw(queue, &raw).await
     }
 
     /// 发送消息到默认队列
-    pub async fn send_default<T: Serialize + Send + Sync>(&self, message: &Message<T>) -> QueueResult<MessageId> {
+    pub async fn send_default<T: Serialize + Send + Sync>(&self, message: &Message<T>) -> WaeResult<MessageId> {
         let raw = message.to_raw()?;
         self.backend.send_raw_default(&raw).await
     }
@@ -399,7 +348,7 @@ impl MessageProducer {
         queue: &str,
         message: &Message<T>,
         delay: Duration,
-    ) -> QueueResult<MessageId> {
+    ) -> WaeResult<MessageId> {
         let raw = message.to_raw()?;
         self.backend.send_raw_delayed(queue, &raw, delay).await
     }
@@ -409,8 +358,8 @@ impl MessageProducer {
         &self,
         queue: &str,
         messages: &[Message<T>],
-    ) -> QueueResult<Vec<MessageId>> {
-        let raw_messages: Vec<RawMessage> = messages.iter().map(|m| m.to_raw()).collect::<QueueResult<_>>()?;
+    ) -> WaeResult<Vec<MessageId>> {
+        let raw_messages: Vec<RawMessage> = messages.iter().map(|m| m.to_raw()).collect::<WaeResult<_>>()?;
         self.backend.send_raw_batch(queue, &raw_messages).await
     }
 
@@ -424,13 +373,13 @@ impl MessageProducer {
 #[async_trait::async_trait]
 pub trait ConsumerBackend: Send + Sync {
     /// 接收原始消息
-    async fn receive_raw(&self) -> QueueResult<Option<ReceivedRawMessage>>;
+    async fn receive_raw(&self) -> WaeResult<Option<ReceivedRawMessage>>;
 
     /// 确认消息
-    async fn ack(&self, delivery_tag: u64) -> QueueResult<()>;
+    async fn ack(&self, delivery_tag: u64) -> WaeResult<()>;
 
     /// 拒绝消息
-    async fn nack(&self, delivery_tag: u64, requeue: bool) -> QueueResult<()>;
+    async fn nack(&self, delivery_tag: u64, requeue: bool) -> WaeResult<()>;
 
     /// 获取消费者配置
     fn config(&self) -> &ConsumerConfig;
@@ -448,7 +397,7 @@ impl MessageConsumer {
     }
 
     /// 接收消息
-    pub async fn receive<T: DeserializeOwned + Send>(&self) -> QueueResult<Option<ReceivedMessage<T>>> {
+    pub async fn receive<T: DeserializeOwned + Send>(&self) -> WaeResult<Option<ReceivedMessage<T>>> {
         let raw = match self.backend.receive_raw().await? {
             Some(r) => r,
             None => return Ok(None),
@@ -459,12 +408,12 @@ impl MessageConsumer {
     }
 
     /// 确认消息
-    pub async fn ack(&self, delivery_tag: u64) -> QueueResult<()> {
+    pub async fn ack(&self, delivery_tag: u64) -> WaeResult<()> {
         self.backend.ack(delivery_tag).await
     }
 
     /// 拒绝消息
-    pub async fn nack(&self, delivery_tag: u64, requeue: bool) -> QueueResult<()> {
+    pub async fn nack(&self, delivery_tag: u64, requeue: bool) -> WaeResult<()> {
         self.backend.nack(delivery_tag, requeue).await
     }
 
@@ -478,35 +427,35 @@ impl MessageConsumer {
 #[async_trait::async_trait]
 pub trait QueueManager: Send + Sync {
     /// 声明队列
-    async fn declare_queue(&self, config: &QueueConfig) -> QueueResult<()>;
+    async fn declare_queue(&self, config: &QueueConfig) -> WaeResult<()>;
 
     /// 删除队列
-    async fn delete_queue(&self, name: &str) -> QueueResult<()>;
+    async fn delete_queue(&self, name: &str) -> WaeResult<()>;
 
     /// 检查队列是否存在
-    async fn queue_exists(&self, name: &str) -> QueueResult<bool>;
+    async fn queue_exists(&self, name: &str) -> WaeResult<bool>;
 
     /// 获取队列消息数量
-    async fn queue_message_count(&self, name: &str) -> QueueResult<u64>;
+    async fn queue_message_count(&self, name: &str) -> WaeResult<u64>;
 
     /// 清空队列
-    async fn purge_queue(&self, name: &str) -> QueueResult<u64>;
+    async fn purge_queue(&self, name: &str) -> WaeResult<u64>;
 }
 
 /// 消息队列服务 trait
 
 pub trait QueueService: Send + Sync {
     /// 创建生产者
-    async fn create_producer(&self, config: ProducerConfig) -> QueueResult<MessageProducer>;
+    async fn create_producer(&self, config: ProducerConfig) -> WaeResult<MessageProducer>;
 
     /// 创建消费者
-    async fn create_consumer(&self, config: ConsumerConfig) -> QueueResult<MessageConsumer>;
+    async fn create_consumer(&self, config: ConsumerConfig) -> WaeResult<MessageConsumer>;
 
     /// 获取队列管理器
     fn manager(&self) -> &dyn QueueManager;
 
     /// 关闭连接
-    async fn close(&self) -> QueueResult<()>;
+    async fn close(&self) -> WaeResult<()>;
 }
 
 /// 内存队列实现
@@ -551,7 +500,7 @@ pub mod memory {
 
     #[async_trait::async_trait]
     impl QueueManager for MemoryQueueManager {
-        async fn declare_queue(&self, config: &QueueConfig) -> QueueResult<()> {
+        async fn declare_queue(&self, config: &QueueConfig) -> WaeResult<()> {
             let mut queues = self.queues.write().await;
             let mut configs = self.configs.write().await;
 
@@ -562,7 +511,7 @@ pub mod memory {
             Ok(())
         }
 
-        async fn delete_queue(&self, name: &str) -> QueueResult<()> {
+        async fn delete_queue(&self, name: &str) -> WaeResult<()> {
             let mut queues = self.queues.write().await;
             let mut configs = self.configs.write().await;
             queues.remove(name);
@@ -570,17 +519,17 @@ pub mod memory {
             Ok(())
         }
 
-        async fn queue_exists(&self, name: &str) -> QueueResult<bool> {
+        async fn queue_exists(&self, name: &str) -> WaeResult<bool> {
             let queues = self.queues.read().await;
             Ok(queues.contains_key(name))
         }
 
-        async fn queue_message_count(&self, name: &str) -> QueueResult<u64> {
+        async fn queue_message_count(&self, name: &str) -> WaeResult<u64> {
             let queues = self.queues.read().await;
             Ok(queues.get(name).map(|q| q.messages.len() as u64).unwrap_or(0))
         }
 
-        async fn purge_queue(&self, name: &str) -> QueueResult<u64> {
+        async fn purge_queue(&self, name: &str) -> WaeResult<u64> {
             let mut queues = self.queues.write().await;
             if let Some(queue) = queues.get_mut(name) {
                 let count = queue.messages.len() as u64;
@@ -607,7 +556,7 @@ pub mod memory {
 
     #[async_trait::async_trait]
     impl ProducerBackend for MemoryProducerBackend {
-        async fn send_raw(&self, queue: &str, message: &RawMessage) -> QueueResult<MessageId> {
+        async fn send_raw(&self, queue: &str, message: &RawMessage) -> WaeResult<MessageId> {
             self.manager.declare_queue(&QueueConfig::new(queue)).await?;
 
             let id = uuid::Uuid::new_v4().to_string();
@@ -624,21 +573,17 @@ pub mod memory {
             Ok(id)
         }
 
-        async fn send_raw_default(&self, message: &RawMessage) -> QueueResult<MessageId> {
-            let queue = self
-                .config
-                .default_queue
-                .as_ref()
-                .ok_or_else(|| QueueError::QueueNotFound("No default queue configured".into()))?;
+        async fn send_raw_default(&self, message: &RawMessage) -> WaeResult<MessageId> {
+            let queue = self.config.default_queue.as_ref().ok_or_else(|| WaeError::config_missing("default_queue"))?;
             self.send_raw(queue, message).await
         }
 
-        async fn send_raw_delayed(&self, queue: &str, message: &RawMessage, delay: Duration) -> QueueResult<MessageId> {
+        async fn send_raw_delayed(&self, queue: &str, message: &RawMessage, delay: Duration) -> WaeResult<MessageId> {
             tokio::time::sleep(delay).await;
             self.send_raw(queue, message).await
         }
 
-        async fn send_raw_batch(&self, queue: &str, messages: &[RawMessage]) -> QueueResult<Vec<MessageId>> {
+        async fn send_raw_batch(&self, queue: &str, messages: &[RawMessage]) -> WaeResult<Vec<MessageId>> {
             let mut ids = Vec::with_capacity(messages.len());
             for msg in messages {
                 ids.push(self.send_raw(queue, msg).await?);
@@ -666,7 +611,7 @@ pub mod memory {
 
     #[async_trait::async_trait]
     impl ConsumerBackend for MemoryConsumerBackend {
-        async fn receive_raw(&self) -> QueueResult<Option<ReceivedRawMessage>> {
+        async fn receive_raw(&self) -> WaeResult<Option<ReceivedRawMessage>> {
             let mut queues = self.queues.write().await;
             if let Some(queue) = queues.get_mut(&self.config.queue) {
                 if let Some((delivery_tag, data, metadata)) = queue.messages.pop_front() {
@@ -677,11 +622,11 @@ pub mod memory {
             Ok(None)
         }
 
-        async fn ack(&self, _delivery_tag: u64) -> QueueResult<()> {
+        async fn ack(&self, _delivery_tag: u64) -> WaeResult<()> {
             Ok(())
         }
 
-        async fn nack(&self, _delivery_tag: u64, _requeue: bool) -> QueueResult<()> {
+        async fn nack(&self, _delivery_tag: u64, _requeue: bool) -> WaeResult<()> {
             Ok(())
         }
 
@@ -709,11 +654,11 @@ pub mod memory {
     }
 
     impl QueueService for MemoryQueueService {
-        async fn create_producer(&self, config: ProducerConfig) -> QueueResult<MessageProducer> {
+        async fn create_producer(&self, config: ProducerConfig) -> WaeResult<MessageProducer> {
             Ok(MessageProducer::new(Box::new(MemoryProducerBackend::new(config, self.manager.clone()))))
         }
 
-        async fn create_consumer(&self, config: ConsumerConfig) -> QueueResult<MessageConsumer> {
+        async fn create_consumer(&self, config: ConsumerConfig) -> WaeResult<MessageConsumer> {
             self.manager.declare_queue(&QueueConfig::new(&config.queue)).await?;
             Ok(MessageConsumer::new(Box::new(MemoryConsumerBackend::new(config, self.manager.clone()))))
         }
@@ -722,7 +667,7 @@ pub mod memory {
             self.manager.as_ref() as &dyn QueueManager
         }
 
-        async fn close(&self) -> QueueResult<()> {
+        async fn close(&self) -> WaeResult<()> {
             Ok(())
         }
     }

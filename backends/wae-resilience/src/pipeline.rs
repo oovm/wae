@@ -5,12 +5,12 @@
 use crate::{
     bulkhead::{Bulkhead, BulkheadConfig},
     circuit_breaker::{CircuitBreaker, CircuitBreakerConfig},
-    error::{ResilienceError, ResilienceResult},
     rate_limiter::{RateLimiter, TokenBucket, TokenBucketConfig},
     retry::{RetryConfig, retry_async},
     timeout::{TimeoutConfig, with_timeout},
 };
 use std::sync::Arc;
+use wae_types::WaeError;
 
 /// 弹性管道配置
 #[derive(Debug, Clone, Default)]
@@ -64,7 +64,7 @@ impl ResiliencePipeline {
     }
 
     /// 执行受保护的异步操作
-    pub async fn execute<F, T, E, Fut>(&self, operation: F) -> ResilienceResult<T>
+    pub async fn execute<F, T, E, Fut>(&self, operation: F) -> Result<T, WaeError>
     where
         F: FnOnce() -> Fut + Clone,
         Fut: std::future::Future<Output = Result<T, E>>,
@@ -77,7 +77,7 @@ impl ResiliencePipeline {
         if let Some(ref cb) = self.circuit_breaker
             && !cb.is_call_allowed()
         {
-            return Err(ResilienceError::CircuitBreakerOpen);
+            return Err(WaeError::circuit_breaker_open(&self.name));
         }
 
         let _permit = if let Some(ref bh) = self.bulkhead { Some(bh.acquire().await?) } else { None };
@@ -92,7 +92,7 @@ impl ResiliencePipeline {
                     with_timeout(duration, op()).await
                 }
                 else {
-                    op().await.map_err(|e| ResilienceError::MaxRetriesExceeded(e.to_string()))
+                    op().await.map_err(|e| WaeError::internal(e.to_string()))
                 }
             }
         })

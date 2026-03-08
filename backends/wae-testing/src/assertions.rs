@@ -1,7 +1,7 @@
 //! 断言宏和工具模块
 
-use crate::error::{TestingError, TestingResult};
 use std::time::Duration;
+use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
 
 /// 断言 Result 是 Ok
 #[macro_export]
@@ -133,7 +133,10 @@ impl AsyncAssert {
             tokio::time::sleep(check_interval).await;
         }
 
-        Err(TestingError::Timeout(format!("Condition not met within {:?}", timeout_duration)))
+        Err(WaeError::new(WaeErrorKind::OperationTimeout {
+            operation: "eventually".to_string(),
+            timeout_ms: timeout_duration.as_millis() as u64,
+        }))
     }
 
     /// 等待条件满足并返回值
@@ -155,7 +158,10 @@ impl AsyncAssert {
             tokio::time::sleep(check_interval).await;
         }
 
-        Err(TestingError::Timeout(format!("Condition not met within {:?}", timeout_duration)))
+        Err(WaeError::new(WaeErrorKind::OperationTimeout {
+            operation: "eventually_with_value".to_string(),
+            timeout_ms: timeout_duration.as_millis() as u64,
+        }))
     }
 }
 
@@ -170,10 +176,13 @@ where
 
 /// 断言两个字符串匹配正则表达式
 pub fn assert_matches_regex(text: &str, pattern: &str) -> TestingResult<()> {
-    let re = regex::Regex::new(pattern).map_err(|e| TestingError::AssertionFailed(format!("Invalid regex: {}", e)))?;
+    let re = regex::Regex::new(pattern)
+        .map_err(|e| WaeError::new(WaeErrorKind::AssertionFailed { message: format!("Invalid regex: {}", e) }))?;
 
     if !re.is_match(text) {
-        return Err(TestingError::AssertionFailed(format!("Text '{}' does not match pattern '{}'", text, pattern)));
+        return Err(WaeError::new(WaeErrorKind::AssertionFailed {
+            message: format!("Text '{}' does not match pattern '{}'", text, pattern),
+        }));
     }
 
     Ok(())
@@ -186,10 +195,12 @@ pub fn assert_json_contains(json: &serde_json::Value, path: &str) -> TestingResu
 
     for part in parts {
         if let serde_json::Value::Object(map) = current {
-            current = map.get(part).ok_or_else(|| TestingError::AssertionFailed(format!("JSON path '{}' not found", path)))?;
+            current = map.get(part).ok_or_else(|| {
+                WaeError::new(WaeErrorKind::AssertionFailed { message: format!("JSON path '{}' not found", path) })
+            })?;
         }
         else {
-            return Err(TestingError::AssertionFailed(format!("JSON path '{}' not found", path)));
+            return Err(WaeError::new(WaeErrorKind::AssertionFailed { message: format!("JSON path '{}' not found", path) }));
         }
     }
 

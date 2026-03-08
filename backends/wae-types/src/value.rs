@@ -1,6 +1,6 @@
 //! 动态值类型定义
 
-use crate::{ValidationErrorKind, WaeError};
+use crate::WaeError;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
 
@@ -501,11 +501,7 @@ impl<'de> Deserialize<'de> for Value {
 fn parse_json_value(s: &str) -> Result<Value, WaeError> {
     let (value, remaining) = parse_value(s.trim())?;
     if !remaining.trim().is_empty() {
-        return Err(ValidationErrorKind::CustomValidation {
-            field: "json".to_string(),
-            message: format!("Unexpected characters after JSON: {}", remaining),
-        }
-        .into());
+        return Err(WaeError::parse_error("json", format!("Unexpected characters after JSON: {}", remaining)));
     }
     Ok(value)
 }
@@ -514,11 +510,7 @@ fn parse_value(s: &str) -> Result<(Value, &str), WaeError> {
     let s = s.trim_start();
 
     if s.is_empty() {
-        return Err(ValidationErrorKind::CustomValidation {
-            field: "json".to_string(),
-            message: "Unexpected end of input".to_string(),
-        }
-        .into());
+        return Err(WaeError::parse_error("json", "Unexpected end of input"));
     }
 
     if let Some(stripped) = s.strip_prefix("null") {
@@ -549,11 +541,7 @@ fn parse_value(s: &str) -> Result<(Value, &str), WaeError> {
         return parse_number(s);
     }
 
-    Err(ValidationErrorKind::InvalidFormat {
-        field: "json".to_string(),
-        expected: format!("valid JSON character, got '{}'", s.chars().next().unwrap_or(' ')),
-    }
-    .into())
+    Err(WaeError::parse_error("json", format!("valid JSON character, got '{}'", s.chars().next().unwrap_or(' '))))
 }
 
 fn parse_number(s: &str) -> Result<(Value, &str), WaeError> {
@@ -588,28 +576,18 @@ fn parse_number(s: &str) -> Result<(Value, &str), WaeError> {
 
     let num_str = &s[..i];
     if has_dot || has_exp {
-        let v: f64 = num_str.parse().map_err(|e| {
-            WaeError::from(ValidationErrorKind::InvalidFormat {
-                field: "number".to_string(),
-                expected: format!("valid float: {}", e),
-            })
-        })?;
+        let v: f64 = num_str.parse().map_err(|e| WaeError::parse_error("number", format!("valid float: {}", e)))?;
         Ok((Value::Float(v), &s[i..]))
     }
     else {
-        let v: i64 = num_str.parse().map_err(|e| {
-            WaeError::from(ValidationErrorKind::InvalidFormat {
-                field: "number".to_string(),
-                expected: format!("valid integer: {}", e),
-            })
-        })?;
+        let v: i64 = num_str.parse().map_err(|e| WaeError::parse_error("number", format!("valid integer: {}", e)))?;
         Ok((Value::Integer(v), &s[i..]))
     }
 }
 
 fn parse_string(s: &str) -> Result<(Value, &str), WaeError> {
     if !s.starts_with('"') {
-        return Err(ValidationErrorKind::InvalidFormat { field: "string".to_string(), expected: "'\"'".to_string() }.into());
+        return Err(WaeError::parse_error("string", "expected '\"'"));
     }
 
     let mut result = String::new();
@@ -624,11 +602,7 @@ fn parse_string(s: &str) -> Result<(Value, &str), WaeError> {
         if c == '\\' {
             i += 1;
             if i >= chars.len() {
-                return Err(ValidationErrorKind::CustomValidation {
-                    field: "string".to_string(),
-                    message: "Unexpected end in escape".to_string(),
-                }
-                .into());
+                return Err(WaeError::parse_error("string", "Unexpected end in escape"));
             }
             let escaped = chars[i];
             match escaped {
@@ -640,19 +614,11 @@ fn parse_string(s: &str) -> Result<(Value, &str), WaeError> {
                 '/' => result.push('/'),
                 'u' => {
                     if i + 4 >= chars.len() {
-                        return Err(ValidationErrorKind::CustomValidation {
-                            field: "string".to_string(),
-                            message: "Invalid unicode escape".to_string(),
-                        }
-                        .into());
+                        return Err(WaeError::parse_error("string", "Invalid unicode escape"));
                     }
                     let hex: String = chars[i + 1..i + 5].iter().collect();
-                    let code = u16::from_str_radix(&hex, 16).map_err(|e| {
-                        WaeError::from(ValidationErrorKind::CustomValidation {
-                            field: "string".to_string(),
-                            message: format!("Invalid unicode: {}", e),
-                        })
-                    })?;
+                    let code = u16::from_str_radix(&hex, 16)
+                        .map_err(|e| WaeError::parse_error("string", format!("Invalid unicode: {}", e)))?;
                     if let Some(c) = char::from_u32(code as u32) {
                         result.push(c);
                     }
@@ -667,13 +633,12 @@ fn parse_string(s: &str) -> Result<(Value, &str), WaeError> {
         i += 1;
     }
 
-    Err(ValidationErrorKind::CustomValidation { field: "string".to_string(), message: "Unterminated string".to_string() }
-        .into())
+    Err(WaeError::parse_error("string", "Unterminated string"))
 }
 
 fn parse_array(s: &str) -> Result<(Value, &str), WaeError> {
     if !s.starts_with('[') {
-        return Err(ValidationErrorKind::InvalidFormat { field: "array".to_string(), expected: "'['".to_string() }.into());
+        return Err(WaeError::parse_error("array", "expected '['"));
     }
 
     let mut result = Vec::new();
@@ -694,9 +659,7 @@ fn parse_array(s: &str) -> Result<(Value, &str), WaeError> {
         }
 
         if !s.starts_with(',') {
-            return Err(
-                ValidationErrorKind::InvalidFormat { field: "array".to_string(), expected: "',' or ']'".to_string() }.into()
-            );
+            return Err(WaeError::parse_error("array", "expected ',' or ']'"));
         }
         s = s[1..].trim_start();
     }
@@ -704,7 +667,7 @@ fn parse_array(s: &str) -> Result<(Value, &str), WaeError> {
 
 fn parse_object(s: &str) -> Result<(Value, &str), WaeError> {
     if !s.starts_with('{') {
-        return Err(ValidationErrorKind::InvalidFormat { field: "object".to_string(), expected: "'{'".to_string() }.into());
+        return Err(WaeError::parse_error("object", "expected '{'"));
     }
 
     let mut result = HashMap::new();
@@ -718,19 +681,11 @@ fn parse_object(s: &str) -> Result<(Value, &str), WaeError> {
     loop {
         s = s.trim_start();
         let (key, remaining) = parse_string(s)?;
-        let key = key
-            .as_str()
-            .ok_or_else(|| {
-                WaeError::from(ValidationErrorKind::CustomValidation {
-                    field: "object_key".to_string(),
-                    message: "Object key must be a string".to_string(),
-                })
-            })?
-            .to_string();
+        let key = key.as_str().ok_or_else(|| WaeError::parse_error("object_key", "Object key must be a string"))?.to_string();
         s = remaining.trim_start();
 
         if !s.starts_with(':') {
-            return Err(ValidationErrorKind::InvalidFormat { field: "object".to_string(), expected: "':'".to_string() }.into());
+            return Err(WaeError::parse_error("object", "expected ':'"));
         }
         s = s[1..].trim_start();
 
@@ -743,9 +698,7 @@ fn parse_object(s: &str) -> Result<(Value, &str), WaeError> {
         }
 
         if !s.starts_with(',') {
-            return Err(
-                ValidationErrorKind::InvalidFormat { field: "object".to_string(), expected: "',' or '}'".to_string() }.into()
-            );
+            return Err(WaeError::parse_error("object", "expected ',' or '}'"));
         }
         s = s[1..].trim_start();
     }

@@ -8,70 +8,10 @@ pub mod totp;
 
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
-
-/// 认证错误类型
-#[derive(Debug)]
-pub enum AuthError {
-    /// 认证失败
-    AuthenticationFailed(String),
-
-    /// 无效凭证
-    InvalidCredentials,
-
-    /// Token 无效
-    InvalidToken(String),
-
-    /// Token 过期
-    TokenExpired,
-
-    /// 权限不足
-    PermissionDenied(String),
-
-    /// 用户不存在
-    UserNotFound(String),
-
-    /// 用户已存在
-    UserAlreadyExists(String),
-
-    /// 密码不符合要求
-    PasswordRequirement(String),
-
-    /// 账户被锁定
-    AccountLocked,
-
-    /// 账户未验证
-    AccountNotVerified,
-
-    /// 操作超时
-    Timeout(String),
-
-    /// 服务内部错误
-    Internal(String),
-}
-
-impl fmt::Display for AuthError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AuthError::AuthenticationFailed(msg) => write!(f, "Authentication failed: {}", msg),
-            AuthError::InvalidCredentials => write!(f, "Invalid credentials"),
-            AuthError::InvalidToken(msg) => write!(f, "Invalid token: {}", msg),
-            AuthError::TokenExpired => write!(f, "Token expired"),
-            AuthError::PermissionDenied(msg) => write!(f, "Permission denied: {}", msg),
-            AuthError::UserNotFound(msg) => write!(f, "User not found: {}", msg),
-            AuthError::UserAlreadyExists(msg) => write!(f, "User already exists: {}", msg),
-            AuthError::PasswordRequirement(msg) => write!(f, "Password does not meet requirements: {}", msg),
-            AuthError::AccountLocked => write!(f, "Account is locked"),
-            AuthError::AccountNotVerified => write!(f, "Account is not verified"),
-            AuthError::Timeout(msg) => write!(f, "Operation timeout: {}", msg),
-            AuthError::Internal(msg) => write!(f, "Auth internal error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for AuthError {}
+use wae_types::{WaeError, WaeErrorKind};
 
 /// 认证操作结果类型
-pub type AuthResult<T> = Result<T, AuthError>;
+pub type AuthResult<T> = Result<T, WaeError>;
 
 /// 用户 ID 类型
 pub type UserId = String;
@@ -449,19 +389,19 @@ pub mod memory {
             let user = users
                 .values_mut()
                 .find(|u| u.info.username == credentials.identifier || u.info.email.as_deref() == Some(&credentials.identifier))
-                .ok_or(AuthError::InvalidCredentials)?;
+                .ok_or(WaeError::invalid_credentials())?;
 
             if user.locked_until.map(|t| t > Self::current_timestamp()).unwrap_or(false) {
-                return Err(AuthError::AccountLocked);
+                return Err(WaeError::account_locked());
             }
 
             if !Self::verify_password(&credentials.password, &user.password_hash) {
                 user.login_attempts += 1;
                 if user.login_attempts >= self.config.max_login_attempts {
                     user.locked_until = Some(Self::current_timestamp() + self.config.lockout_duration as i64);
-                    return Err(AuthError::AccountLocked);
+                    return Err(WaeError::account_locked());
                 }
-                return Err(AuthError::InvalidCredentials);
+                return Err(WaeError::invalid_credentials());
             }
 
             user.login_attempts = 0;
@@ -497,7 +437,7 @@ pub mod memory {
         async fn refresh_token(&self, refresh_token: &str) -> AuthResult<AuthToken> {
             let mut refresh_tokens = self.refresh_tokens.write().await;
             let (user_id, _) =
-                refresh_tokens.remove(refresh_token).ok_or_else(|| AuthError::InvalidToken("Invalid refresh token".into()))?;
+                refresh_tokens.remove(refresh_token).ok_or_else(|| WaeError::invalid_token("Invalid refresh token"))?;
 
             let access_token = Self::generate_token();
             let new_refresh_token = Self::generate_token();
@@ -520,14 +460,14 @@ pub mod memory {
 
         async fn validate_token(&self, token: &str) -> AuthResult<TokenValidation> {
             let tokens = self.tokens.read().await;
-            let (user_id, expires_at) = tokens.get(token).ok_or_else(|| AuthError::InvalidToken("Token not found".into()))?;
+            let (user_id, expires_at) = tokens.get(token).ok_or_else(|| WaeError::invalid_token("Token not found"))?;
 
             if *expires_at < Self::current_timestamp() {
-                return Err(AuthError::TokenExpired);
+                return Err(WaeError::token_expired());
             }
 
             let users = self.users.read().await;
-            let user = users.get(user_id).ok_or_else(|| AuthError::UserNotFound(user_id.clone()))?;
+            let user = users.get(user_id).ok_or_else(|| WaeError::user_not_found(user_id.clone()))?;
 
             let permissions: Vec<PermissionCode> = user.roles.iter().flat_map(|r| r.permissions.iter().cloned()).collect();
 
@@ -544,7 +484,7 @@ pub mod memory {
             let mut users = self.users.write().await;
 
             if users.values().any(|u| u.info.username == request.username) {
-                return Err(AuthError::UserAlreadyExists(request.username.clone()));
+                return Err(WaeError::user_already_exists(request.username.clone()));
             }
 
             let user_id = uuid::Uuid::new_v4().to_string();
@@ -578,12 +518,12 @@ pub mod memory {
 
         async fn get_user(&self, user_id: &str) -> AuthResult<UserInfo> {
             let users = self.users.read().await;
-            users.get(user_id).map(|u| u.info.clone()).ok_or_else(|| AuthError::UserNotFound(user_id.into()))
+            users.get(user_id).map(|u| u.info.clone()).ok_or_else(|| WaeError::user_not_found(user_id))
         }
 
         async fn update_user(&self, user_id: &str, request: &UpdateUserRequest) -> AuthResult<UserInfo> {
             let mut users = self.users.write().await;
-            let user = users.get_mut(user_id).ok_or_else(|| AuthError::UserNotFound(user_id.into()))?;
+            let user = users.get_mut(user_id).ok_or_else(|| WaeError::user_not_found(user_id))?;
 
             if let Some(name) = &request.display_name {
                 user.info.display_name = Some(name.clone());
@@ -601,15 +541,15 @@ pub mod memory {
 
         async fn delete_user(&self, user_id: &str) -> AuthResult<()> {
             let mut users = self.users.write().await;
-            users.remove(user_id).map(|_| ()).ok_or_else(|| AuthError::UserNotFound(user_id.into()))
+            users.remove(user_id).map(|_| ()).ok_or_else(|| WaeError::user_not_found(user_id))
         }
 
         async fn change_password(&self, user_id: &str, request: &ChangePasswordRequest) -> AuthResult<()> {
             let mut users = self.users.write().await;
-            let user = users.get_mut(user_id).ok_or_else(|| AuthError::UserNotFound(user_id.into()))?;
+            let user = users.get_mut(user_id).ok_or_else(|| WaeError::user_not_found(user_id))?;
 
             if !Self::verify_password(&request.old_password, &user.password_hash) {
-                return Err(AuthError::InvalidCredentials);
+                return Err(WaeError::invalid_credentials());
             }
 
             user.password_hash = Self::hash_password(&request.new_password);
@@ -622,7 +562,7 @@ pub mod memory {
             let user = users
                 .values()
                 .find(|u| u.info.username == identifier || u.info.email.as_deref() == Some(identifier))
-                .ok_or_else(|| AuthError::UserNotFound(identifier.into()))?;
+                .ok_or_else(|| WaeError::user_not_found(identifier))?;
 
             tracing::info!("Password reset requested for user: {}", user.info.id);
             Ok(())
@@ -630,20 +570,20 @@ pub mod memory {
 
         async fn check_permission(&self, user_id: &str, permission: &str) -> AuthResult<bool> {
             let users = self.users.read().await;
-            let user = users.get(user_id).ok_or_else(|| AuthError::UserNotFound(user_id.into()))?;
+            let user = users.get(user_id).ok_or_else(|| WaeError::user_not_found(user_id))?;
 
             Ok(user.roles.iter().any(|r| r.permissions.iter().any(|p| p == permission)))
         }
 
         async fn get_user_roles(&self, user_id: &str) -> AuthResult<Vec<Role>> {
             let users = self.users.read().await;
-            let user = users.get(user_id).ok_or_else(|| AuthError::UserNotFound(user_id.into()))?;
+            let user = users.get(user_id).ok_or_else(|| WaeError::user_not_found(user_id))?;
             Ok(user.roles.clone())
         }
 
         async fn assign_role(&self, user_id: &str, role_id: &str) -> AuthResult<()> {
             let mut users = self.users.write().await;
-            let user = users.get_mut(user_id).ok_or_else(|| AuthError::UserNotFound(user_id.into()))?;
+            let user = users.get_mut(user_id).ok_or_else(|| WaeError::user_not_found(user_id))?;
 
             if !user.roles.iter().any(|r| r.id == role_id) {
                 user.roles.push(Role { id: role_id.into(), name: role_id.into(), description: None, permissions: vec![] });
@@ -653,7 +593,7 @@ pub mod memory {
 
         async fn remove_role(&self, user_id: &str, role_id: &str) -> AuthResult<()> {
             let mut users = self.users.write().await;
-            let user = users.get_mut(user_id).ok_or_else(|| AuthError::UserNotFound(user_id.into()))?;
+            let user = users.get_mut(user_id).ok_or_else(|| WaeError::user_not_found(user_id))?;
 
             user.roles.retain(|r| r.id != role_id);
             Ok(())

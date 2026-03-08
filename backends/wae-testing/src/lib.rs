@@ -9,7 +9,6 @@
 
 mod assertions;
 mod environment;
-mod error;
 mod fixture;
 mod mock;
 
@@ -17,11 +16,11 @@ pub use assertions::{AsyncAssert, assert_eventually, assert_json_contains, asser
 
 pub use environment::{TestEnv, TestEnvBuilder, TestEnvConfig, TestEnvState, create_test_env, create_test_env_with_config};
 
-pub use error::{TestingError, TestingResult};
-
 pub use fixture::{
     Fixture, FixtureBuilder, FixtureGenerator, RandomBool, RandomChoice, RandomDateTime, RandomEmail, RandomNumber,
     RandomString, RandomUuid,
 };
 
 pub use mock::{Mock, MockBuilder, MockCall, MockExpectation, MockFn, MockResult, verify};
+
+pub use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};

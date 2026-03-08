@@ -8,7 +8,7 @@ pub mod smtp;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use wae_types::{NetworkErrorKind, StorageErrorKind, ValidationErrorKind, WaeError, WaeResult};
+use wae_types::{WaeError, WaeResult};
 
 use crate::{
     mime::{EmailBuilder, EmailMessage},
@@ -70,9 +70,7 @@ impl SmtpEmailProvider {
 
     /// 将 SMTP 错误转换为 WaeError
     fn map_smtp_error(e: SmtpError) -> WaeError {
-        WaeError::network(NetworkErrorKind::ConnectionFailed)
-            .with_param("host", "")
-            .with_param("message", format!("SMTP error: {}", e))
+        WaeError::connection_failed(format!("SMTP error: {}", e))
     }
 
     /// 构建邮件消息
@@ -166,11 +164,12 @@ impl DirectEmailProvider {
         let response = resolver
             .mx_lookup(domain)
             .await
-            .map_err(|_| WaeError::network(NetworkErrorKind::DnsResolutionFailed).with_param("host", domain))?;
+            .map_err(|_| WaeError::connection_failed(format!("DNS resolution failed for {}", domain)))?;
 
-        let mx = response.iter().min_by_key(|mx| mx.preference()).ok_or_else(|| {
-            WaeError::storage(StorageErrorKind::FileNotFound).with_param("path", format!("No MX records found for {}", domain))
-        })?;
+        let mx = response
+            .iter()
+            .min_by_key(|mx| mx.preference())
+            .ok_or_else(|| WaeError::storage_file_not_found(format!("No MX records found for {}", domain)))?;
 
         Ok(mx.exchange().to_string().trim_end_matches('.').to_string())
     }
@@ -184,36 +183,23 @@ impl DirectEmailProvider {
 #[async_trait]
 impl EmailProvider for DirectEmailProvider {
     async fn send_email(&self, to: &str, subject: &str, body: &str) -> WaeResult<()> {
-        let domain = to.split('@').nth(1).ok_or_else(|| {
-            WaeError::validation(ValidationErrorKind::InvalidFormat {
-                field: "email".to_string(),
-                expected: format!("Invalid email address: {}", to),
-            })
-        })?;
+        let domain =
+            to.split('@').nth(1).ok_or_else(|| WaeError::invalid_format("email", format!("Invalid email address: {}", to)))?;
 
         let mx_host = self.resolve_mx(domain).await?;
 
         let mut client = SmtpClientBuilder::new(&mx_host, 25).timeout(Duration::from_secs(30)).use_starttls(false).build();
 
-        client.connect().await.map_err(|e| {
-            WaeError::network(NetworkErrorKind::ConnectionFailed)
-                .with_param("host", mx_host.clone())
-                .with_param("message", e.to_string())
-        })?;
-        client.ehlo().await.map_err(|e| {
-            WaeError::network(NetworkErrorKind::ConnectionFailed)
-                .with_param("host", mx_host.clone())
-                .with_param("message", format!("EHLO failed: {}", e))
-        })?;
+        client.connect().await.map_err(|e| WaeError::connection_failed(format!("{}: {}", mx_host, e)))?;
+        client.ehlo().await.map_err(|e| WaeError::connection_failed(format!("{}: EHLO failed: {}", mx_host, e)))?;
 
         let email = self.build_email(to, subject, body);
         let content = email.to_string();
 
-        client.send_mail(&self.from_email, &[to], &content).await.map_err(|e| {
-            WaeError::network(NetworkErrorKind::ConnectionFailed)
-                .with_param("host", mx_host.clone())
-                .with_param("message", e.to_string())
-        })?;
+        client
+            .send_mail(&self.from_email, &[to], &content)
+            .await
+            .map_err(|e| WaeError::connection_failed(format!("{}: {}", mx_host, e)))?;
 
         let _ = client.quit().await;
 

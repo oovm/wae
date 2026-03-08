@@ -13,10 +13,8 @@ use tokio::{
 use tracing::{debug, error, info};
 use uuid::Uuid;
 
-use crate::{
-    error::{SchedulerError, SchedulerResult},
-    task::{ScheduledTask, TaskHandle, TaskId, TaskState},
-};
+use crate::task::{ScheduledTask, TaskHandle, TaskId, TaskState};
+use wae_types::{WaeError, WaeResult};
 
 /// 间隔任务调度器配置
 #[derive(Debug, Clone)]
@@ -93,9 +91,9 @@ impl IntervalScheduler {
     /// # 返回值
     ///
     /// 返回任务句柄，可用于查询状态或取消任务。
-    pub async fn schedule_interval(&self, task: Arc<dyn ScheduledTask>, interval: Duration) -> SchedulerResult<TaskHandle> {
+    pub async fn schedule_interval(&self, task: Arc<dyn ScheduledTask>, interval: Duration) -> WaeResult<TaskHandle> {
         if self.is_shutdown.load(Ordering::SeqCst) {
-            return Err(SchedulerError::Shutdown);
+            return Err(WaeError::scheduler_shutdown());
         }
 
         let task_id = Uuid::new_v4().to_string();
@@ -185,7 +183,7 @@ impl IntervalScheduler {
     /// # 返回值
     ///
     /// 成功返回 `true`，任务不存在返回 `false`。
-    pub async fn cancel_task(&self, task_id: &str) -> SchedulerResult<bool> {
+    pub async fn cancel_task(&self, task_id: &str) -> WaeResult<bool> {
         let handles = self.handles.read().await;
         if let Some(handle) = handles.get(task_id) {
             handle.cancel();
@@ -194,7 +192,7 @@ impl IntervalScheduler {
             Ok(true)
         }
         else {
-            Err(SchedulerError::TaskNotFound(task_id.to_string()))
+            Err(WaeError::task_not_found(task_id))
         }
     }
 

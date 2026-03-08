@@ -12,10 +12,8 @@ use tokio::sync::{RwLock, broadcast, mpsc};
 use tracing::{debug, info};
 use uuid::Uuid;
 
-use crate::{
-    error::{SchedulerError, SchedulerResult},
-    task::{TaskHandle, TaskId, TaskState},
-};
+use crate::task::{TaskHandle, TaskId, TaskState};
+use wae_types::{WaeError, WaeResult};
 
 /// 延迟任务
 #[derive(Debug, Clone)]
@@ -62,7 +60,7 @@ impl<T: Send + Sync + Clone + 'static> DelayedTask<T> {
 #[async_trait]
 pub trait DelayedTaskExecutor<T: Send + Sync + Clone + 'static>: Send + Sync {
     /// 执行任务
-    async fn execute(&self, task: DelayedTask<T>) -> SchedulerResult<()>;
+    async fn execute(&self, task: DelayedTask<T>) -> WaeResult<()>;
 }
 
 /// 延迟任务队列配置
@@ -191,9 +189,9 @@ impl<T: Send + Sync + Clone + 'static> DelayedQueue<T> {
     /// # 返回值
     ///
     /// 返回任务句柄。
-    pub async fn schedule_delayed(&self, task: DelayedTask<T>) -> SchedulerResult<TaskHandle> {
+    pub async fn schedule_delayed(&self, task: DelayedTask<T>) -> WaeResult<TaskHandle> {
         if self.is_shutdown.load(Ordering::SeqCst) {
-            return Err(SchedulerError::Shutdown);
+            return Err(WaeError::scheduler_shutdown());
         }
 
         let handle = TaskHandle::new(task.id.clone(), task.name.clone());
@@ -203,7 +201,7 @@ impl<T: Send + Sync + Clone + 'static> DelayedQueue<T> {
             handles.insert(task.id.clone(), handle.clone());
         }
 
-        self.task_tx.send(task).await.map_err(|e| SchedulerError::Internal(format!("Failed to send task: {}", e)))?;
+        self.task_tx.send(task).await.map_err(|e| WaeError::internal(format!("Failed to send task: {}", e)))?;
 
         info!("Scheduled delayed task: {}", handle.name);
         Ok(handle)
@@ -215,7 +213,7 @@ impl<T: Send + Sync + Clone + 'static> DelayedQueue<T> {
     }
 
     /// 取消任务
-    pub async fn cancel_task(&self, task_id: &str) -> SchedulerResult<bool> {
+    pub async fn cancel_task(&self, task_id: &str) -> WaeResult<bool> {
         let mut queue = self.queue.write().await;
         let initial_len = queue.len();
         queue.retain(|t| t.id != task_id);
@@ -229,7 +227,7 @@ impl<T: Send + Sync + Clone + 'static> DelayedQueue<T> {
             Ok(true)
         }
         else {
-            Err(SchedulerError::TaskNotFound(task_id.to_string()))
+            Err(WaeError::task_not_found(task_id))
         }
     }
 

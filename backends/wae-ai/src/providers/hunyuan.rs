@@ -13,7 +13,7 @@ use hmac::{Hmac, Mac};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use wae_request::HttpClient;
-use wae_types::{BillingDimensions, CloudError, hex_encode};
+use wae_types::{BillingDimensions, WaeError, hex_encode};
 
 /// 腾讯混元 AI 服务提供商
 pub struct HunyuanProvider {
@@ -95,11 +95,11 @@ fn _hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
 
 impl VideoGenerationCapability for HunyuanProvider {
     async fn generate_video(&self, _task: &AiVideoTask, _config: &AiConfig) -> AiResult<AiVideoOutput> {
-        Err(CloudError::internal("Hunyuan video generation not implemented yet".to_string()))
+        Err(WaeError::internal("Hunyuan video generation not implemented yet".to_string()))
     }
 
     async fn get_video_task_status(&self, _task_id: &str, _config: &AiConfig) -> AiResult<AiVideoOutput> {
-        Err(CloudError::internal("Hunyuan video status check not implemented yet".to_string()))
+        Err(WaeError::internal("Hunyuan video status check not implemented yet".to_string()))
     }
 }
 
@@ -129,7 +129,7 @@ impl AiImageCapability for HunyuanProvider {
             .inputs
             .iter()
             .find_map(|input| if let AiImageInput::Text(t) = input { Some(t.clone()) } else { None })
-            .ok_or_else(|| CloudError::invalid_param("prompt", "Prompt is required"))?;
+            .ok_or_else(|| WaeError::invalid_params("prompt", "Prompt is required"))?;
 
         let _body = json!({
             "Prompt": prompt,

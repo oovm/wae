@@ -7,7 +7,7 @@ use mysql_async::Row as MySqlRow;
 use tokio_postgres::Row as PostgresRow;
 #[cfg(feature = "turso")]
 use turso::Row;
-use wae_types::WaeError;
+use wae_types::{DatabaseErrorKind, WaeError};
 
 /// 查询结果行
 pub enum DatabaseRow {
@@ -43,8 +43,12 @@ impl DatabaseRow {
         match self {
             #[cfg(feature = "turso")]
             Self::Turso(row) => {
-                let value =
-                    row.get_value(index).map_err(|e| WaeError::internal(format!("Failed to get column {}: {}", index, e)))?;
+                let value = row.get_value(index).map_err(|e| {
+                    WaeError::database(DatabaseErrorKind::QueryFailed {
+                        query: None,
+                        reason: format!("Failed to get column {}: {}", index, e),
+                    })
+                })?;
                 T::from_turso_value(value)
             }
             #[cfg(feature = "postgres")]
@@ -103,7 +107,12 @@ impl DatabaseRows {
             Self::Turso(rows) => rows
                 .next()
                 .await
-                .map_err(|e| WaeError::internal(format!("Failed to fetch row: {}", e)))
+                .map_err(|e| {
+                    WaeError::database(DatabaseErrorKind::QueryFailed {
+                        query: None,
+                        reason: format!("Failed to fetch row: {}", e),
+                    })
+                })
                 .map(|opt| opt.map(DatabaseRow::new_turso)),
             #[cfg(feature = "postgres")]
             Self::Postgres(rows, index) => {

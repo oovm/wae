@@ -1,7 +1,7 @@
 use crate::AiConfig;
 
 use serde::{Deserialize, Serialize};
-use wae_types::{BillingDimensions, CloudResult};
+use wae_types::{BillingDimensions, WaeResult};
 
 /// AI 视频输入
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,9 +44,9 @@ pub struct AiVideoOutput {
 pub trait VideoGenerationCapability: Send + Sync {
     /// 生成视频
     #[allow(async_fn_in_trait)]
-    async fn generate_video(&self, task: &AiVideoTask, config: &AiConfig) -> CloudResult<AiVideoOutput>;
+    async fn generate_video(&self, task: &AiVideoTask, config: &AiConfig) -> WaeResult<AiVideoOutput>;
 
     /// 查询视频任务状态 (某些视频生成是异步的)
     #[allow(async_fn_in_trait)]
-    async fn get_video_task_status(&self, task_id: &str, config: &AiConfig) -> CloudResult<AiVideoOutput>;
+    async fn get_video_task_status(&self, task_id: &str, config: &AiConfig) -> WaeResult<AiVideoOutput>;
 }

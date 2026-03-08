@@ -4,8 +4,9 @@
 
 use crate::{
     auto_migrate::{diff::SchemaDiff, reflect::SchemaReflector},
-    migration::{Migration, MigrationError, MigrationResult},
+    migration::{Migration, MigrationResult},
 };
+use wae_types::{WaeError, WaeResult};
 
 use std::collections::HashMap;
 use tracing::{info, warn};
@@ -150,7 +151,7 @@ impl AutoMigrator {
     }
 
     /// 生成迁移计划
-    pub async fn plan(&self, conn: &dyn DatabaseConnection) -> Result<MigrationPlan, MigrationError> {
+    pub async fn plan(&self, conn: &dyn DatabaseConnection) -> WaeResult<MigrationPlan> {
         let reflector = SchemaReflector::new(conn);
         let actual_schemas = reflector.get_all_schemas().await?;
 
@@ -244,7 +245,7 @@ impl AutoMigrator {
     }
 
     /// 执行迁移
-    pub async fn migrate(&self, conn: &dyn DatabaseConnection) -> Result<Vec<MigrationResult>, MigrationError> {
+    pub async fn migrate(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationResult>> {
         let plan = self.plan(conn).await?;
 
         if plan.is_empty() {
@@ -294,7 +295,7 @@ impl AutoMigrator {
                         error: Some(error_msg.clone()),
                     });
 
-                    return Err(MigrationError::ExecutionFailed(format!("SQL execution failed: {}", error_msg)));
+                    return Err(WaeError::internal(format!("SQL execution failed: {}", error_msg)));
                 }
             }
         }
@@ -305,7 +306,7 @@ impl AutoMigrator {
     }
 
     /// 同步表结构 (创建不存在的表)
-    pub async fn sync(&self, conn: &dyn DatabaseConnection) -> Result<Vec<String>, MigrationError> {
+    pub async fn sync(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<String>> {
         let reflector = SchemaReflector::new(conn);
         let mut created = Vec::new();
 
@@ -328,7 +329,7 @@ impl AutoMigrator {
     }
 
     /// 重建表 (用于处理 SQLite 不支持的 ALTER 操作)
-    pub async fn rebuild_table(conn: &dyn DatabaseConnection, schema: &TableSchema) -> Result<(), MigrationError> {
+    pub async fn rebuild_table(conn: &dyn DatabaseConnection, schema: &TableSchema) -> WaeResult<()> {
         let temp_name = format!("{}_new", schema.name);
 
         let create_sql = schema.to_create_sql().replace(&schema.name, &temp_name);

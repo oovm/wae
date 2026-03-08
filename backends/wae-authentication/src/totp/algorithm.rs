@@ -1,9 +1,13 @@
 //! TOTP/HOTP 算法实现
 
-use crate::totp::{TotpAlgorithm, TotpError, TotpResult};
+use crate::totp::TotpAlgorithm;
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
+use wae_types::{WaeError, WaeErrorKind};
+
+/// TOTP 结果类型
+pub type TotpResult<T> = Result<T, WaeError>;
 
 /// 动态截取函数
 fn dynamic_truncate(hmac_result: &[u8], digits: u32) -> u32 {
@@ -21,17 +25,20 @@ fn dynamic_truncate(hmac_result: &[u8], digits: u32) -> u32 {
 fn compute_hmac(algorithm: TotpAlgorithm, key: &[u8], counter: &[u8]) -> TotpResult<Vec<u8>> {
     match algorithm {
         TotpAlgorithm::SHA1 => {
-            let mut mac = Hmac::<Sha1>::new_from_slice(key).map_err(|e| TotpError::HmacError(e.to_string()))?;
+            let mut mac = Hmac::<Sha1>::new_from_slice(key)
+                .map_err(|e| WaeError::new(WaeErrorKind::HmacError { reason: e.to_string() }))?;
             mac.update(counter);
             Ok(mac.finalize().into_bytes().to_vec())
         }
         TotpAlgorithm::SHA256 => {
-            let mut mac = Hmac::<Sha256>::new_from_slice(key).map_err(|e| TotpError::HmacError(e.to_string()))?;
+            let mut mac = Hmac::<Sha256>::new_from_slice(key)
+                .map_err(|e| WaeError::new(WaeErrorKind::HmacError { reason: e.to_string() }))?;
             mac.update(counter);
             Ok(mac.finalize().into_bytes().to_vec())
         }
         TotpAlgorithm::SHA512 => {
-            let mut mac = Hmac::<Sha512>::new_from_slice(key).map_err(|e| TotpError::HmacError(e.to_string()))?;
+            let mut mac = Hmac::<Sha512>::new_from_slice(key)
+                .map_err(|e| WaeError::new(WaeErrorKind::HmacError { reason: e.to_string() }))?;
             mac.update(counter);
             Ok(mac.finalize().into_bytes().to_vec())
         }

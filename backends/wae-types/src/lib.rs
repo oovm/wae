@@ -31,6 +31,9 @@ pub struct BillingDimensions {
     pub output_pixels: u64,
 }
 
+/// 数据库错误类型别名
+pub type DatabaseErrorKind = WaeErrorKind;
+
 /// 构建对象的便捷宏
 #[macro_export]
 macro_rules! object {

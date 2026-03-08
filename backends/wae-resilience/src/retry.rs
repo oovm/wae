@@ -2,10 +2,10 @@
 //!
 //! 提供灵活的重试策略，包括指数退避、固定间隔和线性退避。
 
-use crate::error::{ResilienceError, ResilienceResult};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::debug;
+use wae_types::{WaeError, WaeResult};
 
 /// 重试策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,7 +134,7 @@ impl RetryContext {
 /// 执行带重试的异步操作
 ///
 /// 根据配置的重试策略自动重试失败的操作。
-pub async fn retry_async<F, T, E, Fut>(config: &RetryConfig, mut operation: F) -> ResilienceResult<T>
+pub async fn retry_async<F, T, E, Fut>(config: &RetryConfig, mut operation: F) -> WaeResult<T>
 where
     F: FnMut(RetryContext) -> Fut,
     Fut: std::future::Future<Output = Result<T, E>>,
@@ -151,7 +151,7 @@ where
                 context.last_error = Some(e.to_string());
 
                 if !context.can_retry() {
-                    return Err(ResilienceError::MaxRetriesExceeded(e.to_string()));
+                    return Err(WaeError::max_retries_exceeded(config.max_retries));
                 }
 
                 let delay = config.policy.delay_for_attempt(context.attempt - 1);
@@ -172,7 +172,7 @@ where
 /// 执行带重试的异步操作 (带条件判断)
 ///
 /// 只有当 should_retry 返回 true 时才会重试。
-pub async fn retry_async_if<F, T, E, Fut, P>(config: &RetryConfig, mut operation: F, mut should_retry: P) -> ResilienceResult<T>
+pub async fn retry_async_if<F, T, E, Fut, P>(config: &RetryConfig, mut operation: F, mut should_retry: P) -> WaeResult<T>
 where
     F: FnMut(RetryContext) -> Fut,
     Fut: std::future::Future<Output = Result<T, E>>,
@@ -190,7 +190,7 @@ where
                 context.last_error = Some(e.to_string());
 
                 if !context.can_retry() || !should_retry(&e) {
-                    return Err(ResilienceError::MaxRetriesExceeded(e.to_string()));
+                    return Err(WaeError::max_retries_exceeded(config.max_retries));
                 }
 
                 let delay = config.policy.delay_for_attempt(context.attempt - 1);
