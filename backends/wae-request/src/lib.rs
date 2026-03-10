@@ -1,18 +1,17 @@
-//! WAE Request - 纯 Tokio HTTP 客户端
+//! WAE Request - 基于 hyper 的 HTTP 客户端
 //!
-//! 基于 tokio + tokio-rustls 实现的 HTTP/1.1 客户端
-//! 不依赖 hyper 或 reqwest
+//! 基于 hyper + hyper-tls 实现的 HTTP 客户端
 
 #![warn(missing_docs)]
 
+use bytes::Bytes;
+use http_body_util::{BodyExt, Full};
+use hyper::{Request, Uri};
+use hyper_util::client::legacy::Client;
+use hyper_util::rt::TokioExecutor;
 use serde::{Serialize, de::DeserializeOwned};
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
-    net::TcpStream,
-    time::timeout,
-};
-use tokio_rustls::{TlsConnector, rustls::pki_types::ServerName};
+use tokio::time::timeout;
 use tracing::{debug, error, info};
 use url::Url;
 use wae_types::{WaeError, WaeErrorKind, WaeResult};
@@ -79,16 +78,20 @@ impl HttpResponse {
     }
 }
 
-/// TLS 连接器 (全局共享)
-static TLS_CONNECTOR: std::sync::OnceLock<Arc<TlsConnector>> = std::sync::OnceLock::new();
+/// hyper 客户端 (全局共享)
+static HYPER_CLIENT: std::sync::OnceLock<Arc<Client<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, Full<Bytes>>>> = std::sync::OnceLock::new();
 
-fn get_tls_connector() -> Arc<TlsConnector> {
-    TLS_CONNECTOR
+fn get_hyper_client() -> Arc<Client<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, Full<Bytes>>> {
+    HYPER_CLIENT
         .get_or_init(|| {
-            let mut roots = tokio_rustls::rustls::RootCertStore::empty();
-            roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-            let config = tokio_rustls::rustls::ClientConfig::builder().with_root_certificates(roots).with_no_client_auth();
-            Arc::new(TlsConnector::from(Arc::new(config)))
+            let mut http = hyper_util::client::legacy::connect::HttpConnector::new();
+            http.enforce_http(false);
+            
+            let https = hyper_tls::HttpsConnector::new_with_connector(http);
+            
+            let client = Client::builder(TokioExecutor::new()).build(https);
+            
+            Arc::new(client)
         })
         .clone()
 }
@@ -133,7 +136,7 @@ impl HttpClient {
 
     /// 发送 POST JSON 请求
     pub async fn post_json<T: Serialize>(&self, url: &str, body: &T) -> WaeResult<HttpResponse> {
-        let json_body = serde_json::to_vec(body).map_err(|e| WaeError::serialization_failed("JSON"))?;
+        let json_body = serde_json::to_vec(body).map_err(|_e| WaeError::serialization_failed("JSON"))?;
 
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
@@ -210,176 +213,90 @@ impl HttpClient {
         body: Option<Vec<u8>>,
         extra_headers: Option<HashMap<String, String>>,
     ) -> WaeResult<HttpResponse> {
-        let url = Url::parse(url_str).map_err(|e| WaeError::invalid_params("url", e.to_string()))?;
+        let _url = Url::parse(url_str).map_err(|e| WaeError::invalid_params("url", e.to_string()))?;
+        let uri = url_str.parse::<Uri>().map_err(|e| WaeError::invalid_params("url", e.to_string()))?;
 
-        let host = url.host_str().ok_or_else(|| WaeError::invalid_params("url", "Missing host"))?;
-        let port = url.port().unwrap_or(if url.scheme() == "https" { 443 } else { 80 });
-        let path = url.path();
-        let query = url.query().map(|q| format!("?{}", q)).unwrap_or_default();
-        let uri = format!("{}{}", path, query);
+        let client = get_hyper_client();
 
-        let is_https = url.scheme() == "https";
-
-        let connect_result = timeout(self.config.connect_timeout, TcpStream::connect((host, port)))
-            .await
-            .map_err(|_| WaeError::operation_timeout("connect", self.config.connect_timeout.as_millis() as u64))?;
-
-        let tcp_stream = connect_result.map_err(|e| WaeError::connection_failed(format!("{}:{}: {}", host, port, e)))?;
-
-        tcp_stream.set_nodelay(true).ok();
-
-        let response = if is_https {
-            let connector = get_tls_connector();
-            let server_name = ServerName::try_from(host.to_string())
-                .map_err(|e| WaeError::new(WaeErrorKind::TlsError { reason: e.to_string() }))?;
-
-            let tls_stream = connector
-                .connect(server_name, tcp_stream)
-                .await
-                .map_err(|e| WaeError::new(WaeErrorKind::TlsError { reason: e.to_string() }))?;
-
-            let (reader, writer) = tokio::io::split(tls_stream);
-            self.send_http_request(reader, writer, method, host, &uri, body, extra_headers).await?
-        }
-        else {
-            let (reader, writer) = tcp_stream.into_split();
-            self.send_http_request(reader, writer, method, host, &uri, body, extra_headers).await?
-        };
-
-        Ok(response)
-    }
-
-    /// 发送 HTTP 请求并读取响应
-    #[allow(clippy::too_many_arguments)]
-    async fn send_http_request<R, W>(
-        &self,
-        reader: R,
-        mut writer: W,
-        method: &str,
-        host: &str,
-        uri: &str,
-        body: Option<Vec<u8>>,
-        extra_headers: Option<HashMap<String, String>>,
-    ) -> WaeResult<HttpResponse>
-    where
-        R: AsyncReadExt + Unpin,
-        W: AsyncWriteExt + Unpin,
-    {
-        let body_len = body.as_ref().map(|b| b.len()).unwrap_or(0);
-
-        let mut request =
-            format!("{} {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: {}\r\n", method, uri, host, self.config.user_agent);
-
-        if body_len > 0 {
-            request.push_str(&format!("Content-Length: {}\r\n", body_len));
-        }
+        let mut builder = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("User-Agent", &self.config.user_agent);
 
         for (key, value) in &self.config.default_headers {
-            request.push_str(&format!("{}: {}\r\n", key, value));
+            builder = builder.header(key, value);
         }
 
         if let Some(headers) = extra_headers {
             for (key, value) in headers {
-                request.push_str(&format!("{}: {}\r\n", key, value));
+                builder = builder.header(key, value);
             }
         }
 
-        request.push_str("Connection: close\r\n\r\n");
+        let request = match body {
+            Some(b) => {
+                let len = b.len();
+                builder
+                    .header("Content-Length", len)
+                    .body(Full::new(Bytes::from(b)))
+                    .map_err(|e| WaeError::new(WaeErrorKind::RequestError {
+                        url: url_str.to_string(),
+                        reason: e.to_string(),
+                    }))?
+            }
+            None => {
+                builder
+                    .body(Full::new(Bytes::new()))
+                    .map_err(|e| WaeError::new(WaeErrorKind::RequestError {
+                        url: url_str.to_string(),
+                        reason: e.to_string(),
+                    }))?
+            }
+        };
 
-        let mut request_bytes = request.into_bytes();
-        if let Some(b) = body {
-            request_bytes.extend(b);
-        }
-
-        timeout(self.config.timeout, async {
-            writer
-                .write_all(&request_bytes)
-                .await
-                .map_err(|e| WaeError::connection_failed(format!("{}: Write failed: {}", host, e)))?;
-            writer.flush().await.map_err(|e| WaeError::connection_failed(format!("{}: Flush failed: {}", host, e)))?;
-            Ok::<_, WaeError>(())
-        })
-        .await
-        .map_err(|_| WaeError::operation_timeout("write_request", self.config.timeout.as_millis() as u64))??;
-
-        let response = timeout(self.config.timeout, self.read_response(reader))
+        let response = timeout(self.config.timeout, client.request(request))
             .await
-            .map_err(|_| WaeError::operation_timeout("read_response", self.config.timeout.as_millis() as u64))??;
+            .map_err(|_| WaeError::operation_timeout("request", self.config.timeout.as_millis() as u64))?
+            .map_err(|_e| WaeError::new(WaeErrorKind::ConnectionFailed {
+                target: url_str.to_string(),
+            }))?;
 
-        Ok(response)
-    }
-
-    /// 读取 HTTP 响应
-    async fn read_response<R: AsyncReadExt + Unpin>(&self, reader: R) -> WaeResult<HttpResponse> {
-        let mut buf_reader = BufReader::new(reader);
-        let mut status_line = String::new();
-
-        buf_reader.read_line(&mut status_line).await.map_err(|e| {
-            WaeError::new(WaeErrorKind::ProtocolError {
-                protocol: "HTTP".to_string(),
-                reason: format!("Read status line failed: {}", e),
-            })
-        })?;
-
-        let status_parts: Vec<&str> = status_line.trim().splitn(3, ' ').collect();
-        if status_parts.len() < 2 {
-            return Err(WaeError::new(WaeErrorKind::ProtocolError {
-                protocol: "HTTP".to_string(),
-                reason: "Invalid status line".to_string(),
-            }));
-        }
-
-        let version = status_parts[0].to_string();
-        let status: u16 = status_parts[1].parse().map_err(|_| {
-            WaeError::new(WaeErrorKind::ProtocolError {
-                protocol: "HTTP".to_string(),
-                reason: "Invalid status code".to_string(),
-            })
-        })?;
-        let status_text = status_parts.get(2).unwrap_or(&"").to_string();
+        let status = response.status().as_u16();
+        let status_text = response.status().canonical_reason().unwrap_or("").to_string();
+        
+        let version = match response.version() {
+            hyper::Version::HTTP_09 => "HTTP/0.9".to_string(),
+            hyper::Version::HTTP_10 => "HTTP/1.0".to_string(),
+            hyper::Version::HTTP_11 => "HTTP/1.1".to_string(),
+            hyper::Version::HTTP_2 => "HTTP/2".to_string(),
+            hyper::Version::HTTP_3 => "HTTP/3".to_string(),
+            _ => "HTTP/Unknown".to_string(),
+        };
 
         let mut headers = HashMap::new();
-        loop {
-            let mut line = String::new();
-            buf_reader.read_line(&mut line).await.map_err(|e| {
-                WaeError::new(WaeErrorKind::ProtocolError {
-                    protocol: "HTTP".to_string(),
-                    reason: format!("Read header failed: {}", e),
-                })
-            })?;
-
-            if line == "\r\n" || line.is_empty() {
-                break;
-            }
-
-            if let Some((key, value)) = line.split_once(':') {
-                headers.insert(key.trim().to_string(), value.trim().to_string());
+        for (key, value) in response.headers() {
+            if let Ok(value_str) = value.to_str() {
+                headers.insert(key.as_str().to_string(), value_str.to_string());
             }
         }
 
-        let content_length: Option<usize> = headers.get("content-length").and_then(|v| v.parse().ok());
+        let body_bytes = response
+            .into_body()
+            .collect()
+            .await
+            .map_err(|e| WaeError::new(WaeErrorKind::ProtocolError {
+                protocol: "HTTP".to_string(),
+                reason: format!("Read body failed: {}", e),
+            }))?
+            .to_bytes();
 
-        let mut body = Vec::new();
-
-        if let Some(len) = content_length {
-            body.resize(len, 0);
-            buf_reader.read_exact(&mut body).await.map_err(|e| {
-                WaeError::new(WaeErrorKind::ProtocolError {
-                    protocol: "HTTP".to_string(),
-                    reason: format!("Read body failed: {}", e),
-                })
-            })?;
-        }
-        else {
-            buf_reader.read_to_end(&mut body).await.map_err(|e| {
-                WaeError::new(WaeErrorKind::ProtocolError {
-                    protocol: "HTTP".to_string(),
-                    reason: format!("Read body failed: {}", e),
-                })
-            })?;
-        }
-
-        Ok(HttpResponse { version, status, status_text, headers, body })
+        Ok(HttpResponse {
+            version,
+            status,
+            status_text,
+            headers,
+            body: body_bytes.to_vec(),
+        })
     }
 
     /// 判断状态码是否可重试

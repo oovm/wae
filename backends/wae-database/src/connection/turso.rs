@@ -4,12 +4,12 @@ use crate::connection::{
     config::{DatabaseConfig, DatabaseResult},
     row::DatabaseRows,
     statement::DatabaseStatement,
-    trait_impl::DatabaseConnection,
+    trait_impl::{DatabaseConnection, DatabaseBackend},
 };
 use async_trait::async_trait;
 use std::path::PathBuf;
 use turso::{Builder, Connection, Database, Value as TursoValue};
-use wae_types::{DatabaseErrorKind, WaeError};
+use wae_types::{WaeErrorKind, WaeError};
 
 /// Turso 连接包装
 pub struct TursoConnection {
@@ -24,15 +24,19 @@ impl TursoConnection {
 
 #[async_trait]
 impl DatabaseConnection for TursoConnection {
+    fn backend(&self) -> DatabaseBackend {
+        DatabaseBackend::Turso
+    }
+
     async fn query(&self, sql: &str) -> DatabaseResult<DatabaseRows> {
         let mut stmt = self.conn.prepare(sql).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed {
+            WaeError::database(WaeErrorKind::QueryFailed {
                 query: Some(sql.to_string()),
                 reason: format!("Prepare failed: {}", e),
             })
         })?;
         let rows = stmt.query(()).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed {
+            WaeError::database(WaeErrorKind::QueryFailed {
                 query: Some(sql.to_string()),
                 reason: format!("Query failed: {}", e),
             })
@@ -47,7 +51,7 @@ impl DatabaseConnection for TursoConnection {
 
     async fn execute(&self, sql: &str) -> DatabaseResult<u64> {
         self.conn.execute(sql, ()).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed {
+            WaeError::database(WaeErrorKind::ExecuteFailed {
                 statement: Some(sql.to_string()),
                 reason: format!("Execute failed: {}", e),
             })
@@ -64,7 +68,7 @@ impl DatabaseConnection for TursoConnection {
             .prepare(sql)
             .await
             .map_err(|e| {
-                WaeError::database(DatabaseErrorKind::QueryFailed {
+                WaeError::database(WaeErrorKind::QueryFailed {
                     query: Some(sql.to_string()),
                     reason: format!("Prepare failed: {}", e),
                 })
@@ -72,15 +76,42 @@ impl DatabaseConnection for TursoConnection {
             .map(DatabaseStatement::new_turso)
     }
 
+    async fn begin_transaction(&self) -> DatabaseResult<()> {
+        self.conn.execute("BEGIN TRANSACTION", ()).await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Failed to begin transaction: {}", e),
+            })
+        })?;
+        Ok(())
+    }
+
+    async fn commit(&self) -> DatabaseResult<()> {
+        self.conn.execute("COMMIT", ()).await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Failed to commit transaction: {}", e),
+            })
+        })?;
+        Ok(())
+    }
+
+    async fn rollback(&self) -> DatabaseResult<()> {
+        self.conn.execute("ROLLBACK", ()).await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Failed to rollback transaction: {}", e),
+            })
+        })?;
+        Ok(())
+    }
+
     async fn query_with_turso(&self, sql: &str, params: Vec<TursoValue>) -> DatabaseResult<DatabaseRows> {
         let mut stmt = self.conn.prepare(sql).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed {
+            WaeError::database(WaeErrorKind::QueryFailed {
                 query: Some(sql.to_string()),
                 reason: format!("Prepare failed: {}", e),
             })
         })?;
         let rows = stmt.query(params).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed {
+            WaeError::database(WaeErrorKind::QueryFailed {
                 query: Some(sql.to_string()),
                 reason: format!("Query failed: {}", e),
             })
@@ -90,7 +121,7 @@ impl DatabaseConnection for TursoConnection {
 
     async fn execute_with_turso(&self, sql: &str, params: Vec<TursoValue>) -> DatabaseResult<u64> {
         self.conn.execute(sql, params).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed {
+            WaeError::database(WaeErrorKind::ExecuteFailed {
                 statement: Some(sql.to_string()),
                 reason: format!("Execute failed: {}", e),
             })
@@ -112,13 +143,13 @@ impl DatabaseService {
                     Some(path) => {
                         let path_str = path.to_string_lossy().into_owned();
                         Builder::new_local(&path_str).build().await.map_err(|e| {
-                            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                                 reason: format!("Failed to create database: {}", e),
                             })
                         })?
                     }
                     None => Builder::new_local(":memory:").build().await.map_err(|e| {
-                        WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                        WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                             reason: format!("Failed to create database: {}", e),
                         })
                     })?,
@@ -126,11 +157,11 @@ impl DatabaseService {
                 Ok(Self { db })
             }
             #[cfg(feature = "postgres")]
-            DatabaseConfig::Postgres { .. } => Err(WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+            DatabaseConfig::Postgres { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use PostgresDatabaseService for Postgres".to_string(),
             })),
             #[cfg(feature = "mysql")]
-            DatabaseConfig::MySql { .. } => Err(WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+            DatabaseConfig::MySql { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use MySqlDatabaseService for MySQL".to_string(),
             })),
         }
@@ -149,7 +180,7 @@ impl DatabaseService {
     /// 获取连接
     pub fn connect(&self) -> DatabaseResult<TursoConnection> {
         let conn = self.db.connect().map_err(|e| {
-            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed { reason: format!("Failed to connect: {}", e) })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Failed to connect: {}", e) })
         })?;
         Ok(TursoConnection::new(conn))
     }

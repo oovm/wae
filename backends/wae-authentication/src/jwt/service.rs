@@ -295,6 +295,42 @@ impl JwtService {
             refresh_expires_in: self.config.refresh_token_expires_in(),
         })
     }
+
+    /// 轮换刷新令牌
+    ///
+    /// 使用旧的刷新令牌生成新的令牌对，并递增版本号
+    ///
+    /// # Arguments
+    /// * `refresh_token` - 旧的刷新令牌
+    /// * `new_access_claims` - 新的访问令牌 Claims（可选）
+    pub fn rotate_token_pair(
+        &self,
+        refresh_token: &str,
+        new_access_claims: Option<AccessTokenClaims>,
+    ) -> JwtResult<TokenPair> {
+        let refresh_claims = self.verify_refresh_token(refresh_token)?;
+        
+        let new_version = refresh_claims.version + 1;
+        let access_claims = new_access_claims.unwrap_or_else(|| {
+            AccessTokenClaims::new(refresh_claims.user_id.clone())
+                .with_session_id(refresh_claims.session_id.clone())
+        });
+        
+        let access_token = self.generate_access_token(&refresh_claims.user_id, access_claims)?;
+        let new_refresh_token = self.generate_refresh_token(
+            &refresh_claims.user_id,
+            &refresh_claims.session_id,
+            new_version
+        )?;
+
+        Ok(TokenPair {
+            access_token,
+            refresh_token: new_refresh_token,
+            token_type: "Bearer".to_string(),
+            expires_in: self.config.access_token_expires_in(),
+            refresh_expires_in: self.config.refresh_token_expires_in(),
+        })
+    }
 }
 
 /// 便捷函数：创建默认 JWT 服务

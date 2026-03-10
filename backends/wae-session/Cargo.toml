@@ -15,8 +15,10 @@ wae-types = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-axum = { workspace = true }
 tower = { workspace = true }
+tower-http = { workspace = true }
+http = { workspace = true }
+http-body = { workspace = true }
 dashmap = { workspace = true }
 time = { workspace = true }
 cookie = { workspace = true }

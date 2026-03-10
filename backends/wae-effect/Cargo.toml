@@ -13,6 +13,7 @@ documentation = "https://docs.rs/wae-effect"
 [dependencies]
 wae-types = { workspace = true }
 wae-config = { workspace = true }
-axum = { workspace = true }
+http = { workspace = true }
+http-body = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }

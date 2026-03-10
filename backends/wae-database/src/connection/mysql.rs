@@ -4,12 +4,12 @@ use crate::connection::{
     config::{DatabaseConfig, DatabaseResult},
     row::DatabaseRows,
     statement::DatabaseStatement,
-    trait_impl::DatabaseConnection,
+    trait_impl::{DatabaseConnection, DatabaseBackend},
 };
 use async_trait::async_trait;
 use mysql_async::prelude::*;
 use tokio::sync::Mutex;
-use wae_types::{DatabaseErrorKind, WaeError};
+use wae_types::{WaeErrorKind, WaeError};
 
 /// MySQL 连接包装
 pub struct MySqlConnection {
@@ -24,16 +24,20 @@ impl MySqlConnection {
 
 #[async_trait]
 impl DatabaseConnection for MySqlConnection {
+    fn backend(&self) -> DatabaseBackend {
+        DatabaseBackend::MySql
+    }
+
     async fn query(&self, sql: &str) -> DatabaseResult<DatabaseRows> {
         let mut guard = self.conn.lock().await;
         let conn = guard.as_mut().ok_or_else(|| {
-            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
         })?;
         let result = conn.query_iter(sql).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed { query: Some(sql.to_string()), reason: e.to_string() })
+            WaeError::database(WaeErrorKind::QueryFailed { query: Some(sql.to_string()), reason: e.to_string() })
         })?;
         let rows: Vec<mysql_async::Row> = result.collect_and_drop().await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed {
+            WaeError::database(WaeErrorKind::QueryFailed {
                 query: Some(sql.to_string()),
                 reason: format!("Failed to collect rows: {}", e),
             })
@@ -44,14 +48,14 @@ impl DatabaseConnection for MySqlConnection {
     async fn query_with(&self, sql: &str, params: Vec<wae_types::Value>) -> DatabaseResult<DatabaseRows> {
         let mut guard = self.conn.lock().await;
         let conn = guard.as_mut().ok_or_else(|| {
-            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
         })?;
         let mysql_params = crate::types::to_mysql_params(params);
         let result = conn.exec_iter(sql, mysql_params).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed { query: Some(sql.to_string()), reason: e.to_string() })
+            WaeError::database(WaeErrorKind::QueryFailed { query: Some(sql.to_string()), reason: e.to_string() })
         })?;
         let rows: Vec<mysql_async::Row> = result.collect_and_drop().await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::QueryFailed {
+            WaeError::database(WaeErrorKind::QueryFailed {
                 query: Some(sql.to_string()),
                 reason: format!("Failed to collect rows: {}", e),
             })
@@ -62,14 +66,14 @@ impl DatabaseConnection for MySqlConnection {
     async fn execute(&self, sql: &str) -> DatabaseResult<u64> {
         let mut guard = self.conn.lock().await;
         let conn = guard.as_mut().ok_or_else(|| {
-            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
         })?;
         let result = conn.query_iter(sql).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed { statement: Some(sql.to_string()), reason: e.to_string() })
+            WaeError::database(WaeErrorKind::ExecuteFailed { statement: Some(sql.to_string()), reason: e.to_string() })
         })?;
         let affected = result.affected_rows();
         result.drop_result().await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed {
+            WaeError::database(WaeErrorKind::ExecuteFailed {
                 statement: Some(sql.to_string()),
                 reason: format!("Failed to drop result: {}", e),
             })
@@ -80,15 +84,15 @@ impl DatabaseConnection for MySqlConnection {
     async fn execute_with(&self, sql: &str, params: Vec<wae_types::Value>) -> DatabaseResult<u64> {
         let mut guard = self.conn.lock().await;
         let conn = guard.as_mut().ok_or_else(|| {
-            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
         })?;
         let mysql_params = crate::types::to_mysql_params(params);
         let result = conn.exec_iter(sql, mysql_params).await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed { statement: Some(sql.to_string()), reason: e.to_string() })
+            WaeError::database(WaeErrorKind::ExecuteFailed { statement: Some(sql.to_string()), reason: e.to_string() })
         })?;
         let affected = result.affected_rows();
         result.drop_result().await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::ExecuteFailed {
+            WaeError::database(WaeErrorKind::ExecuteFailed {
                 statement: Some(sql.to_string()),
                 reason: format!("Failed to drop result: {}", e),
             })
@@ -98,6 +102,45 @@ impl DatabaseConnection for MySqlConnection {
 
     async fn prepare(&self, sql: &str) -> DatabaseResult<DatabaseStatement> {
         Ok(DatabaseStatement::new_mysql(sql.to_string()))
+    }
+
+    async fn begin_transaction(&self) -> DatabaseResult<()> {
+        let mut guard = self.conn.lock().await;
+        let conn = guard.as_mut().ok_or_else(|| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+        })?;
+        conn.query_drop("START TRANSACTION").await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Failed to begin transaction: {}", e),
+            })
+        })?;
+        Ok(())
+    }
+
+    async fn commit(&self) -> DatabaseResult<()> {
+        let mut guard = self.conn.lock().await;
+        let conn = guard.as_mut().ok_or_else(|| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+        })?;
+        conn.query_drop("COMMIT").await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Failed to commit transaction: {}", e),
+            })
+        })?;
+        Ok(())
+    }
+
+    async fn rollback(&self) -> DatabaseResult<()> {
+        let mut guard = self.conn.lock().await;
+        let conn = guard.as_mut().ok_or_else(|| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+        })?;
+        conn.query_drop("ROLLBACK").await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Failed to rollback transaction: {}", e),
+            })
+        })?;
+        Ok(())
     }
 }
 
@@ -111,21 +154,21 @@ impl MySqlDatabaseService {
     pub async fn new(config: &DatabaseConfig) -> DatabaseResult<Self> {
         match config {
             #[cfg(feature = "turso")]
-            DatabaseConfig::Turso { .. } => Err(WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+            DatabaseConfig::Turso { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use DatabaseService for Turso".to_string(),
             })),
             #[cfg(feature = "postgres")]
-            DatabaseConfig::Postgres { .. } => Err(WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+            DatabaseConfig::Postgres { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use PostgresDatabaseService for Postgres".to_string(),
             })),
             DatabaseConfig::MySql { connection_string, max_connections } => {
                 let opts = mysql_async::Opts::from_url(connection_string).map_err(|e| {
-                    WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                    WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                         reason: format!("Invalid connection string: {}", e),
                     })
                 })?;
                 let constraints = mysql_async::PoolConstraints::new(1, max_connections.unwrap_or(10)).ok_or_else(|| {
-                    WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+                    WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                         reason: "Invalid pool constraints: min must be <= max".to_string(),
                     })
                 })?;
@@ -140,7 +183,7 @@ impl MySqlDatabaseService {
     /// 获取连接
     pub async fn connect(&self) -> DatabaseResult<MySqlConnection> {
         let conn = self.pool.get_conn().await.map_err(|e| {
-            WaeError::database(DatabaseErrorKind::DatabaseConnectionFailed {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: format!("Failed to get connection: {}", e),
             })
         })?;

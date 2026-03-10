@@ -5,10 +5,15 @@ edition.workspace = true
 license.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-queue"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-queue"
-description = "WAE Queue - 消息队列抽象层，支持内存队列"
-keywords = ["queue", "message-queue", "async", "messaging"]
+description = "WAE Queue - 消息队列抽象层，支持内存队列、Redis 和 RabbitMQ"
+keywords = ["queue", "message-queue", "async", "messaging", "redis", "rabbitmq"]
 categories = ["asynchronous", "concurrency"]
 documentation = "https://docs.rs/wae-queue"
+
+[features]
+default = []
+redis-backend = ["dep:redis", "dep:base64"]
+rabbitmq-backend = ["dep:lapin"]
 
 [dependencies]
 wae-types = { workspace = true }
@@ -19,3 +24,6 @@ tracing = { workspace = true }
 futures = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }
+base64 = { version = "0.22", optional = true }
+redis = { version = "0.25", features = ["tokio-comp"], optional = true }
+lapin = { version = "2.4", optional = true }

@@ -10,7 +10,7 @@ mod value_impl;
 mod turso;
 
 #[cfg(feature = "postgres")]
-mod postgres;
+pub(crate) mod postgres;
 
 #[cfg(feature = "mysql")]
 mod mysql;
@@ -18,7 +18,7 @@ mod mysql;
 pub use config::{DatabaseConfig, DatabaseError, DatabaseResult};
 pub use row::{DatabaseRow, DatabaseRows};
 pub use statement::DatabaseStatement;
-pub use trait_impl::DatabaseConnection;
+pub use trait_impl::{DatabaseConnection, DatabaseBackend};
 pub use value_impl::FromDatabaseValue;
 
 #[cfg(feature = "turso")]

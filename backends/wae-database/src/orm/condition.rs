@@ -14,6 +14,9 @@ use crate::types::from_wae_to_mysql;
 #[cfg(feature = "mysql")]
 use mysql_async::Value as MySqlValue;
 
+#[cfg(feature = "postgres")]
+use crate::connection::postgres::{PostgresParam, value_to_postgres_param};
+
 /// 查询条件
 #[derive(Debug, Clone)]
 pub enum Condition {
@@ -268,6 +271,121 @@ impl Condition {
             }
         }
     }
+
+    #[cfg(feature = "postgres")]
+    /// 构建 SQL 和参数 (内部使用 PostgresParam)
+    pub(crate) fn build_postgres(&self) -> (String, Vec<PostgresParam>) {
+        let param_index = 1;
+        match self {
+            Condition::Eq { column, value } => {
+                let sql = format!("{} = ${}", column, param_index);
+                let params = vec![value_to_postgres_param(value.clone())];
+                (sql, params)
+            }
+            Condition::Ne { column, value } => {
+                let sql = format!("{} != ${}", column, param_index);
+                let params = vec![value_to_postgres_param(value.clone())];
+                (sql, params)
+            }
+            Condition::Gt { column, value } => {
+                let sql = format!("{} > ${}", column, param_index);
+                let params = vec![value_to_postgres_param(value.clone())];
+                (sql, params)
+            }
+            Condition::Gte { column, value } => {
+                let sql = format!("{} >= ${}", column, param_index);
+                let params = vec![value_to_postgres_param(value.clone())];
+                (sql, params)
+            }
+            Condition::Lt { column, value } => {
+                let sql = format!("{} < ${}", column, param_index);
+                let params = vec![value_to_postgres_param(value.clone())];
+                (sql, params)
+            }
+            Condition::Lte { column, value } => {
+                let sql = format!("{} <= ${}", column, param_index);
+                let params = vec![value_to_postgres_param(value.clone())];
+                (sql, params)
+            }
+            Condition::Like { column, pattern } => {
+                let sql = format!("{} LIKE ${}", column, param_index);
+                let params = vec![value_to_postgres_param(Value::String(pattern.clone()))];
+                (sql, params)
+            }
+            Condition::In { column, values } => {
+                let placeholders: Vec<String> = (0..values.len()).map(|i| format!("${}", param_index + i)).collect();
+                let postgres_params: Vec<PostgresParam> = values.iter().map(|v| value_to_postgres_param(v.clone())).collect();
+                (format!("{} IN ({})", column, placeholders.join(", ")), postgres_params)
+            }
+            Condition::IsNull { column } => (format!("{} IS NULL", column), vec![]),
+            Condition::IsNotNull { column } => (format!("{} IS NOT NULL", column), vec![]),
+            Condition::And(conditions) => {
+                let mut sql_parts = Vec::new();
+                let mut all_params = Vec::new();
+                let mut current_index = 1;
+                for cond in conditions {
+                    let (sql, params) = cond.build_postgres();
+                    let sql = replace_placeholders(&sql, current_index);
+                    sql_parts.push(format!("({})", sql));
+                    let params_len = params.len();
+                    all_params.extend(params);
+                    current_index += params_len;
+                }
+                (sql_parts.join(" AND "), all_params)
+            }
+            Condition::Or(conditions) => {
+                let mut sql_parts = Vec::new();
+                let mut all_params = Vec::new();
+                let mut current_index = 1;
+                for cond in conditions {
+                    let (sql, params) = cond.build_postgres();
+                    let sql = replace_placeholders(&sql, current_index);
+                    sql_parts.push(format!("({})", sql));
+                    let params_len = params.len();
+                    all_params.extend(params);
+                    current_index += params_len;
+                }
+                (sql_parts.join(" OR "), all_params)
+            }
+            Condition::Not(cond) => {
+                let (sql, params) = cond.build_postgres();
+                (format!("NOT ({})", sql), params)
+            }
+            Condition::Raw { sql, params } => {
+                let postgres_params: Vec<PostgresParam> = params.iter().map(|v| value_to_postgres_param(v.clone())).collect();
+                (sql.clone(), postgres_params)
+            }
+        }
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn replace_placeholders(sql: &str, start_index: usize) -> String {
+    let mut result = String::new();
+    let mut chars = sql.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '$' {
+            let mut num_str = String::new();
+            while let Some(&next_c) = chars.peek() {
+                if next_c.is_ascii_digit() {
+                    num_str.push(next_c);
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+            if !num_str.is_empty() {
+                if let Ok(num) = num_str.parse::<usize>() {
+                    result.push_str(&format!("${}", num + start_index - 1));
+                }
+            } else {
+                result.push(c);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
 }
 
 /// 排序方式

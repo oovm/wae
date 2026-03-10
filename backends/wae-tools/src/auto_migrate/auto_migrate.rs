@@ -277,6 +277,7 @@ impl AutoMigrator {
                         executed_at,
                         duration_ms,
                         success: true,
+                        dry_run: false,
                         error: None,
                     });
                 }
@@ -292,6 +293,7 @@ impl AutoMigrator {
                         executed_at,
                         duration_ms,
                         success: false,
+                        dry_run: false,
                         error: Some(error_msg.clone()),
                     });
 

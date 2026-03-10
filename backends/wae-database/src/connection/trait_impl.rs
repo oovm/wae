@@ -3,9 +3,23 @@
 use crate::connection::{config::DatabaseResult, row::DatabaseRows, statement::DatabaseStatement};
 use async_trait::async_trait;
 
+/// 数据库后端类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DatabaseBackend {
+    /// Turso (SQLite) backend
+    Turso,
+    /// PostgreSQL backend
+    Postgres,
+    /// MySQL backend
+    MySql,
+}
+
 /// 数据库连接抽象
 #[async_trait]
 pub trait DatabaseConnection: Send + Sync {
+    /// 获取数据库后端类型
+    fn backend(&self) -> DatabaseBackend;
+
     /// 执行查询，返回结果集
     async fn query(&self, sql: &str) -> DatabaseResult<DatabaseRows>;
 
@@ -20,6 +34,15 @@ pub trait DatabaseConnection: Send + Sync {
 
     /// 准备语句
     async fn prepare(&self, sql: &str) -> DatabaseResult<DatabaseStatement>;
+
+    /// 开始一个新事务
+    async fn begin_transaction(&self) -> DatabaseResult<()>;
+
+    /// 提交当前事务
+    async fn commit(&self) -> DatabaseResult<()>;
+
+    /// 回滚当前事务
+    async fn rollback(&self) -> DatabaseResult<()>;
 
     #[cfg(feature = "turso")]
     /// 执行带参数的查询 (内部使用 turso::Value)

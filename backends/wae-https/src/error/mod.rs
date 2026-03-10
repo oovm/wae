@@ -3,20 +3,17 @@
 //! 提供统一的错误处理机制，包括：
 //! - 错误响应格式化
 //! - 错误扩展 trait
-//! - 与 axum 框架的集成
 
-use axum::{
-    body::Body,
-    http::{StatusCode, header},
-    response::{IntoResponse, Response},
-};
+use http::{Response, StatusCode, header};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use wae_types::{ErrorCategory, WaeError};
 
+use crate::{Body, full_body};
+
 /// HTTP 错误包装类型
 ///
-/// 包装 WaeError 以实现 axum 的 IntoResponse trait。
+/// 包装 WaeError 以提供 HTTP 响应转换。
 #[derive(Debug, Clone)]
 pub struct HttpError {
     /// 内部 WaeError
@@ -87,6 +84,17 @@ impl HttpError {
     /// 创建无效格式错误
     pub fn invalid_format(field: impl Into<String>, expected: impl Into<String>) -> Self {
         Self::new(WaeError::invalid_format(field, expected))
+    }
+
+    /// 转换为 HTTP 响应
+    pub fn into_response(self) -> Response<Body> {
+        let status = category_to_status_code(self.category());
+        let error_response = ErrorResponse::from_error(&self);
+        let body = serde_json::to_string(&error_response).unwrap_or_else(|_| {
+            r#"{"success":false,"code":"INTERNAL_ERROR","message":"Failed to serialize error"}"#.to_string()
+        });
+
+        Response::builder().status(status).header(header::CONTENT_TYPE, "application/json").body(full_body(body)).unwrap()
     }
 }
 
@@ -165,6 +173,16 @@ impl ErrorResponse {
         self.trace_id = Some(trace_id.into());
         self
     }
+
+    /// 转换为 HTTP 响应
+    pub fn into_response(self) -> Response<Body> {
+        let status = StatusCode::BAD_REQUEST;
+        let body = serde_json::to_string(&self).unwrap_or_else(|_| {
+            r#"{"success":false,"code":"INTERNAL_ERROR","message":"Failed to serialize error"}"#.to_string()
+        });
+
+        Response::builder().status(status).header(header::CONTENT_TYPE, "application/json").body(full_body(body)).unwrap()
+    }
 }
 
 /// 将 ErrorCategory 转换为 StatusCode
@@ -183,29 +201,6 @@ fn category_to_status_code(category: ErrorCategory) -> StatusCode {
         ErrorCategory::Config => StatusCode::INTERNAL_SERVER_ERROR,
         ErrorCategory::Timeout => StatusCode::REQUEST_TIMEOUT,
         ErrorCategory::Internal => StatusCode::INTERNAL_SERVER_ERROR,
-    }
-}
-
-impl IntoResponse for HttpError {
-    fn into_response(self) -> Response {
-        let status = category_to_status_code(self.category());
-        let error_response = ErrorResponse::from_error(&self);
-        let body = serde_json::to_string(&error_response).unwrap_or_else(|_| {
-            r#"{"success":false,"code":"INTERNAL_ERROR","message":"Failed to serialize error"}"#.to_string()
-        });
-
-        Response::builder().status(status).header(header::CONTENT_TYPE, "application/json").body(Body::from(body)).unwrap()
-    }
-}
-
-impl IntoResponse for ErrorResponse {
-    fn into_response(self) -> Response {
-        let status = StatusCode::BAD_REQUEST;
-        let body = serde_json::to_string(&self).unwrap_or_else(|_| {
-            r#"{"success":false,"code":"INTERNAL_ERROR","message":"Failed to serialize error"}"#.to_string()
-        });
-
-        Response::builder().status(status).header(header::CONTENT_TYPE, "application/json").body(Body::from(body)).unwrap()
     }
 }
 
@@ -271,18 +266,18 @@ impl<T, E: fmt::Display> ErrorExt<T> for Result<T, E> {
 }
 
 /// 创建成功响应的便捷函数
-pub fn success_response<T: Serialize>(data: T) -> Response {
+pub fn success_response<T: Serialize>(data: T) -> Response<Body> {
     let body = serde_json::to_string(&serde_json::json!({
         "success": true,
         "data": data
     }))
     .unwrap_or_default();
 
-    Response::builder().status(StatusCode::OK).header(header::CONTENT_TYPE, "application/json").body(Body::from(body)).unwrap()
+    Response::builder().status(StatusCode::OK).header(header::CONTENT_TYPE, "application/json").body(full_body(body)).unwrap()
 }
 
 /// 创建分页响应的便捷函数
-pub fn paginated_response<T: Serialize>(items: Vec<T>, total: u64, page: u32, page_size: u32) -> Response {
+pub fn paginated_response<T: Serialize>(items: Vec<T>, total: u64, page: u32, page_size: u32) -> Response<Body> {
     let total_pages = (total as f64 / page_size as f64).ceil() as u32;
 
     let body = serde_json::to_string(&serde_json::json!({
@@ -299,5 +294,5 @@ pub fn paginated_response<T: Serialize>(items: Vec<T>, total: u64, page: u32, pa
     }))
     .unwrap_or_default();
 
-    Response::builder().status(StatusCode::OK).header(header::CONTENT_TYPE, "application/json").body(Body::from(body)).unwrap()
+    Response::builder().status(StatusCode::OK).header(header::CONTENT_TYPE, "application/json").body(full_body(body)).unwrap()
 }

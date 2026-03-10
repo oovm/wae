@@ -8,9 +8,13 @@
 #![warn(missing_docs)]
 
 mod assertions;
+mod containers;
+mod db_mock;
 mod environment;
 mod fixture;
+mod http_client;
 mod mock;
+mod service_mock;
 
 pub use assertions::{AsyncAssert, assert_eventually, assert_json_contains, assert_matches_regex};
 
@@ -22,5 +26,22 @@ pub use fixture::{
 };
 
 pub use mock::{Mock, MockBuilder, MockCall, MockExpectation, MockFn, MockResult, verify};
+
+pub use http_client::{TestClient, RequestBuilder, TestResponse};
+
+pub use db_mock::{
+    DatabaseExpectation, DatabaseQuery, DatabaseResult, MockDatabase, MockDatabaseBuilder,
+};
+
+pub use service_mock::{
+    MockExternalService, MockExternalServiceBuilder, ServiceExpectation, ServiceMatchRule,
+    ServiceRequest, ServiceResponse, ServiceResponseConfig,
+};
+
+#[cfg(feature = "containers")]
+pub use containers::{
+    TestContainer, PostgresContainer, PostgresImage, MySqlContainer, MySqlImage, 
+    RedisContainer, RedisImage, is_docker_available
+};
 
 pub use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};

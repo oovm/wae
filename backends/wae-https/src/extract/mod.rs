@@ -1,15 +1,7 @@
 #![doc = include_str!("readme.md")]
 
-use axum::{
-    body::Body,
-    extract::rejection::*,
-    http::{Method, Uri, Version, header::HeaderMap},
-};
+use http::{Method, Uri, Version, header::HeaderMap};
 use std::fmt;
-
-pub use axum::extract::{Extension, Form, Path, Query, State};
-
-pub use axum::Json;
 
 /// Extractor 错误类型
 ///
@@ -17,19 +9,40 @@ pub use axum::Json;
 #[derive(Debug)]
 pub enum ExtractorError {
     /// 路径参数提取错误
-    PathRejection(PathRejection),
+    PathRejection(String),
 
     /// 查询参数提取错误
-    QueryRejection(QueryRejection),
+    QueryRejection(String),
 
     /// JSON 提取错误
-    JsonRejection(JsonRejection),
+    JsonRejection(String),
 
     /// 表单数据提取错误
-    FormRejection(FormRejection),
+    FormRejection(String),
 
     /// 扩展数据提取错误
-    ExtensionRejection(ExtensionRejection),
+    ExtensionRejection(String),
+
+    /// Host 提取错误
+    HostRejection(String),
+
+    /// TypedHeader 提取错误
+    TypedHeaderRejection(String),
+
+    /// Cookie 提取错误
+    CookieRejection(String),
+
+    /// Multipart 提取错误
+    MultipartRejection(String),
+
+    /// WebSocketUpgrade 提取错误
+    WebSocketUpgradeRejection(String),
+
+    /// Bytes 提取错误
+    BytesRejection(String),
+
+    /// Stream 提取错误
+    StreamRejection(String),
 
     /// 自定义错误消息
     Custom(String),
@@ -43,42 +56,19 @@ impl fmt::Display for ExtractorError {
             ExtractorError::JsonRejection(e) => write!(f, "Json extraction failed: {}", e),
             ExtractorError::FormRejection(e) => write!(f, "Form extraction failed: {}", e),
             ExtractorError::ExtensionRejection(e) => write!(f, "Extension extraction failed: {}", e),
+            ExtractorError::HostRejection(e) => write!(f, "Host extraction failed: {}", e),
+            ExtractorError::TypedHeaderRejection(e) => write!(f, "TypedHeader extraction failed: {}", e),
+            ExtractorError::CookieRejection(e) => write!(f, "Cookie extraction failed: {}", e),
+            ExtractorError::MultipartRejection(e) => write!(f, "Multipart extraction failed: {}", e),
+            ExtractorError::WebSocketUpgradeRejection(e) => write!(f, "WebSocketUpgrade extraction failed: {}", e),
+            ExtractorError::BytesRejection(e) => write!(f, "Bytes extraction failed: {}", e),
+            ExtractorError::StreamRejection(e) => write!(f, "Stream extraction failed: {}", e),
             ExtractorError::Custom(msg) => write!(f, "Extractor error: {}", msg),
         }
     }
 }
 
 impl std::error::Error for ExtractorError {}
-
-impl From<PathRejection> for ExtractorError {
-    fn from(e: PathRejection) -> Self {
-        ExtractorError::PathRejection(e)
-    }
-}
-
-impl From<QueryRejection> for ExtractorError {
-    fn from(e: QueryRejection) -> Self {
-        ExtractorError::QueryRejection(e)
-    }
-}
-
-impl From<JsonRejection> for ExtractorError {
-    fn from(e: JsonRejection) -> Self {
-        ExtractorError::JsonRejection(e)
-    }
-}
-
-impl From<FormRejection> for ExtractorError {
-    fn from(e: FormRejection) -> Self {
-        ExtractorError::FormRejection(e)
-    }
-}
-
-impl From<ExtensionRejection> for ExtractorError {
-    fn from(e: ExtensionRejection) -> Self {
-        ExtractorError::ExtensionRejection(e)
-    }
-}
 
 /// 请求头提取器
 ///
@@ -95,11 +85,6 @@ impl From<ExtensionRejection> for ExtractorError {
 /// ```
 #[derive(Debug, Clone)]
 pub struct Header<T>(pub T);
-
-/// 原始请求体提取器
-///
-/// 直接获取请求体的原始字节流。
-pub type RawBody = Body;
 
 /// HTTP 方法提取器
 ///
@@ -120,3 +105,23 @@ pub type HttpVersion = Version;
 ///
 /// 获取所有请求头的键值对映射。
 pub type Headers = HeaderMap;
+
+/// 重新导出 axum 的常用提取器
+pub use axum::extract::{
+    OriginalUri,
+    Path,
+    Query,
+    Json,
+    Form,
+    State,
+    Extension,
+    WebSocketUpgrade,
+    Multipart,
+};
+
+pub use bytes::Bytes;
+
+/// 流式请求体提取器
+///
+/// 用于从请求中提取流式数据。
+pub type Stream = axum::body::Body;

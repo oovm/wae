@@ -11,7 +11,7 @@ mod types;
 
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 pub use connection::{
-    DatabaseConfig, DatabaseConnection, DatabaseError, DatabaseResult, DatabaseRow, DatabaseRows, DatabaseStatement,
+    DatabaseBackend, DatabaseConfig, DatabaseConnection, DatabaseError, DatabaseResult, DatabaseRow, DatabaseRows, DatabaseStatement,
     FromDatabaseValue,
 };
 #[cfg(feature = "turso")]
@@ -26,7 +26,7 @@ pub use orm::DbRepository;
 pub use orm::MySqlDbRepository;
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 pub use orm::{
-    Condition, DeleteBuilder, Entity, FromRow, InsertBuilder, QueryBuilder, Repository, SelectBuilder, ToRow, UpdateBuilder,
+    BelongsTo, Condition, DeleteBuilder, Entity, FromRow, HasMany, InsertBuilder, Join, JoinType, ManyToMany, QueryBuilder, Repository, SelectBuilder, ToRow, UpdateBuilder,
 };
 pub use schema::{ColumnDef, ColumnType, ForeignKeyDef, IndexDef, ReferentialAction, TableSchema, col};
 pub use wae_types::Value;

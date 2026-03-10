@@ -6,11 +6,10 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use axum::{
-    body::Body,
-    extract::FromRequestParts,
-    http::{StatusCode, request::Parts},
-    response::{IntoResponse, Response},
+use http::{
+    StatusCode,
+    request::Parts,
+    Response,
 };
 use wae_types::{WaeError, WaeResult};
 
@@ -68,22 +67,6 @@ impl Effectful {
     }
 }
 
-/// 从请求中提取 Effectful
-impl<S> FromRequestParts<S> for Effectful
-where
-    S: Send + Sync,
-{
-    type Rejection = Response<Body>;
-
-    fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
-        let deps = Arc::new(Dependencies::new());
-        async move { Ok(Effectful::new(deps, parts.clone())) }
-    }
-}
-
 /// 代数效应构建器
 ///
 /// 用于构建依赖容器并注册各种依赖。
@@ -118,11 +101,15 @@ impl AlgebraicEffect {
 /// WaeError 的包装类型，用于解决 orphan rule 问题
 pub struct WaeErrorResponse(pub WaeError);
 
-impl IntoResponse for WaeErrorResponse {
-    fn into_response(self) -> Response {
+impl WaeErrorResponse {
+    /// 将 WaeError 转换为 http::Response
+    pub fn into_response<B>(self) -> Response<B>
+    where
+        B: From<String>,
+    {
         let status = self.0.http_status();
-        let body = Body::from(self.0.to_string());
+        let body = B::from(self.0.to_string());
         let status_code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-        axum::http::Response::builder().status(status_code).body(body).unwrap()
+        Response::builder().status(status_code).body(body).unwrap()
     }
 }

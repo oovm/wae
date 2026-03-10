@@ -1,20 +1,17 @@
 //! 模板渲染模块
 //!
-//! 提供基于 Askama 模板引擎的渲染支持，与 Axum 框架深度集成。
+//! 提供基于 Askama 模板引擎的渲染支持。
 //!
 //! # 特性
 //!
 //! - 编译时模板检查，类型安全
 //! - 自动 HTML 转义，防止 XSS 攻击
-//! - 支持 Axum IntoResponse trait
 //! - 可配置模板目录和扩展名
 
-use axum::{
-    body::Body,
-    http::{Response, StatusCode, header},
-    response::IntoResponse,
-};
+use http::{Response, StatusCode, header};
 use std::path::PathBuf;
+
+use crate::{Body, full_body};
 
 pub use askama;
 
@@ -62,7 +59,7 @@ impl TemplateConfig {
 
 /// 模板渲染器
 ///
-/// 提供模板渲染的核心功能，支持与 Axum 框架集成。
+/// 提供模板渲染的核心功能。
 ///
 /// # 示例
 ///
@@ -132,7 +129,7 @@ impl std::error::Error for TemplateError {}
 
 /// HTML 模板响应包装器
 ///
-/// 用于将 Askama 模板包装为 Axum 响应。
+/// 用于将 Askama 模板包装为 HTTP 响应。
 /// 支持自动设置 Content-Type 头。
 pub struct HtmlTemplate<T> {
     /// 内部模板
@@ -162,23 +159,24 @@ impl<T> From<T> for HtmlTemplate<T> {
     }
 }
 
-impl<T> IntoResponse for HtmlTemplate<T>
+impl<T> HtmlTemplate<T>
 where
     T: askama::Template,
 {
-    fn into_response(self) -> Response<Body> {
+    /// 转换为 HTTP 响应
+    pub fn into_response(self) -> Response<Body> {
         match self.inner.render() {
             Ok(html) => Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-                .body(Body::from(html))
+                .body(full_body(html))
                 .unwrap(),
             Err(e) => {
                 tracing::error!("Template render error: {}", e);
                 Response::builder()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
-                    .body(Body::from(format!("Template error: {}", e)))
+                    .body(full_body(format!("Template error: {}", e)))
                     .unwrap()
             }
         }
@@ -202,14 +200,14 @@ impl TemplateResponse {
             Ok(html) => Response::builder()
                 .status(status)
                 .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-                .body(Body::from(html))
+                .body(full_body(html))
                 .unwrap(),
             Err(e) => {
                 tracing::error!("Template render error: {}", e);
                 Response::builder()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
-                    .body(Body::from(format!("Template error: {}", e)))
+                    .body(full_body(format!("Template error: {}", e)))
                     .unwrap()
             }
         }

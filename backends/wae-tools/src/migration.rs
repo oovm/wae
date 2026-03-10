@@ -10,7 +10,7 @@ mod inner {
     use std::{collections::BTreeMap, sync::Arc};
     use tracing::{info, warn};
     use wae_database::DatabaseConnection;
-    use wae_types::{Value, WaeError, WaeResult};
+    use wae_types::{WaeError, WaeResult};
 
     /// 迁移执行结果
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +25,8 @@ mod inner {
         pub duration_ms: u64,
         /// 是否成功
         pub success: bool,
+        /// 是否为试运行
+        pub dry_run: bool,
         /// 错误信息 (如果失败)
         pub error: Option<String>,
     }
@@ -44,6 +46,34 @@ mod inner {
         pub checksum: Option<String>,
     }
 
+    /// 迁移执行配置
+    #[derive(Debug, Clone, Default)]
+    pub struct MigrationOptions {
+        /// 是否为试运行模式
+        pub dry_run: bool,
+        /// 是否在事务中执行迁移
+        pub transactional: bool,
+    }
+
+    impl MigrationOptions {
+        /// 创建默认配置
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        /// 设置试运行模式
+        pub fn with_dry_run(mut self, dry_run: bool) -> Self {
+            self.dry_run = dry_run;
+            self
+        }
+
+        /// 设置事务模式
+        pub fn with_transactional(mut self, transactional: bool) -> Self {
+            self.transactional = transactional;
+            self
+        }
+    }
+
     /// 迁移 trait
     ///
     /// 实现此 trait 以定义数据库迁移。
@@ -58,6 +88,11 @@ mod inner {
         /// 描述信息
         fn description(&self) -> Option<&str> {
             None
+        }
+
+        /// 是否在事务中执行
+        fn transactional(&self) -> bool {
+            true
         }
 
         /// 执行迁移
@@ -194,6 +229,11 @@ CREATE TABLE IF NOT EXISTS _migrations (
 
         /// 执行所有待执行的迁移
         pub async fn migrate(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationResult>> {
+            self.migrate_with_options(conn, MigrationOptions::new()).await
+        }
+
+        /// 执行所有待执行的迁移 (带配置选项)
+        pub async fn migrate_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Vec<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -205,46 +245,82 @@ CREATE TABLE IF NOT EXISTS _migrations (
                     continue;
                 }
 
-                info!(version = version, name = migration.name(), "Executing migration");
+                let use_transaction = options.transactional && migration.transactional();
+
+                info!(
+                    version = version,
+                    name = migration.name(),
+                    dry_run = options.dry_run,
+                    transactional = use_transaction,
+                    "Executing migration"
+                );
 
                 let start = std::time::Instant::now();
                 let executed_at = Utc::now();
 
-                let result = match migration.up(conn).await {
-                    Ok(()) => {
-                        let duration_ms = start.elapsed().as_millis() as u64;
-                        Self::record_migration(conn, migration.as_ref(), duration_ms).await?;
+                let result = if options.dry_run {
+                    MigrationResult {
+                        name: migration.name().to_string(),
+                        version: *version,
+                        executed_at,
+                        duration_ms: 0,
+                        success: true,
+                        dry_run: true,
+                        error: None,
+                    }
+                } else {
+                    let mut success = true;
+                    let mut error = None;
+                    let duration_ms;
 
-                        info!(
-                            version = version,
-                            name = migration.name(),
-                            duration_ms = duration_ms,
-                            "Migration completed successfully"
-                        );
+                    if use_transaction {
+                        conn.begin_transaction().await?;
+                    }
 
-                        MigrationResult {
-                            name: migration.name().to_string(),
-                            version: *version,
-                            executed_at,
-                            duration_ms,
-                            success: true,
-                            error: None,
+                    let migration_result = migration.up(conn).await;
+
+                    match migration_result {
+                        Ok(()) => {
+                            duration_ms = start.elapsed().as_millis() as u64;
+                            Self::record_migration(conn, migration.as_ref(), duration_ms).await?;
+
+                            if use_transaction {
+                                conn.commit().await?;
+                            }
+
+                            info!(
+                                version = version,
+                                name = migration.name(),
+                                duration_ms = duration_ms,
+                                "Migration completed successfully"
+                            );
+                        }
+                        Err(e) => {
+                            duration_ms = start.elapsed().as_millis() as u64;
+                            success = false;
+                            error = Some(e.to_string());
+
+                            if use_transaction {
+                                conn.rollback().await?;
+                            }
+
+                            warn!(
+                                version = version,
+                                name = migration.name(),
+                                error = error.as_ref().unwrap(),
+                                "Migration failed"
+                            );
                         }
                     }
-                    Err(e) => {
-                        let duration_ms = start.elapsed().as_millis() as u64;
-                        let error_msg = e.to_string();
 
-                        warn!(version = version, name = migration.name(), error = error_msg, "Migration failed");
-
-                        MigrationResult {
-                            name: migration.name().to_string(),
-                            version: *version,
-                            executed_at,
-                            duration_ms,
-                            success: false,
-                            error: Some(error_msg),
-                        }
+                    MigrationResult {
+                        name: migration.name().to_string(),
+                        version: *version,
+                        executed_at,
+                        duration_ms,
+                        success,
+                        dry_run: false,
+                        error,
                     }
                 };
 
@@ -252,7 +328,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
                     return Err(WaeError::internal(format!(
                         "Migration '{}' failed: {}",
                         result.name,
-                        result.error.unwrap_or_default()
+                        result.error.as_deref().unwrap_or_default()
                     )));
                 }
 
@@ -264,6 +340,16 @@ CREATE TABLE IF NOT EXISTS _migrations (
 
         /// 回滚到指定版本
         pub async fn rollback_to(&self, conn: &dyn DatabaseConnection, target_version: i64) -> WaeResult<Vec<MigrationResult>> {
+            self.rollback_to_with_options(conn, target_version, MigrationOptions::new()).await
+        }
+
+        /// 回滚到指定版本 (带配置选项)
+        pub async fn rollback_to_with_options(
+            &self,
+            conn: &dyn DatabaseConnection,
+            target_version: i64,
+            options: MigrationOptions,
+        ) -> WaeResult<Vec<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -282,46 +368,82 @@ CREATE TABLE IF NOT EXISTS _migrations (
                     return Err(WaeError::internal(format!("Migration '{}' is not reversible", migration.name())));
                 }
 
-                info!(version = version, name = migration.name(), "Rolling back migration");
+                let use_transaction = options.transactional && migration.transactional();
+
+                info!(
+                    version = version,
+                    name = migration.name(),
+                    dry_run = options.dry_run,
+                    transactional = use_transaction,
+                    "Rolling back migration"
+                );
 
                 let start = std::time::Instant::now();
                 let executed_at = Utc::now();
 
-                let result = match migration.down(conn).await {
-                    Ok(()) => {
-                        let duration_ms = start.elapsed().as_millis() as u64;
-                        Self::remove_migration_record(conn, version).await?;
+                let result = if options.dry_run {
+                    MigrationResult {
+                        name: migration.name().to_string(),
+                        version,
+                        executed_at,
+                        duration_ms: 0,
+                        success: true,
+                        dry_run: true,
+                        error: None,
+                    }
+                } else {
+                    let mut success = true;
+                    let mut error = None;
+                    let duration_ms;
 
-                        info!(
-                            version = version,
-                            name = migration.name(),
-                            duration_ms = duration_ms,
-                            "Rollback completed successfully"
-                        );
+                    if use_transaction {
+                        conn.begin_transaction().await?;
+                    }
 
-                        MigrationResult {
-                            name: migration.name().to_string(),
-                            version,
-                            executed_at,
-                            duration_ms,
-                            success: true,
-                            error: None,
+                    let rollback_result = migration.down(conn).await;
+
+                    match rollback_result {
+                        Ok(()) => {
+                            duration_ms = start.elapsed().as_millis() as u64;
+                            Self::remove_migration_record(conn, version).await?;
+
+                            if use_transaction {
+                                conn.commit().await?;
+                            }
+
+                            info!(
+                                version = version,
+                                name = migration.name(),
+                                duration_ms = duration_ms,
+                                "Rollback completed successfully"
+                            );
+                        }
+                        Err(e) => {
+                            duration_ms = start.elapsed().as_millis() as u64;
+                            success = false;
+                            error = Some(e.to_string());
+
+                            if use_transaction {
+                                conn.rollback().await?;
+                            }
+
+                            warn!(
+                                version = version,
+                                name = migration.name(),
+                                error = error.as_ref().unwrap(),
+                                "Rollback failed"
+                            );
                         }
                     }
-                    Err(e) => {
-                        let duration_ms = start.elapsed().as_millis() as u64;
-                        let error_msg = e.to_string();
 
-                        warn!(version = version, name = migration.name(), error = error_msg, "Rollback failed");
-
-                        MigrationResult {
-                            name: migration.name().to_string(),
-                            version,
-                            executed_at,
-                            duration_ms,
-                            success: false,
-                            error: Some(error_msg),
-                        }
+                    MigrationResult {
+                        name: migration.name().to_string(),
+                        version,
+                        executed_at,
+                        duration_ms,
+                        success,
+                        dry_run: false,
+                        error,
                     }
                 };
 
@@ -329,7 +451,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
                     return Err(WaeError::internal(format!(
                         "Rollback of migration '{}' failed: {}",
                         result.name,
-                        result.error.unwrap_or_default()
+                        result.error.as_deref().unwrap_or_default()
                     )));
                 }
 
@@ -341,6 +463,11 @@ CREATE TABLE IF NOT EXISTS _migrations (
 
         /// 回滚最后一次迁移
         pub async fn rollback(&self, conn: &dyn DatabaseConnection) -> WaeResult<Option<MigrationResult>> {
+            self.rollback_with_options(conn, MigrationOptions::new()).await
+        }
+
+        /// 回滚最后一次迁移 (带配置选项)
+        pub async fn rollback_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Option<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -354,19 +481,29 @@ CREATE TABLE IF NOT EXISTS _migrations (
             };
 
             let target_version = last_version - 1;
-            let results = self.rollback_to(conn, target_version).await?;
+            let results = self.rollback_to_with_options(conn, target_version, options).await?;
             Ok(results.into_iter().next())
         }
 
         /// 重置数据库 (回滚所有迁移)
         pub async fn reset(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationResult>> {
-            self.rollback_to(conn, 0).await
+            self.reset_with_options(conn, MigrationOptions::new()).await
+        }
+
+        /// 重置数据库 (回滚所有迁移，带配置选项)
+        pub async fn reset_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Vec<MigrationResult>> {
+            self.rollback_to_with_options(conn, 0, options).await
         }
 
         /// 刷新数据库 (重置后重新执行所有迁移)
         pub async fn refresh(&self, conn: &dyn DatabaseConnection) -> WaeResult<Vec<MigrationResult>> {
-            self.reset(conn).await?;
-            self.migrate(conn).await
+            self.refresh_with_options(conn, MigrationOptions::new()).await
+        }
+
+        /// 刷新数据库 (重置后重新执行所有迁移，带配置选项)
+        pub async fn refresh_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Vec<MigrationResult>> {
+            self.reset_with_options(conn, options.clone()).await?;
+            self.migrate_with_options(conn, options).await
         }
 
         /// 获取迁移状态
@@ -383,6 +520,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
                     name: migration.name().to_string(),
                     description: migration.description().map(|s| s.to_string()),
                     reversible: migration.reversible(),
+                    transactional: migration.transactional(),
                     executed: record.is_some(),
                     executed_at: record.map(|r| r.executed_at),
                     duration_ms: record.map(|r| r.duration_ms),
@@ -390,6 +528,23 @@ CREATE TABLE IF NOT EXISTS _migrations (
             }
 
             Ok(status_list)
+        }
+
+        /// 获取迁移状态摘要
+        pub async fn status_summary(&self, conn: &dyn DatabaseConnection) -> WaeResult<MigrationStatusSummary> {
+            let status_list = self.status(conn).await?;
+            let total = status_list.len();
+            let executed = status_list.iter().filter(|s| s.executed).count();
+            let pending = total - executed;
+            let reversible = status_list.iter().filter(|s| s.reversible).count();
+
+            Ok(MigrationStatusSummary {
+                total,
+                executed,
+                pending,
+                reversible,
+                latest_version: self.latest_version(),
+            })
         }
     }
 
@@ -410,12 +565,29 @@ CREATE TABLE IF NOT EXISTS _migrations (
         pub description: Option<String>,
         /// 是否可回滚
         pub reversible: bool,
+        /// 是否在事务中执行
+        pub transactional: bool,
         /// 是否已执行
         pub executed: bool,
         /// 执行时间
         pub executed_at: Option<DateTime<Utc>>,
         /// 执行耗时
         pub duration_ms: Option<u64>,
+    }
+
+    /// 迁移状态摘要
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct MigrationStatusSummary {
+        /// 总迁移数
+        pub total: usize,
+        /// 已执行迁移数
+        pub executed: usize,
+        /// 待执行迁移数
+        pub pending: usize,
+        /// 可回滚迁移数
+        pub reversible: usize,
+        /// 最新版本号
+        pub latest_version: Option<i64>,
     }
 
     /// 简单 SQL 迁移
@@ -430,12 +602,21 @@ CREATE TABLE IF NOT EXISTS _migrations (
         up_sql: String,
         /// 降级 SQL
         down_sql: Option<String>,
+        /// 是否在事务中执行
+        transactional: bool,
     }
 
     impl SimpleMigration {
         /// 创建新的简单迁移
         pub fn new<V: Into<i64>, N: Into<String>, U: Into<String>>(version: V, name: N, up_sql: U) -> Self {
-            Self { version: version.into(), name: name.into(), description: None, up_sql: up_sql.into(), down_sql: None }
+            Self {
+                version: version.into(),
+                name: name.into(),
+                description: None,
+                up_sql: up_sql.into(),
+                down_sql: None,
+                transactional: true,
+            }
         }
 
         /// 设置描述
@@ -447,6 +628,12 @@ CREATE TABLE IF NOT EXISTS _migrations (
         /// 设置降级 SQL
         pub fn with_down_sql<D: Into<String>>(mut self, down_sql: D) -> Self {
             self.down_sql = Some(down_sql.into());
+            self
+        }
+
+        /// 设置是否在事务中执行
+        pub fn with_transactional(mut self, transactional: bool) -> Self {
+            self.transactional = transactional;
             self
         }
     }
@@ -463,6 +650,10 @@ CREATE TABLE IF NOT EXISTS _migrations (
 
         fn description(&self) -> Option<&str> {
             self.description.as_deref()
+        }
+
+        fn transactional(&self) -> bool {
+            self.transactional
         }
 
         async fn up(&self, conn: &dyn DatabaseConnection) -> WaeResult<()> {

@@ -1,18 +1,12 @@
 //! Session 提取器
 //!
-//! 提供 axum 的 Session 提取器实现。
+//! 提供 Session 提取器实现。
 
 use crate::Session;
-use axum::{
-    body::Body,
-    extract::FromRequestParts,
-    http::{StatusCode, request::Parts},
-    response::{IntoResponse, Response},
-};
 use std::sync::Arc;
 use wae_types::WaeError;
 
-/// Session 提取器拒绝错误
+/// Session 提取错误
 #[derive(Debug, Clone)]
 pub struct SessionRejection {
     inner: WaeError,
@@ -37,27 +31,17 @@ impl std::fmt::Display for SessionRejection {
 
 impl std::error::Error for SessionRejection {}
 
-impl IntoResponse for SessionRejection {
-    fn into_response(self) -> Response {
-        let status = self.inner.http_status();
-        let body = Body::from(self.inner.to_string());
-        Response::builder()
-            .status(StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR))
-            .body(body)
-            .unwrap()
-    }
-}
-
 /// Session 提取器
 ///
-/// 用于在 axum 处理函数中提取 Session。
+/// 用于从请求中提取 Session。
 ///
 /// # 示例
 ///
 /// ```rust,ignore
 /// use wae_session::SessionExtractor;
 ///
-/// async fn handler(session: SessionExtractor) -> impl IntoResponse {
+/// async fn handler(request: &Request) {
+///     let session = SessionExtractor::from_request(request).unwrap();
 ///     let user_id: Option<String> = session.get_typed("user_id").await;
 ///     // ...
 /// }
@@ -69,6 +53,21 @@ pub struct SessionExtractor {
 }
 
 impl SessionExtractor {
+    /// 创建 Session 提取器
+    pub fn new(session: Arc<Session>) -> Self {
+        Self { session }
+    }
+
+    /// 从请求的扩展中提取 Session
+    pub fn from_request<B>(request: &http::Request<B>) -> Result<Self, SessionRejection> {
+        request
+            .extensions()
+            .get::<Arc<Session>>()
+            .cloned()
+            .map(|session| SessionExtractor { session })
+            .ok_or_else(|| SessionRejection::new(WaeError::internal("Session not found in request extensions")))
+    }
+
     /// 获取 Session 引用
     pub fn inner(&self) -> &Session {
         &self.session
@@ -127,21 +126,5 @@ impl SessionExtractor {
     /// 检查是否为空
     pub async fn is_empty(&self) -> bool {
         self.session.is_empty().await
-    }
-}
-
-impl<S> FromRequestParts<S> for SessionExtractor
-where
-    S: Send + Sync,
-{
-    type Rejection = SessionRejection;
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<Arc<Session>>()
-            .cloned()
-            .map(|session| SessionExtractor { session })
-            .ok_or_else(|| SessionRejection::new(WaeError::internal("Session not found in request extensions")))
     }
 }

@@ -3,10 +3,14 @@
 mod github;
 mod google;
 mod wechat;
+mod dingtalk;
+mod feishu;
 
 pub use github::*;
 pub use google::*;
 pub use wechat::*;
+pub use dingtalk::*;
+pub use feishu::*;
 
 use crate::oauth2::OAuth2ProviderConfig;
 
@@ -19,6 +23,10 @@ pub enum OAuth2ProviderType {
     GitHub,
     /// 微信
     WeChat,
+    /// 钉钉
+    DingTalk,
+    /// 飞书
+    Feishu,
     /// 自定义
     Custom,
 }
@@ -34,6 +42,8 @@ pub fn create_provider_config(
         OAuth2ProviderType::Google => google_config(client_id, client_secret, redirect_uri),
         OAuth2ProviderType::GitHub => github_config(client_id, client_secret, redirect_uri),
         OAuth2ProviderType::WeChat => wechat_config(client_id, client_secret, redirect_uri),
+        OAuth2ProviderType::DingTalk => dingtalk_config(client_id, client_secret, redirect_uri),
+        OAuth2ProviderType::Feishu => feishu_config(client_id, client_secret, redirect_uri),
         OAuth2ProviderType::Custom => OAuth2ProviderConfig::new("custom", client_id, client_secret, redirect_uri),
     }
 }

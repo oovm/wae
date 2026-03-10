@@ -5,10 +5,14 @@ pub mod jwt;
 pub mod oauth2;
 pub mod saml;
 pub mod totp;
+pub mod password;
+pub mod csrf;
+pub mod rate_limit;
 
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt};
-use wae_types::{WaeError, WaeErrorKind};
+use std::{collections::HashMap, sync::Arc};
+use wae_types::WaeError;
+use crate::password::{PasswordHasherService, PasswordHashConfig};
 
 /// 认证操作结果类型
 pub type AuthResult<T> = Result<T, WaeError>;
@@ -161,6 +165,8 @@ pub struct AuthConfig {
     pub max_login_attempts: u32,
     /// 锁定时间 (秒)
     pub lockout_duration: u64,
+    /// 密码哈希配置
+    pub password_hash_config: PasswordHashConfig,
 }
 
 impl Default for AuthConfig {
@@ -175,6 +181,7 @@ impl Default for AuthConfig {
             password_require_special: false,
             max_login_attempts: 5,
             lockout_duration: 1800,
+            password_hash_config: PasswordHashConfig::default(),
         }
     }
 }
@@ -343,6 +350,7 @@ pub mod memory {
     /// 内存认证服务
     pub struct MemoryAuthService {
         config: AuthConfig,
+        password_hasher: Arc<PasswordHasherService>,
         users: Arc<RwLock<HashMap<UserId, UserRecord>>>,
         tokens: Arc<RwLock<HashMap<String, (UserId, i64)>>>,
         refresh_tokens: Arc<RwLock<HashMap<String, (UserId, i64)>>>,
@@ -351,20 +359,22 @@ pub mod memory {
     impl MemoryAuthService {
         /// 创建新的内存认证服务
         pub fn new(config: AuthConfig) -> Self {
+            let password_hasher = PasswordHasherService::new(config.password_hash_config.clone());
             Self {
                 config,
+                password_hasher: Arc::new(password_hasher),
                 users: Arc::new(RwLock::new(HashMap::new())),
                 tokens: Arc::new(RwLock::new(HashMap::new())),
                 refresh_tokens: Arc::new(RwLock::new(HashMap::new())),
             }
         }
 
-        fn hash_password(password: &str) -> String {
-            format!("hash:{}", password)
+        fn hash_password(&self, password: &str) -> AuthResult<String> {
+            self.password_hasher.hash_password(password).map_err(|e| e.into())
         }
 
-        fn verify_password(password: &str, hash: &str) -> bool {
-            hash == &Self::hash_password(password)
+        fn verify_password(&self, password: &str, hash: &str) -> AuthResult<bool> {
+            self.password_hasher.verify_password(password, hash).map_err(|e| e.into())
         }
 
         fn generate_token() -> String {
@@ -395,7 +405,7 @@ pub mod memory {
                 return Err(WaeError::account_locked());
             }
 
-            if !Self::verify_password(&credentials.password, &user.password_hash) {
+            if !self.verify_password(&credentials.password, &user.password_hash)? {
                 user.login_attempts += 1;
                 if user.login_attempts >= self.config.max_login_attempts {
                     user.locked_until = Some(Self::current_timestamp() + self.config.lockout_duration as i64);
@@ -489,6 +499,7 @@ pub mod memory {
 
             let user_id = uuid::Uuid::new_v4().to_string();
             let now = Self::current_timestamp();
+            let password_hash = self.hash_password(&request.password)?;
 
             let info = UserInfo {
                 id: user_id.clone(),
@@ -506,7 +517,7 @@ pub mod memory {
 
             let record = UserRecord {
                 info: info.clone(),
-                password_hash: Self::hash_password(&request.password),
+                password_hash,
                 roles: vec![],
                 login_attempts: 0,
                 locked_until: None,
@@ -548,11 +559,11 @@ pub mod memory {
             let mut users = self.users.write().await;
             let user = users.get_mut(user_id).ok_or_else(|| WaeError::user_not_found(user_id))?;
 
-            if !Self::verify_password(&request.old_password, &user.password_hash) {
+            if !self.verify_password(&request.old_password, &user.password_hash)? {
                 return Err(WaeError::invalid_credentials());
             }
 
-            user.password_hash = Self::hash_password(&request.new_password);
+            user.password_hash = self.hash_password(&request.new_password)?;
             user.info.updated_at = Self::current_timestamp();
             Ok(())
         }

@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use axum::http::{HeaderName, HeaderValue, Method, header};
+use http::{HeaderName, HeaderValue, Method, header};
 use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 
 /// CORS 配置结构体

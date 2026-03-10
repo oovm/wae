@@ -10,8 +10,11 @@ pub mod migration;
 
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub use auto_migrate::{
-    AutoMigrate, AutoMigrator, AutoMigratorConfig, ColumnDiff, DiffAction, IndexDiff, MigrationPlan, SchemaDiff,
+    AutoMigrate, AutoMigrator, AutoMigratorConfig, CodeGenerator, ColumnDiff, DiffAction, IndexDiff, MigrationPlan, SchemaDiff,
     SchemaReflector, TableDiff,
 };
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-pub use migration::{Migration, MigrationResult, Migrator, SimpleMigration};
+pub use migration::{
+    Migration, MigrationOptions, MigrationRecord, MigrationResult, MigrationStatus, MigrationStatusSummary, Migrator,
+    SimpleMigration,
+};

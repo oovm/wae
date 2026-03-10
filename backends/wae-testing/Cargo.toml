@@ -20,6 +20,15 @@ rand = { workspace = true }
 uuid = { workspace = true }
 futures = { workspace = true }
 regex = { workspace = true }
+http = { workspace = true }
+bytes = { workspace = true }
+url = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+http-body = { workspace = true }
+http-body-util = { workspace = true }
+testcontainers = { version = "0.19.0", optional = true }
 
 [features]
 default = []
+containers = ["dep:testcontainers"]

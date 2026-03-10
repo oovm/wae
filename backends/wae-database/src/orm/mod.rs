@@ -4,6 +4,7 @@
 //! - 实体定义和映射
 //! - 查询构建器
 //! - CRUD 操作封装
+//! - 一对多和多对多关系
 
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 mod builder;
@@ -17,11 +18,11 @@ mod macros;
 mod repository;
 
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
-pub use builder::{DeleteBuilder, InsertBuilder, QueryBuilder, SelectBuilder, UpdateBuilder};
+pub use builder::{DeleteBuilder, InsertBuilder, Join, JoinType, QueryBuilder, SelectBuilder, UpdateBuilder};
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 pub use condition::Condition;
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
-pub use entity::{Entity, FromRow, ToRow};
+pub use entity::{BelongsTo, Entity, FromRow, HasMany, ManyToMany, ToRow};
 #[cfg(feature = "mysql")]
 pub use repository::MySqlDbRepository;
 #[cfg(any(feature = "turso", feature = "postgres"))]
