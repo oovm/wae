@@ -3,10 +3,14 @@
 //! 提供轻量级 Prometheus 指标的注册、管理和导出功能。
 //! 不依赖任何第三方库，纯自主实现。
 
-use std::collections::HashMap;
-use std::fmt::Write;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    fmt::Write,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
+};
 
 /// 指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,25 +40,24 @@ pub struct Metric {
 impl Metric {
     /// 创建新的指标
     pub fn new(name: String, help: String, metric_type: MetricType, label_keys: Vec<String>) -> Self {
-        Self {
-            name,
-            help,
-            metric_type,
-            values: parking_lot::RwLock::new(HashMap::new()),
-            label_keys,
-        }
+        Self { name, help, metric_type, values: parking_lot::RwLock::new(HashMap::new()), label_keys }
     }
 
     /// 获取或创建指标值
     fn get_or_create_value(&self, label_values: &[&str]) -> MetricValue {
         let key: Vec<String> = label_values.iter().map(|s| s.to_string()).collect();
-        
+
         let mut values = self.values.write();
-        values.entry(key).or_insert_with(|| match self.metric_type {
-            MetricType::Counter => MetricValue::Counter(Arc::new(AtomicU64::new(0))),
-            MetricType::Gauge => MetricValue::Gauge(Arc::new(AtomicU64::new(0))),
-            MetricType::Histogram => MetricValue::Histogram(Arc::new(parking_lot::RwLock::new(Histogram::new(vec![0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0])))),
-        }).clone()
+        values
+            .entry(key)
+            .or_insert_with(|| match self.metric_type {
+                MetricType::Counter => MetricValue::Counter(Arc::new(AtomicU64::new(0))),
+                MetricType::Gauge => MetricValue::Gauge(Arc::new(AtomicU64::new(0))),
+                MetricType::Histogram => MetricValue::Histogram(Arc::new(parking_lot::RwLock::new(Histogram::new(vec![
+                    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+                ])))),
+            })
+            .clone()
     }
 
     /// 增加计数器
@@ -92,26 +95,28 @@ impl Metric {
     /// 导出为 Prometheus 格式
     pub fn export(&self) -> String {
         let mut output = String::new();
-        
+
         writeln!(&mut output, "# HELP {} {}", self.name, self.help).unwrap();
         writeln!(&mut output, "# TYPE {} {}", self.name, self.metric_type.to_str()).unwrap();
-        
+
         let values = self.values.read();
         for (label_values, value) in values.iter() {
             let labels_str = if !self.label_keys.is_empty() {
-                let labels: Vec<String> = self.label_keys
+                let labels: Vec<String> = self
+                    .label_keys
                     .iter()
                     .zip(label_values.iter())
                     .map(|(k, v)| format!("{}=\"{}\"", k, escape_label_value(v)))
                     .collect();
                 format!("{{{}}}", labels.join(","))
-            } else {
+            }
+            else {
                 String::new()
             };
-            
+
             value.export(&mut output, &self.name, &labels_str);
         }
-        
+
         output
     }
 }
@@ -159,21 +164,16 @@ impl Histogram {
     /// 创建新的直方图
     pub fn new(buckets: Vec<f64>) -> Self {
         let bucket_counts = (0..buckets.len() + 1).map(|_| AtomicU64::new(0)).collect();
-        Self {
-            buckets,
-            bucket_counts,
-            sum: AtomicU64::new(0),
-            count: AtomicU64::new(0),
-        }
+        Self { buckets, bucket_counts, sum: AtomicU64::new(0), count: AtomicU64::new(0) }
     }
 
     /// 观察一个值
     pub fn observe(&self, value: f64) {
         let value_u64 = (value * 1000.0) as u64;
-        
+
         self.sum.fetch_add(value_u64, Ordering::Relaxed);
         self.count.fetch_add(1, Ordering::Relaxed);
-        
+
         let mut bucket_index = self.buckets.len();
         for (i, &bucket) in self.buckets.iter().enumerate() {
             if value <= bucket {
@@ -181,7 +181,7 @@ impl Histogram {
                 break;
             }
         }
-        
+
         for i in bucket_index..self.bucket_counts.len() {
             self.bucket_counts[i].fetch_add(1, Ordering::Relaxed);
         }
@@ -191,22 +191,24 @@ impl Histogram {
     pub fn export(&self, output: &mut String, name: &str, labels: &str) {
         let count = self.count.load(Ordering::Relaxed);
         let sum = self.sum.load(Ordering::Relaxed) as f64 / 1000.0;
-        
+
         for (i, &bucket) in self.buckets.iter().enumerate() {
             let bucket_count = self.bucket_counts[i].load(Ordering::Relaxed);
             let bucket_label = if labels.is_empty() {
                 format!("{{le=\"{}\"}}", bucket)
-            } else {
-                format!("{},le=\"{}\"", &labels[1..labels.len()-1], bucket)
+            }
+            else {
+                format!("{},le=\"{}\"", &labels[1..labels.len() - 1], bucket)
             };
             writeln!(output, "{}_bucket{{{}}} {}", name, bucket_label, bucket_count).unwrap();
         }
-        
+
         let inf_count = self.bucket_counts.last().unwrap().load(Ordering::Relaxed);
         let inf_label = if labels.is_empty() {
             "{le=\"+Inf\"}".to_string()
-        } else {
-            format!("{},le=\"+Inf\"", &labels[1..labels.len()-1])
+        }
+        else {
+            format!("{},le=\"+Inf\"", &labels[1..labels.len() - 1])
         };
         writeln!(output, "{}_bucket{{{}}} {}", name, inf_label, inf_count).unwrap();
         writeln!(output, "{}_sum{} {}", name, labels, sum).unwrap();
@@ -216,9 +218,7 @@ impl Histogram {
 
 /// 转义标签值
 fn escape_label_value(value: &str) -> String {
-    value.replace("\\", "\\\\")
-         .replace("\"", "\\\"")
-         .replace("\n", "\\n")
+    value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
 }
 
 impl MetricType {
@@ -242,9 +242,7 @@ pub struct MetricsRegistry {
 impl MetricsRegistry {
     /// 创建新的指标注册器
     pub fn new() -> Self {
-        let registry = Self {
-            metrics: parking_lot::RwLock::new(HashMap::new()),
-        };
+        let registry = Self { metrics: parking_lot::RwLock::new(HashMap::new()) };
 
         registry.register_counter(
             "http_requests_total".to_string(),
@@ -313,8 +311,6 @@ impl Default for MetricsRegistry {
 
 impl Clone for MetricsRegistry {
     fn clone(&self) -> Self {
-        Self {
-            metrics: parking_lot::RwLock::new(self.metrics.read().clone()),
-        }
+        Self { metrics: parking_lot::RwLock::new(self.metrics.read().clone()) }
     }
 }

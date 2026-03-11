@@ -69,20 +69,7 @@ impl StorageProvider for AzureBlobProvider {
         let resource_path = format!("/{}/{}/{}", config.secret_id, config.bucket, clean_path);
         let string_to_sign = format!(
             "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
-            permissions,
-            start,
-            expiry,
-            resource_path,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            version,
-            "",
-            ""
+            permissions, start, expiry, resource_path, "", "", "", "", "", "", "", version, "", ""
         );
 
         let signature = Self::hmac_sha256(&account_key, string_to_sign.as_bytes());
@@ -127,20 +114,7 @@ impl StorageProvider for AzureBlobProvider {
 
         let string_to_sign = format!(
             "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
-            permissions,
-            "",
-            expiry,
-            resource_path,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            version,
-            "",
-            ""
+            permissions, "", expiry, resource_path, "", "", "", "", "", "", "", version, "", ""
         );
 
         let signature = Self::hmac_sha256(&account_key, string_to_sign.as_bytes());

@@ -101,6 +101,7 @@ pub trait Mock: Send + Sync {
 }
 
 /// 异步 Mock 行为 trait
+#[allow(async_fn_in_trait)]
 pub trait AsyncMock: Mock {
     /// 异步验证期望
     async fn verify_async(&self) -> TestingResult<()>;

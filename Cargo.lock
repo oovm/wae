@@ -3910,20 +3910,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "opentelemetry"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b84bcd6ae87133e903af7ef497404dda70c60d0ea14895fc8a5e6722754fc2a0"
-dependencies = [
- "futures-core",
- "futures-sink",
- "js-sys",
- "pin-project-lite",
- "thiserror",
- "tracing",
-]
-
-[[package]]
 name = "os_info"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7073,6 +7059,7 @@ version = "0.0.1"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
+ "http",
  "mysql_async",
  "serde",
  "serde_json",
@@ -7201,16 +7188,14 @@ dependencies = [
  "http",
  "http-body-util",
  "hyper",
- "opentelemetry",
  "parking_lot",
  "pin-project-lite",
- "rand 0.10.0",
- "rand_core 0.10.0",
  "serde",
  "serde_json",
  "tokio",
  "tower",
  "tracing",
+ "uuid",
  "wae-request",
  "wae-types",
 ]

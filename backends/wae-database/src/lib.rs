@@ -4,6 +4,8 @@
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 mod connection;
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+mod extract;
+#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 mod orm;
 mod schema;
 #[cfg(feature = "turso")]
@@ -20,6 +22,16 @@ pub use connection::{DatabaseService, TursoConnection};
 pub use connection::{MySqlConnection, MySqlDatabaseService};
 #[cfg(feature = "postgres")]
 pub use connection::{PostgresConnection, PostgresDatabaseService};
+#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+pub use extract::{
+    DatabaseConnectionExtractor, DatabaseRejection,
+};
+#[cfg(feature = "turso")]
+pub use extract::TursoConnectionExtractor;
+#[cfg(feature = "postgres")]
+pub use extract::PostgresConnectionExtractor;
+#[cfg(feature = "mysql")]
+pub use extract::MySqlConnectionExtractor;
 #[cfg(feature = "turso")]
 pub use orm::DbRepository;
 #[cfg(feature = "mysql")]

@@ -40,24 +40,99 @@ pub type HttpsResult<T> = WaeResult<T>;
 pub type HttpsError = WaeError;
 
 /// 自定义路由类型
-#[derive(Clone, Default)]
-pub struct Router {
-    // 暂时为空，后续实现
+#[derive(Clone)]
+pub struct Router<S = ()> {
+    /// 按 HTTP 方法存储的路由表
+    routes: std::collections::HashMap<http::Method, matchit::Router<Box<dyn std::any::Any + Send + Sync + 'static>>>,
+    /// 路由合并时使用的原始路由数据
+    raw_routes: Vec<RouteEntry>,
+    /// 状态类型
+    state: S,
 }
 
-impl Router {
+/// 路由条目
+struct RouteEntry {
+    /// HTTP 方法
+    method: http::Method,
+    /// 路径模式
+    path: String,
+    /// 处理函数
+    handler: Box<dyn std::any::Any + Send + Sync + 'static>,
+}
+
+impl Default for Router<()> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Router<()> {
     /// 创建新的空路由
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            routes: std::collections::HashMap::new(),
+            raw_routes: Vec::new(),
+            state: (),
+        }
+    }
+}
+
+impl<S> Router<S> {
+    /// 创建带状态的路由
+    pub fn with_state(state: S) -> Self {
+        Self {
+            routes: std::collections::HashMap::new(),
+            raw_routes: Vec::new(),
+            state,
+        }
     }
 
-    /// 合并另一个路由（暂时实现）
-    pub fn merge(self, _other: Self) -> Self {
+    /// 获取路由状态
+    pub fn state(&self) -> &S {
+        &self.state
+    }
+
+    /// 获取可变的路由状态
+    pub fn state_mut(&mut self) -> &mut S {
+        &mut self.state
+    }
+
+    /// 添加路由到路由表
+    pub fn add_route_inner(&mut self, method: http::Method, path: String, handler: Box<dyn std::any::Any + Send + Sync + 'static>) {
+        let entry = RouteEntry {
+            method: method.clone(),
+            path: path.clone(),
+            handler,
+        };
+        self.raw_routes.push(entry);
+        
+        let router = self.routes.entry(method).or_insert_with(matchit::Router::new);
+        router.insert(path, handler).ok();
+    }
+}
+
+impl<S> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    /// 合并另一个路由
+    pub fn merge(mut self, other: Router<S>) -> Self {
+        for entry in other.raw_routes {
+            self.add_route_inner(entry.method, entry.path, entry.handler);
+        }
         self
     }
 
-    /// 嵌套服务（暂时实现）
-    pub fn nest_service<S>(self, _prefix: &str, _service: S) -> Self {
+    /// 嵌套服务
+    pub fn nest_service<T>(mut self, prefix: &str, service: T) -> Self
+    where
+        T: Into<Router<S>>,
+    {
+        let other = service.into();
+        for entry in other.raw_routes {
+            let new_path = format!("{}{}", prefix.trim_end_matches('/'), entry.path);
+            self.add_route_inner(entry.method, new_path, entry.handler);
+        }
         self
     }
 }
@@ -240,17 +315,33 @@ impl Default for HttpsServerConfig {
 /// HTTPS 服务器构建器
 ///
 /// 用于构建和配置 HTTPS 服务器。
-pub struct HttpsServerBuilder {
+pub struct HttpsServerBuilder<S = ()> {
     config: HttpsServerConfig,
-    router: Router,
+    router: Router<S>,
+    _marker: std::marker::PhantomData<S>,
 }
 
-impl HttpsServerBuilder {
+impl HttpsServerBuilder<()> {
     /// 创建新的 HTTPS 服务器构建器
     pub fn new() -> Self {
-        Self { config: HttpsServerConfig::default(), router: Router::new() }
+        Self { 
+            config: HttpsServerConfig::default(), 
+            router: Router::new(),
+            _marker: std::marker::PhantomData,
+        }
     }
+}
 
+impl Default for HttpsServerBuilder<()> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<S> HttpsServerBuilder<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     /// 设置服务器监听地址
     pub fn addr(mut self, addr: SocketAddr) -> Self {
         self.config.addr = addr;
@@ -264,13 +355,16 @@ impl HttpsServerBuilder {
     }
 
     /// 设置路由
-    pub fn router(mut self, router: Router) -> Self {
-        self.router = router;
+    pub fn router<T>(mut self, router: T) -> Self
+    where
+        T: Into<Router<S>>,
+    {
+        self.router = router.into();
         self
     }
 
     /// 合并路由
-    pub fn merge_router(mut self, router: Router) -> Self {
+    pub fn merge_router(mut self, router: Router<S>) -> Self {
         self.router = self.router.merge(router);
         self
     }
@@ -311,27 +405,25 @@ impl HttpsServerBuilder {
     }
 
     /// 构建 HTTPS 服务器
-    pub fn build(self) -> HttpsServer {
-        HttpsServer { config: self.config, router: self.router }
-    }
-}
-
-impl Default for HttpsServerBuilder {
-    fn default() -> Self {
-        Self::new()
+    pub fn build(self) -> HttpsServer<S> {
+        HttpsServer { 
+            config: self.config, 
+            router: self.router,
+            _marker: std::marker::PhantomData,
+        }
     }
 }
 
 /// HTTPS 服务器
 ///
 /// 提供 HTTP/HTTPS 服务的核心类型。
-pub struct HttpsServer {
+pub struct HttpsServer<S = ()> {
     config: HttpsServerConfig,
-    #[expect(dead_code)]
-    router: Router,
+    router: Router<S>,
+    _marker: std::marker::PhantomData<S>,
 }
 
-impl HttpsServer {
+impl HttpsServer<()> {
     /// 启动服务器
     pub async fn serve(self) -> HttpsResult<()> {
         let addr = self.config.addr;
@@ -349,7 +441,9 @@ impl HttpsServer {
             None => self.serve_plain(listener).await,
         }
     }
+}
 
+impl<S> HttpsServer<S> {
     async fn serve_plain(self, _listener: TcpListener) -> HttpsResult<()> {
         // TODO: 使用 hyper::server 实现
         // 暂时挂起，等待 Router 实现

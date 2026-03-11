@@ -11,7 +11,7 @@ use std::{
 };
 use tower::{Layer, Service};
 
-use crate::tracing::{extract_context_from_headers, inject_context_to_headers, set_global_text_map_propagator, TraceContext};
+use crate::tracing::{TraceContext, extract_context_from_headers, inject_context_to_headers, set_global_text_map_propagator};
 
 /// 追踪中间件 Layer
 #[derive(Clone, Debug, Default)]
@@ -55,13 +55,10 @@ where
     }
 
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
-        let context = extract_context_from_headers(req.headers()).unwrap_or_else(TraceContext::new);
+        let context = extract_context_from_headers(req.headers()).unwrap_or_default();
         let child_context = context.child();
 
-        OpenTelemetryFuture {
-            inner: self.inner.call(req),
-            context: child_context,
-        }
+        OpenTelemetryFuture { inner: self.inner.call(req), context: child_context }
     }
 }
 

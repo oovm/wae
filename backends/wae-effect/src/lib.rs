@@ -4,7 +4,7 @@
 
 #![warn(missing_docs)]
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, any::TypeId, sync::Arc};
 
 use http::{Response, StatusCode, request::Parts};
 use wae_types::{WaeError, WaeResult};
@@ -15,26 +15,44 @@ use wae_types::{WaeError, WaeResult};
 #[derive(Default)]
 pub struct Dependencies {
     services: HashMap<String, Box<dyn std::any::Any + Send + Sync>>,
+    typed_services: HashMap<TypeId, Box<dyn std::any::Any + Send + Sync>>,
 }
 
 impl Dependencies {
     /// 创建新的依赖容器
     pub fn new() -> Self {
-        Self { services: HashMap::new() }
+        Self {
+            services: HashMap::new(),
+            typed_services: HashMap::new(),
+        }
     }
 
-    /// 注册服务
+    /// 注册服务（按字符串键）
     pub fn register<T: Send + Sync + 'static>(&mut self, name: &str, service: T) {
         self.services.insert(name.to_string(), Box::new(service));
     }
 
-    /// 获取服务
+    /// 获取服务（按字符串键）
     pub fn get<T: Clone + Send + Sync + 'static>(&self, name: &str) -> WaeResult<T> {
         self.services
             .get(name)
             .and_then(|s| s.downcast_ref::<T>())
             .cloned()
             .ok_or_else(|| WaeError::not_found("Dependency", name))
+    }
+
+    /// 按类型注册服务
+    pub fn register_type<T: Clone + Send + Sync + 'static>(&mut self, service: T) {
+        self.typed_services.insert(TypeId::of::<T>(), Box::new(service));
+    }
+
+    /// 按类型获取服务
+    pub fn get_type<T: Clone + Send + Sync + 'static>(&self) -> WaeResult<T> {
+        self.typed_services
+            .get(&TypeId::of::<T>())
+            .and_then(|s| s.downcast_ref::<T>())
+            .cloned()
+            .ok_or_else(|| WaeError::not_found("Typed dependency", std::any::type_name::<T>()))
     }
 }
 
@@ -52,9 +70,14 @@ impl Effectful {
         Self { deps, parts }
     }
 
-    /// 获取依赖
+    /// 获取依赖（按字符串键）
     pub fn get<T: Clone + Send + Sync + 'static>(&self, name: &str) -> WaeResult<T> {
         self.deps.get(name)
+    }
+
+    /// 按类型获取依赖
+    pub fn get_type<T: Clone + Send + Sync + 'static>(&self) -> WaeResult<T> {
+        self.deps.get_type()
     }
 
     /// 获取请求头
@@ -82,9 +105,15 @@ impl AlgebraicEffect {
         Self { deps: Dependencies::new() }
     }
 
-    /// 注册服务
+    /// 注册服务（按字符串键）
     pub fn with<T: Send + Sync + 'static>(mut self, name: &str, service: T) -> Self {
         self.deps.register(name, service);
+        self
+    }
+
+    /// 按类型注册服务
+    pub fn with_type<T: Clone + Send + Sync + 'static>(mut self, service: T) -> Self {
+        self.deps.register_type(service);
         self
     }
 

@@ -378,10 +378,12 @@ impl TestEnv {
                 hook.before_setup(self)?;
             }
 
+            #[allow(clippy::await_holding_lock)]
             for hook in self.async_lifecycle_hooks.read().iter() {
                 hook.before_setup_async(self).await?;
             }
 
+            #[allow(clippy::await_holding_lock)]
             for hook in self.async_lifecycle_hooks.read().iter() {
                 hook.after_setup_async(self).await?;
             }
@@ -483,10 +485,12 @@ impl TestEnv {
                 hook.before_teardown(self)?;
             }
 
+            #[allow(clippy::await_holding_lock)]
             for hook in self.async_lifecycle_hooks.read().iter() {
                 hook.before_teardown_async(self).await?;
             }
 
+            #[allow(clippy::await_holding_lock)]
             {
                 let handlers = self.async_cleanup_handlers.write();
                 for handler in handlers.iter().rev() {
@@ -503,6 +507,7 @@ impl TestEnv {
 
             self.storage.write().clear();
 
+            #[allow(clippy::await_holding_lock)]
             for hook in self.async_lifecycle_hooks.read().iter() {
                 hook.after_teardown_async(self).await?;
             }

@@ -54,6 +54,7 @@ pub struct NormalizePathConfig;
 
 impl NormalizePathConfig {
     /// 创建默认的路径归一化中间件
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> NormalizePathLayer {
         NormalizePathLayer::trim_trailing_slash()
     }

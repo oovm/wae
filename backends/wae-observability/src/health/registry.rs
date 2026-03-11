@@ -68,7 +68,7 @@ impl HealthRegistry {
     /// 返回存活检查报告
     pub async fn check_liveness(&self) -> HealthReport {
         let mut checks = Vec::with_capacity(self.liveness_checkers.len());
-        for (_name, checker) in &self.liveness_checkers {
+        for checker in self.liveness_checkers.values() {
             checks.push(checker.check().await);
         }
         HealthReport::new(checks)
@@ -79,7 +79,7 @@ impl HealthRegistry {
     /// 返回就绪检查报告
     pub async fn check_readiness(&self) -> HealthReport {
         let mut checks = Vec::with_capacity(self.readiness_checkers.len());
-        for (_name, checker) in &self.readiness_checkers {
+        for checker in self.readiness_checkers.values() {
             checks.push(checker.check().await);
         }
         HealthReport::new(checks)

@@ -120,11 +120,7 @@ impl fmt::Display for SpanId {
 impl TraceContext {
     /// 创建新的 Trace Context
     pub fn new() -> Self {
-        Self {
-            trace_id: TraceId::new(),
-            span_id: SpanId::new(),
-            trace_flags: 0x01,
-        }
+        Self { trace_id: TraceId::new(), span_id: SpanId::new(), trace_flags: 0x01 }
     }
 
     /// 从 traceparent 头解析
@@ -139,11 +135,7 @@ impl TraceContext {
         let trace_id = TraceId::from_hex(parts[1])?;
         let span_id = SpanId::from_hex(parts[2].get(0..16)?)?;
         let trace_flags = u8::from_str_radix(parts[2].get(16..18)?, 16).ok()?;
-        Some(Self {
-            trace_id,
-            span_id,
-            trace_flags,
-        })
+        Some(Self { trace_id, span_id, trace_flags })
     }
 
     /// 格式化为 traceparent 头
@@ -153,11 +145,7 @@ impl TraceContext {
 
     /// 创建子 Span
     pub fn child(&self) -> Self {
-        Self {
-            trace_id: self.trace_id,
-            span_id: SpanId::new(),
-            trace_flags: self.trace_flags,
-        }
+        Self { trace_id: self.trace_id, span_id: SpanId::new(), trace_flags: self.trace_flags }
     }
 }
 
@@ -169,10 +157,7 @@ impl Default for TraceContext {
 
 /// 从 HTTP 头提取 Trace Context
 pub fn extract_context_from_headers(headers: &HeaderMap) -> Option<TraceContext> {
-    headers
-        .get("traceparent")
-        .and_then(|v| v.to_str().ok())
-        .and_then(TraceContext::from_traceparent)
+    headers.get("traceparent").and_then(|v| v.to_str().ok()).and_then(TraceContext::from_traceparent)
 }
 
 /// 将 Trace Context 注入 HTTP 头
@@ -183,5 +168,4 @@ pub fn inject_context_to_headers(context: &TraceContext, headers: &mut HeaderMap
 }
 
 /// 设置全局 Text Map 传播器
-pub fn set_global_text_map_propagator() {
-}
+pub fn set_global_text_map_propagator() {}

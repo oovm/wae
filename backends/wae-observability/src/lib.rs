@@ -35,20 +35,15 @@ use std::sync::Arc;
 pub type ObservabilityResult<T> = Result<T, WaeError>;
 
 /// 健康状态枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum HealthStatus {
     /// 服务健康
+    #[default]
     Passing,
     /// 服务警告
     Warning,
     /// 服务失败
     Critical,
-}
-
-impl Default for HealthStatus {
-    fn default() -> Self {
-        Self::Passing
-    }
 }
 
 /// 健康检查结果
@@ -107,21 +102,15 @@ pub trait HealthChecker: Send + Sync {
 
 /// 日志输出目标
 #[cfg(feature = "json-log")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LogOutput {
     /// 输出到标准输出
+    #[default]
     Stdout,
     /// 输出到标准错误
     Stderr,
     /// 输出到测试用的 writer（用于测试）
     Test,
-}
-
-#[cfg(feature = "json-log")]
-impl Default for LogOutput {
-    fn default() -> Self {
-        Self::Stdout
-    }
 }
 
 /// JSON 日志配置
@@ -357,20 +346,15 @@ impl ObservabilityService {
 pub fn init_observability(config: ObservabilityConfig) -> ObservabilityResult<ObservabilityService> {
     #[cfg(feature = "json-log")]
     if config.enable_json_log {
-        let json_config = crate::logging::init::JsonLoggerConfig::default().with_level(config.json_log_config.level);
-        crate::logging::init::init_json_logger(json_config);
     }
 
     #[cfg(feature = "otlp")]
-    if config.enable_otlp {
-        tracing::info!("OTLP tracing initialized");
-    }
+    if config.enable_otlp {}
 
     #[cfg(feature = "profiling")]
     if config.enable_profiling {
         let console = profiling::TokioConsole::new();
         console.init(&config.profiling_config);
-        tracing::info!("Tokio Console initialized on {}", config.profiling_config.bind_addr);
     }
 
     #[allow(unused_mut)]

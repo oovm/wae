@@ -6,18 +6,13 @@ use crate::logging::json::JsonFormatterConfig;
 use ::tracing::Level;
 
 /// 日志输出目标
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LogOutput {
     /// 输出到标准输出
+    #[default]
     Stdout,
     /// 输出到标准错误
     Stderr,
-}
-
-impl Default for LogOutput {
-    fn default() -> Self {
-        Self::Stdout
-    }
 }
 
 /// JSON 日志初始化配置

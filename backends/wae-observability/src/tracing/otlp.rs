@@ -84,11 +84,8 @@ impl OtlpConfig {
 
 /// 初始化 OpenTelemetry 追踪
 pub fn init_tracing(_config: OtlpConfig) -> Result<(), String> {
-    tracing::info!("OTLP tracing initialized (lightweight implementation)");
     Ok(())
 }
 
 /// 关闭 OpenTelemetry 追踪
-pub fn shutdown_tracing() {
-    tracing::info!("OTLP tracing shutdown");
-}
+pub fn shutdown_tracing() {}

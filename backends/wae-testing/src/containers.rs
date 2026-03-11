@@ -10,7 +10,7 @@ use std::{
 };
 
 /// 测试容器错误类型
-#[expect(dead_code)]
+#[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum ContainerError {
     /// Docker 命令执行失败
@@ -31,11 +31,11 @@ pub enum ContainerError {
 }
 
 /// 测试容器结果类型
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub type ContainerResult<T> = Result<T, ContainerError>;
 
 /// 测试容器 trait，定义容器生命周期管理方法
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub trait TestContainer {
     /// 获取容器的连接 URL
     fn connection_url(&self) -> String;
@@ -53,7 +53,7 @@ pub trait TestContainer {
 }
 
 /// 检查 Docker 是否可用
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub fn is_docker_available() -> bool {
     let output = Command::new("docker").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).output();
 
@@ -64,7 +64,7 @@ pub fn is_docker_available() -> bool {
 }
 
 /// 执行 Docker 命令
-#[expect(dead_code)]
+#[allow(dead_code)]
 fn docker_command(args: &[&str]) -> ContainerResult<String> {
     let output = Command::new("docker").args(args).stdout(Stdio::piped()).stderr(Stdio::piped()).output()?;
 
@@ -78,7 +78,7 @@ fn docker_command(args: &[&str]) -> ContainerResult<String> {
 }
 
 /// 等待容器就绪
-#[expect(dead_code)]
+#[allow(dead_code)]
 async fn wait_for_ready(_container_id: &str, check_fn: impl Fn() -> bool, timeout: Duration) -> ContainerResult<()> {
     let start = Instant::now();
 
@@ -93,7 +93,7 @@ async fn wait_for_ready(_container_id: &str, check_fn: impl Fn() -> bool, timeou
 }
 
 /// 检查容器日志是否包含特定消息
-#[expect(dead_code)]
+#[allow(dead_code)]
 fn check_container_log(container_id: &str, message: &str) -> bool {
     let output = Command::new("docker").args(["logs", container_id]).stdout(Stdio::piped()).stderr(Stdio::piped()).output();
 
@@ -108,7 +108,7 @@ fn check_container_log(container_id: &str, message: &str) -> bool {
 }
 
 /// PostgreSQL 容器
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub struct PostgresContainer {
     container_id: String,
     host: String,
@@ -119,7 +119,7 @@ pub struct PostgresContainer {
 }
 
 /// PostgreSQL 镜像配置
-#[expect(dead_code)]
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PostgresImage {
     tag: String,
@@ -128,7 +128,7 @@ pub struct PostgresImage {
     database: String,
 }
 
-#[expect(dead_code)]
+#[allow(dead_code)]
 impl Default for PostgresImage {
     fn default() -> Self {
         Self {
@@ -140,7 +140,7 @@ impl Default for PostgresImage {
     }
 }
 
-#[expect(dead_code)]
+#[allow(dead_code)]
 impl PostgresContainer {
     /// 创建默认 PostgreSQL 容器
     pub async fn default() -> ContainerResult<Self> {
@@ -197,7 +197,7 @@ impl PostgresContainer {
     }
 }
 
-#[expect(dead_code)]
+#[allow(dead_code)]
 impl TestContainer for PostgresContainer {
     fn connection_url(&self) -> String {
         format!("postgres://{}:{}@{}:{}/{}", self.username, self.password, self.host, self.port, self.database)
@@ -219,7 +219,7 @@ impl TestContainer for PostgresContainer {
 }
 
 /// MySQL 容器
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub struct MySqlContainer {
     container_id: String,
     host: String,
@@ -230,7 +230,7 @@ pub struct MySqlContainer {
 }
 
 /// MySQL 镜像配置
-#[expect(dead_code)]
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct MySqlImage {
     tag: String,
@@ -240,7 +240,7 @@ pub struct MySqlImage {
     root_password: String,
 }
 
-#[expect(dead_code)]
+#[allow(dead_code)]
 impl Default for MySqlImage {
     fn default() -> Self {
         Self {
@@ -253,7 +253,7 @@ impl Default for MySqlImage {
     }
 }
 
-#[expect(dead_code)]
+#[allow(dead_code)]
 impl MySqlContainer {
     /// 创建默认 MySQL 容器
     pub async fn default() -> ContainerResult<Self> {
@@ -307,6 +307,7 @@ impl MySqlContainer {
     }
 }
 
+#[allow(dead_code)]
 impl TestContainer for MySqlContainer {
     fn connection_url(&self) -> String {
         format!("mysql://{}:{}@{}:{}/{}", self.username, self.password, self.host, self.port, self.database)
@@ -328,6 +329,7 @@ impl TestContainer for MySqlContainer {
 }
 
 /// Redis 容器
+#[allow(dead_code)]
 pub struct RedisContainer {
     container_id: String,
     host: String,
@@ -336,18 +338,21 @@ pub struct RedisContainer {
 }
 
 /// Redis 镜像配置
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct RedisImage {
     tag: String,
     password: Option<String>,
 }
 
+#[allow(dead_code)]
 impl Default for RedisImage {
     fn default() -> Self {
         Self { tag: "7-alpine".to_string(), password: None }
     }
 }
 
+#[allow(dead_code)]
 impl RedisContainer {
     /// 创建默认 Redis 容器
     pub async fn default() -> ContainerResult<Self> {
@@ -402,6 +407,7 @@ impl RedisContainer {
     }
 }
 
+#[allow(dead_code)]
 impl TestContainer for RedisContainer {
     fn connection_url(&self) -> String {
         match &self.password {
@@ -426,11 +432,13 @@ impl TestContainer for RedisContainer {
 }
 
 /// 运行容器
+#[allow(dead_code)]
 fn run_container(image: &str, ports: &[u16], env_vars: &HashMap<&str, String>) -> ContainerResult<String> {
     run_container_with_cmd(image, ports, env_vars, None)
 }
 
 /// 运行容器（带自定义命令）
+#[allow(dead_code)]
 fn run_container_with_cmd(
     image: &str,
     ports: &[u16],
@@ -463,11 +471,12 @@ fn run_container_with_cmd(
 }
 
 /// 获取主机端口映射
+#[allow(dead_code)]
 fn get_host_port(container_id: &str, container_port: u16) -> ContainerResult<u16> {
     let output = docker_command(&["port", container_id, &container_port.to_string()])?;
 
     let port_str =
-        output.split(':').last().ok_or_else(|| ContainerError::CommandFailed("Failed to parse port mapping".to_string()))?;
+        output.split(':').next_back().ok_or_else(|| ContainerError::CommandFailed("Failed to parse port mapping".to_string()))?;
 
     let port = port_str.parse().map_err(|_| ContainerError::CommandFailed("Failed to parse port number".to_string()))?;
 
