@@ -14,7 +14,7 @@
   - `human-judgement` TR-1.3: 所有公共 API 有完整文档注释
 - **Notes**: 应遵循现有的 wae-https extract 模块的设计模式
 
-## [ ] Task 2: 事务中间件实现
+## [x] Task 2: 事务中间件实现
 - **Priority**: P0
 - **Depends On**: [Task 1]
 - **Description**:
@@ -28,7 +28,7 @@
   - `human-judgement` TR-2.3: 所有公共 API 有完整文档注释
 - **Notes**: 应遵循现有的 wae-https middleware 模块的设计模式
 
-## [ ] Task 3: 完善 auto-migrate 功能
+## [x] Task 3: 完善 auto-migrate 功能
 - **Priority**: P0
 - **Depends On**: None
 - **Description**:
@@ -44,7 +44,7 @@
   - `human-judgement` TR-3.4: 所有公共 API 有完整文档注释
 - **Notes**: 应先查看现有 auto_migrate 模块的实现
 
-## [ ] Task 4: 连接池深度优化
+## [x] Task 4: 连接池深度优化
 - **Priority**: P1
 - **Depends On**: None
 - **Description**:
@@ -59,7 +59,7 @@
   - `human-judgement` TR-4.3: 所有公共 API 有完整文档注释
 - **Notes**: 针对 PostgreSQL 使用 deadpool-postgres，其他后端相应优化
 
-## [ ] Task 5: 集成测试和文档完善
+## [x] Task 5: 集成测试和文档完善
 - **Priority**: P1
 - **Depends On**: [Task 1, Task 2, Task 3, Task 4]
 - **Description**:

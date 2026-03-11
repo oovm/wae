@@ -15,7 +15,7 @@ pub(crate) mod postgres;
 #[cfg(feature = "mysql")]
 mod mysql;
 
-pub use config::{DatabaseConfig, DatabaseError, DatabaseResult};
+pub use config::{DatabaseConfig, DatabaseError, DatabaseResult, PoolConfig, RecyclingMethod};
 pub use row::{DatabaseRow, DatabaseRows};
 pub use statement::DatabaseStatement;
 pub use trait_impl::{DatabaseBackend, DatabaseConnection};
@@ -25,7 +25,7 @@ pub use value_impl::FromDatabaseValue;
 pub use turso::{DatabaseService, TursoConnection};
 
 #[cfg(feature = "postgres")]
-pub use postgres::{PostgresConnection, PostgresDatabaseService};
+pub use postgres::{PoolMetrics, PostgresConnection, PostgresDatabaseService};
 
 #[cfg(feature = "mysql")]
-pub use mysql::{MySqlConnection, MySqlDatabaseService};
+pub use mysql::{MySqlConnection, MySqlDatabaseService, MySqlPoolMetrics};

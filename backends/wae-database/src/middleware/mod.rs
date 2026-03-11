@@ -4,7 +4,6 @@
 
 use crate::connection::DatabaseConnection;
 use http::{Request, Response};
-use pin_project_lite::pin_project;
 use std::{
     future::Future,
     pin::Pin,
@@ -129,6 +128,8 @@ impl<S, C, ReqBody, ResBody> Service<Request<ReqBody>> for TransactionService<S,
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>>,
     S::Future: Send + 'static,
+    S::Error: Send,
+    ResBody: Send,
     C: DatabaseConnection + Send + Sync + 'static,
 {
     type Response = S::Response;

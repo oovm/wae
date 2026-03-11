@@ -1,15 +1,60 @@
 //! MySQL 数据库实现
 
 use crate::connection::{
-    config::{DatabaseConfig, DatabaseResult},
+    config::{DatabaseConfig, DatabaseResult, PoolConfig},
     row::DatabaseRows,
     statement::DatabaseStatement,
     trait_impl::{DatabaseBackend, DatabaseConnection},
 };
 use async_trait::async_trait;
 use mysql_async::prelude::*;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 use wae_types::{WaeError, WaeErrorKind};
+
+/// MySQL 连接池监控指标
+#[derive(Debug, Clone)]
+pub struct MySqlPoolMetrics {
+    /// 成功获取连接次数
+    pub get_success: u64,
+    /// 获取连接超时次数
+    pub get_timeout: u64,
+    /// 获取连接错误次数
+    pub get_error: u64,
+    /// 最大连接数
+    pub max_connections: usize,
+}
+
+/// 原子 MySQL 连接池监控指标
+#[derive(Debug)]
+struct AtomicMySqlPoolMetrics {
+    get_success: AtomicU64,
+    get_timeout: AtomicU64,
+    get_error: AtomicU64,
+}
+
+impl AtomicMySqlPoolMetrics {
+    fn new() -> Self {
+        Self {
+            get_success: AtomicU64::new(0),
+            get_timeout: AtomicU64::new(0),
+            get_error: AtomicU64::new(0),
+        }
+    }
+
+    fn increment_get_success(&self) {
+        self.get_success.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_get_timeout(&self) {
+        self.get_timeout.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_get_error(&self) {
+        self.get_error.fetch_add(1, Ordering::Relaxed);
+    }
+}
 
 /// MySQL 连接包装
 pub struct MySqlConnection {
@@ -19,6 +64,20 @@ pub struct MySqlConnection {
 impl MySqlConnection {
     pub(crate) fn new(conn: mysql_async::Conn) -> Self {
         Self { conn: Mutex::new(Some(conn)) }
+    }
+
+    /// 检查连接是否健康
+    pub async fn health_check(&self) -> DatabaseResult<()> {
+        let mut guard = self.conn.lock().await;
+        let conn = guard.as_mut().ok_or_else(|| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
+        })?;
+        conn.query_drop("SELECT 1").await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Health check failed: {}", e),
+            })
+        })?;
+        Ok(())
     }
 }
 
@@ -145,6 +204,8 @@ impl DatabaseConnection for MySqlConnection {
 /// MySQL 数据库服务
 pub struct MySqlDatabaseService {
     pool: mysql_async::Pool,
+    metrics: Arc<AtomicMySqlPoolMetrics>,
+    pool_config: PoolConfig,
 }
 
 impl MySqlDatabaseService {
@@ -159,30 +220,84 @@ impl MySqlDatabaseService {
             DatabaseConfig::Postgres { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use PostgresDatabaseService for Postgres".to_string(),
             })),
-            DatabaseConfig::MySql { connection_string, max_connections } => {
+            DatabaseConfig::MySql { connection_string, pool_config } => {
                 let opts = mysql_async::Opts::from_url(connection_string).map_err(|e| {
                     WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                         reason: format!("Invalid connection string: {}", e),
                     })
                 })?;
-                let constraints = mysql_async::PoolConstraints::new(1, max_connections.unwrap_or(10)).ok_or_else(|| {
+                
+                let min_idle = pool_config.min_idle.unwrap_or(1);
+                let constraints = mysql_async::PoolConstraints::new(min_idle, pool_config.max_connections).ok_or_else(|| {
                     WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                         reason: "Invalid pool constraints: min must be <= max".to_string(),
                     })
                 })?;
+                
                 let pool_opts = mysql_async::PoolOpts::default().with_constraints(constraints);
+                
                 let opts = mysql_async::OptsBuilder::from_opts(opts).pool_opts(pool_opts);
                 let pool = mysql_async::Pool::new(opts);
-                Ok(Self { pool })
+                let metrics = Arc::new(AtomicMySqlPoolMetrics::new());
+                
+                Ok(Self { 
+                    pool, 
+                    metrics,
+                    pool_config: pool_config.clone(),
+                })
             }
         }
     }
 
     /// 获取连接
     pub async fn connect(&self) -> DatabaseResult<MySqlConnection> {
-        let conn = self.pool.get_conn().await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Failed to get connection: {}", e) })
-        })?;
-        Ok(MySqlConnection::new(conn))
+        match self.pool.get_conn().await {
+            Ok(conn) => {
+                self.metrics.increment_get_success();
+                let connection = MySqlConnection::new(conn);
+                
+                if self.pool_config.health_check_enabled {
+                    if let Err(e) = connection.health_check().await {
+                        self.metrics.increment_get_error();
+                        return Err(e);
+                    }
+                }
+                
+                Ok(connection)
+            }
+            Err(e) => {
+                self.metrics.increment_get_error();
+                Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed { 
+                    reason: format!("Failed to get connection: {}", e) 
+                }))
+            }
+        }
     }
+
+    /// 获取连接池监控指标
+    pub fn metrics(&self) -> MySqlPoolMetrics {
+        MySqlPoolMetrics {
+            get_success: self.metrics.get_success.load(Ordering::Relaxed),
+            get_timeout: self.metrics.get_timeout.load(Ordering::Relaxed),
+            get_error: self.metrics.get_error.load(Ordering::Relaxed),
+            max_connections: self.pool_config.max_connections,
+        }
+    }
+
+    /// 获取连接池配置
+    pub fn pool_config(&self) -> &PoolConfig {
+        &self.pool_config
+    }
+
+    /// 预热连接池，创建最小数量的连接
+    pub async fn warmup(&self) -> DatabaseResult<()> {
+        if let Some(min_idle) = self.pool_config.min_idle {
+            let mut connections = Vec::with_capacity(min_idle);
+            for _ in 0..min_idle {
+                connections.push(self.connect().await?);
+            }
+        }
+        Ok(())
+    }
+
 }

@@ -3,7 +3,7 @@
 //! 从数据库读取现有表结构信息。
 
 use std::collections::HashMap;
-use wae_database::{ColumnDef, ColumnType, DatabaseBackend, DatabaseConnection, DatabaseResult, IndexDef, TableSchema};
+use wae_database::{ColumnDef, ColumnType, DatabaseBackend, DatabaseConnection, DatabaseResult, ForeignKeyDef, IndexDef, ReferentialAction, TableSchema};
 use wae_types::WaeResult;
 
 /// Schema 反射器
@@ -67,8 +67,18 @@ impl<'a> SchemaReflector<'a> {
     pub async fn get_table_schema(&self, table_name: &str) -> DatabaseResult<TableSchema> {
         let columns = self.get_columns(table_name).await?;
         let indexes = self.get_indexes(table_name).await?;
+        let foreign_keys = self.get_foreign_keys(table_name).await?;
 
-        Ok(TableSchema { name: table_name.to_string(), columns, indexes })
+        Ok(TableSchema { name: table_name.to_string(), columns, indexes, foreign_keys })
+    }
+
+    /// 获取表的所有外键约束
+    pub async fn get_foreign_keys(&self, table_name: &str) -> DatabaseResult<Vec<ForeignKeyDef>> {
+        match self.conn.backend() {
+            DatabaseBackend::Turso => self.get_foreign_keys_turso(table_name).await,
+            DatabaseBackend::Postgres => self.get_foreign_keys_postgres(table_name).await,
+            DatabaseBackend::MySql => self.get_foreign_keys_mysql(table_name).await,
+        }
     }
 
     /// 获取表的所有列
@@ -337,6 +347,114 @@ impl<'a> SchemaReflector<'a> {
         }
         else {
             Ok(false)
+        }
+    }
+
+    async fn get_foreign_keys_turso(&self, table_name: &str) -> DatabaseResult<Vec<ForeignKeyDef>> {
+        let sql = format!("PRAGMA foreign_key_list({})", table_name);
+        let mut rows = self.conn.query(&sql).await?;
+
+        let mut foreign_keys = Vec::new();
+        while let Some(row) = rows.next().await? {
+            let id = row.get::<i64>(0)?;
+            let seq = row.get::<i64>(1)?;
+            if seq != 0 {
+                continue;
+            }
+            let ref_table = row.get::<String>(2)?;
+            let column = row.get::<String>(3)?;
+            let ref_column = row.get::<String>(4)?;
+            let on_update_str = row.get::<String>(5)?;
+            let on_delete_str = row.get::<String>(6)?;
+
+            let on_update = Self::parse_referential_action(&on_update_str);
+            let on_delete = Self::parse_referential_action(&on_delete_str);
+
+            let fk_name = format!("fk_{}_{}", table_name, column);
+
+            foreign_keys.push(ForeignKeyDef::new(fk_name, column, ref_table, ref_column)
+                .on_update(on_update)
+                .on_delete(on_delete));
+        }
+
+        Ok(foreign_keys)
+    }
+
+    async fn get_foreign_keys_postgres(&self, table_name: &str) -> DatabaseResult<Vec<ForeignKeyDef>> {
+        let sql = format!(
+            "SELECT tc.constraint_name, kcu.column_name, ccu.table_name AS foreign_table_name, \
+             ccu.column_name AS foreign_column_name, rc.update_rule, rc.delete_rule \
+             FROM information_schema.table_constraints tc \
+             JOIN information_schema.key_column_usage kcu \
+             ON tc.constraint_name = kcu.constraint_name \
+             JOIN information_schema.constraint_column_usage ccu \
+             ON ccu.constraint_name = tc.constraint_name \
+             JOIN information_schema.referential_constraints rc \
+             ON tc.constraint_name = rc.constraint_name \
+             WHERE tc.table_name = '{}' AND tc.constraint_type = 'FOREIGN KEY'",
+            table_name
+        );
+        let mut rows = self.conn.query(&sql).await?;
+
+        let mut foreign_keys = Vec::new();
+        while let Some(row) = rows.next().await? {
+            let name = row.get::<String>(0)?;
+            let column = row.get::<String>(1)?;
+            let ref_table = row.get::<String>(2)?;
+            let ref_column = row.get::<String>(3)?;
+            let on_update_str = row.get::<String>(4)?;
+            let on_delete_str = row.get::<String>(5)?;
+
+            let on_update = Self::parse_referential_action(&on_update_str);
+            let on_delete = Self::parse_referential_action(&on_delete_str);
+
+            foreign_keys.push(ForeignKeyDef::new(name, column, ref_table, ref_column)
+                .on_update(on_update)
+                .on_delete(on_delete));
+        }
+
+        Ok(foreign_keys)
+    }
+
+    async fn get_foreign_keys_mysql(&self, table_name: &str) -> DatabaseResult<Vec<ForeignKeyDef>> {
+        let sql = format!(
+            "SELECT constraint_name, column_name, referenced_table_name, referenced_column_name, \
+             update_rule, delete_rule \
+             FROM information_schema.key_column_usage \
+             JOIN information_schema.referential_constraints \
+             USING (constraint_name) \
+             WHERE table_name = '{}' AND table_schema = DATABASE() AND referenced_table_name IS NOT NULL",
+            table_name
+        );
+        let mut rows = self.conn.query(&sql).await?;
+
+        let mut foreign_keys = Vec::new();
+        while let Some(row) = rows.next().await? {
+            let name = row.get::<String>(0)?;
+            let column = row.get::<String>(1)?;
+            let ref_table = row.get::<String>(2)?;
+            let ref_column = row.get::<String>(3)?;
+            let on_update_str = row.get::<String>(4)?;
+            let on_delete_str = row.get::<String>(5)?;
+
+            let on_update = Self::parse_referential_action(&on_update_str);
+            let on_delete = Self::parse_referential_action(&on_delete_str);
+
+            foreign_keys.push(ForeignKeyDef::new(name, column, ref_table, ref_column)
+                .on_update(on_update)
+                .on_delete(on_delete));
+        }
+
+        Ok(foreign_keys)
+    }
+
+    fn parse_referential_action(s: &str) -> ReferentialAction {
+        match s.to_uppercase().as_str() {
+            "CASCADE" => ReferentialAction::Cascade,
+            "RESTRICT" => ReferentialAction::Restrict,
+            "SET NULL" => ReferentialAction::SetNull,
+            "SET DEFAULT" => ReferentialAction::SetDefault,
+            _ => ReferentialAction::NoAction,
         }
     }
 }

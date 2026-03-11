@@ -1,5 +1,6 @@
 //! 密码哈希器实现
 
+use wae_crypto::PasswordHasher;
 use zeroize::Zeroize;
 
 use crate::password::{PasswordHashConfig, PasswordHashError, PasswordHashResult};
@@ -7,7 +8,7 @@ use crate::password::{PasswordHashConfig, PasswordHashError, PasswordHashResult}
 /// 密码哈希器
 #[derive(Debug, Clone)]
 pub struct PasswordHasherService {
-    config: PasswordHashConfig,
+    hasher: PasswordHasher,
 }
 
 impl PasswordHasherService {
@@ -16,7 +17,8 @@ impl PasswordHasherService {
     /// # Arguments
     /// * `config` - 密码哈希配置
     pub fn new(config: PasswordHashConfig) -> Self {
-        Self { config }
+        let crypto_config = wae_crypto::PasswordHasherConfig::from(&config);
+        Self { hasher: PasswordHasher::new(crypto_config) }
     }
 
     /// 使用默认配置创建密码哈希器
@@ -31,7 +33,7 @@ impl PasswordHasherService {
     pub fn hash_password(&self, password: &str) -> PasswordHashResult<String> {
         let mut password_bytes = password.as_bytes().to_vec();
 
-        let result = self.hash_bcrypt(&password_bytes);
+        let result = self.hasher.hash_password(password).map_err(PasswordHashError::from);
 
         password_bytes.zeroize();
         result
@@ -45,20 +47,10 @@ impl PasswordHasherService {
     pub fn verify_password(&self, password: &str, hash: &str) -> PasswordHashResult<bool> {
         let mut password_bytes = password.as_bytes().to_vec();
 
-        let result = self.verify_bcrypt(&password_bytes, hash);
+        let result = self.hasher.verify_password(password, hash).map_err(PasswordHashError::from);
 
         password_bytes.zeroize();
         result
-    }
-
-    /// 使用 bcrypt 哈希密码
-    fn hash_bcrypt(&self, password: &[u8]) -> PasswordHashResult<String> {
-        bcrypt::hash(password, self.config.bcrypt_cost).map_err(|_| PasswordHashError::HashFailed)
-    }
-
-    /// 使用 bcrypt 验证密码
-    fn verify_bcrypt(&self, password: &[u8], hash: &str) -> PasswordHashResult<bool> {
-        bcrypt::verify(password, hash).map_err(|_| PasswordHashError::VerifyFailed)
     }
 }
 

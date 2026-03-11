@@ -13,6 +13,7 @@ documentation = "https://docs.rs/wae-authentication"
 [dependencies]
 wae-types = { workspace = true }
 wae-request = { workspace = true }
+wae-crypto = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

@@ -533,6 +533,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "auth-basic"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "tokio",
+ "wae-authentication",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1196,6 +1206,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "config-basic"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "tokio",
+ "wae-config",
+]
+
+[[package]]
 name = "console"
 version = "0.15.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1525,6 +1544,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
 
 [[package]]
+name = "database-basic"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "tokio",
+ "wae-database",
+]
+
+[[package]]
 name = "deadpool"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1718,6 +1746,15 @@ name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
+name = "effect-advanced"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "tokio",
+ "wae-effect",
+]
 
 [[package]]
 name = "effect-basic"
@@ -3815,6 +3852,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff76201f031d8863c38aa7f905eca4f53abbfa15f609db4277d44cd8938f33fe"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "observability-basic"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "wae-observability",
+ "wae-types",
 ]
 
 [[package]]
@@ -7020,6 +7070,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+ "wae-crypto",
  "wae-request",
  "wae-types",
  "zeroize",
@@ -7073,9 +7124,11 @@ dependencies = [
  "deadpool-postgres",
  "http",
  "mysql_async",
+ "once_cell",
  "pin-project-lite",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tokio",
  "tokio-postgres",
  "tower",

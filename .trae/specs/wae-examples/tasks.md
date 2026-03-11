@@ -1,6 +1,6 @@
 # WAE 完整示例集 - The Implementation Plan (Decomposed and Prioritized Task List)
 
-## [/] Task 1: 基础 HTTP 服务示例 (https-basic)
+## [ ] Task 1: 基础 HTTP 服务示例 (https-basic)
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -14,7 +14,7 @@
   - `human-judgement` TR-1.3: 有清晰的 README.md 文档
 - **Notes**: 作为第一个示例，注意代码风格和结构的一致性
 
-## [ ] Task 2: 数据库操作示例 (database-basic)
+## [x] Task 2: 数据库操作示例 (database-basic)
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -28,7 +28,7 @@
   - `human-judgement` TR-2.3: 有清晰的 README.md 文档
 - **Notes**: 使用内存数据库或本地 SQLite 便于运行
 
-## [ ] Task 3: 认证与授权示例 (auth-basic)
+## [x] Task 3: 认证与授权示例 (auth-basic)
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -126,7 +126,7 @@
   - `human-judgement` TR-9.3: 有清晰的 README.md 文档
 - **Notes**: 展示不同类型的错误和对应的 HTTP 状态码
 
-## [ ] Task 10: 配置管理示例 (config-basic)
+## [x] Task 10: 配置管理示例 (config-basic)
 - **Priority**: P1
 - **Depends On**: None
 - **Description**: 
@@ -140,7 +140,7 @@
   - `human-judgement` TR-10.3: 有清晰的 README.md 文档
 - **Notes**: 展示 TOML/YAML 配置文件加载、环境变量覆盖
 
-## [ ] Task 11: Effect 依赖注入进阶示例 (effect-advanced)
+## [x] Task 11: Effect 依赖注入进阶示例 (effect-advanced)
 - **Priority**: P1
 - **Depends On**: None
 - **Description**: 

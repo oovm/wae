@@ -1,6 +1,7 @@
 //! 密码哈希错误类型
 
 use std::fmt;
+use wae_crypto::CryptoError;
 use wae_types::WaeError;
 
 /// 密码哈希错误
@@ -36,6 +37,16 @@ impl From<PasswordHashError> for WaeError {
             PasswordHashError::HashFailed => WaeError::internal("password hash failed"),
             PasswordHashError::VerifyFailed => WaeError::invalid_credentials(),
             PasswordHashError::InvalidHashFormat => WaeError::invalid_format("hash", "valid hash format"),
+        }
+    }
+}
+
+impl From<CryptoError> for PasswordHashError {
+    fn from(err: CryptoError) -> Self {
+        match err {
+            CryptoError::PasswordHashError => PasswordHashError::HashFailed,
+            CryptoError::PasswordVerifyError => PasswordHashError::VerifyFailed,
+            _ => PasswordHashError::HashFailed,
         }
     }
 }

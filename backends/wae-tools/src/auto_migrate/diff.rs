@@ -3,23 +3,23 @@
 //! 比较期望 Schema 和实际 Schema，生成迁移计划。
 
 use std::collections::HashMap;
-use wae_database::{ColumnDef, IndexDef, TableSchema};
+use wae_database::{ColumnDef, ForeignKeyDef, IndexDef, TableSchema};
 
 /// 差异操作类型
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DiffAction {
-    /// 创建
+    /// 创建操作
     Create,
-    /// 修改
+    /// 修改操作
     Alter,
-    /// 删除
+    /// 删除操作
     Drop,
 }
 
 /// 列差异
 #[derive(Debug, Clone)]
 pub struct ColumnDiff {
-    /// 操作类型
+    /// 差异操作类型
     pub action: DiffAction,
     /// 列名
     pub column_name: String,
@@ -46,7 +46,7 @@ impl ColumnDiff {
 /// 索引差异
 #[derive(Debug, Clone)]
 pub struct IndexDiff {
-    /// 操作类型
+    /// 差异操作类型
     pub action: DiffAction,
     /// 索引名
     pub index_name: String,
@@ -54,6 +54,19 @@ pub struct IndexDiff {
     pub expected: Option<IndexDef>,
     /// 实际的索引定义
     pub actual: Option<IndexDef>,
+}
+
+/// 外键约束差异
+#[derive(Debug, Clone)]
+pub struct ForeignKeyDiff {
+    /// 差异操作类型
+    pub action: DiffAction,
+    /// 外键约束名称
+    pub foreign_key_name: String,
+    /// 期望的外键约束定义
+    pub expected: Option<ForeignKeyDef>,
+    /// 实际的外键约束定义
+    pub actual: Option<ForeignKeyDef>,
 }
 
 impl IndexDiff {
@@ -77,10 +90,36 @@ impl IndexDiff {
     }
 }
 
-/// 表差异
+impl ForeignKeyDiff {
+    /// 生成 SQL 语句
+    pub fn to_sql(&self, table_name: &str) -> Option<String> {
+        match &self.action {
+            DiffAction::Create => {
+                let fk = self.expected.as_ref()?;
+                Some(fk.to_add_sql(table_name))
+            }
+            DiffAction::Drop => {
+                let fk = self.actual.as_ref()?;
+                Some(fk.to_drop_sql(table_name))
+            }
+            DiffAction::Alter => {
+                let mut sqls = Vec::new();
+                if let Some(fk) = &self.actual {
+                    sqls.push(fk.to_drop_sql(table_name));
+                }
+                if let Some(fk) = &self.expected {
+                    sqls.push(fk.to_add_sql(table_name));
+                }
+                Some(sqls.join("; "))
+            }
+        }
+    }
+}
+
+/// 表结构差异
 #[derive(Debug, Clone)]
 pub struct TableDiff {
-    /// 操作类型
+    /// 差异操作类型
     pub action: DiffAction,
     /// 表名
     pub table_name: String,
@@ -92,6 +131,8 @@ pub struct TableDiff {
     pub column_diffs: Vec<ColumnDiff>,
     /// 索引差异列表
     pub index_diffs: Vec<IndexDiff>,
+    /// 外键约束差异列表
+    pub foreign_key_diffs: Vec<ForeignKeyDiff>,
 }
 
 impl TableDiff {
@@ -119,6 +160,11 @@ impl TableDiff {
                 }
                 for idx_diff in &self.index_diffs {
                     if let Some(sql) = idx_diff.to_sql() {
+                        sqls.push(sql);
+                    }
+                }
+                for fk_diff in &self.foreign_key_diffs {
+                    if let Some(sql) = fk_diff.to_sql(&self.table_name) {
                         sqls.push(sql);
                     }
                 }
@@ -175,6 +221,7 @@ impl SchemaDiff {
                     actual: None,
                     column_diffs: Vec::new(),
                     index_diffs: Vec::new(),
+                    foreign_key_diffs: Vec::new(),
                 },
                 (None, Some(_)) => TableDiff {
                     action: DiffAction::Drop,
@@ -183,12 +230,14 @@ impl SchemaDiff {
                     actual: None,
                     column_diffs: Vec::new(),
                     index_diffs: Vec::new(),
+                    foreign_key_diffs: Vec::new(),
                 },
                 (Some(exp), Some(act)) => {
                     let column_diffs = Self::compare_columns(&exp.columns, &act.columns);
                     let index_diffs = Self::compare_indexes(&exp.indexes, &act.indexes);
+                    let foreign_key_diffs = Self::compare_foreign_keys(&exp.foreign_keys, &act.foreign_keys);
 
-                    if column_diffs.is_empty() && index_diffs.is_empty() {
+                    if column_diffs.is_empty() && index_diffs.is_empty() && foreign_key_diffs.is_empty() {
                         continue;
                     }
 
@@ -199,6 +248,7 @@ impl SchemaDiff {
                         actual: Some(act.clone()),
                         column_diffs,
                         index_diffs,
+                        foreign_key_diffs,
                     }
                 }
                 (None, None) => continue,
@@ -312,5 +362,62 @@ impl SchemaDiff {
     /// 比较两个索引定义是否不同
     fn indexes_differ(a: &IndexDef, b: &IndexDef) -> bool {
         a.unique != b.unique || a.columns != b.columns
+    }
+
+    /// 比较外键约束差异
+    fn compare_foreign_keys(expected: &[ForeignKeyDef], actual: &[ForeignKeyDef]) -> Vec<ForeignKeyDiff> {
+        let mut diffs = Vec::new();
+
+        let expected_map: HashMap<&str, &ForeignKeyDef> = expected.iter().map(|f| (f.name.as_str(), f)).collect();
+        let actual_map: HashMap<&str, &ForeignKeyDef> = actual.iter().map(|f| (f.name.as_str(), f)).collect();
+
+        let all_foreign_keys: std::collections::HashSet<&str> = expected_map.keys().chain(actual_map.keys()).copied().collect();
+
+        for fk_name in all_foreign_keys {
+            let expected_fk = expected_map.get(fk_name).copied();
+            let actual_fk = actual_map.get(fk_name).copied();
+
+            let diff = match (expected_fk, actual_fk) {
+                (Some(exp), None) => ForeignKeyDiff {
+                    action: DiffAction::Create,
+                    foreign_key_name: fk_name.to_string(),
+                    expected: Some(exp.clone()),
+                    actual: None,
+                },
+                (None, Some(_)) => ForeignKeyDiff {
+                    action: DiffAction::Drop,
+                    foreign_key_name: fk_name.to_string(),
+                    expected: None,
+                    actual: None,
+                },
+                (Some(exp), Some(act)) => {
+                    if Self::foreign_keys_differ(exp, act) {
+                        ForeignKeyDiff {
+                            action: DiffAction::Alter,
+                            foreign_key_name: fk_name.to_string(),
+                            expected: Some(exp.clone()),
+                            actual: Some(act.clone()),
+                        }
+                    }
+                    else {
+                        continue;
+                    }
+                }
+                (None, None) => continue,
+            };
+
+            diffs.push(diff);
+        }
+
+        diffs
+    }
+
+    /// 比较两个外键约束定义是否不同
+    fn foreign_keys_differ(a: &ForeignKeyDef, b: &ForeignKeyDef) -> bool {
+        a.column != b.column
+            || a.ref_table != b.ref_table
+            || a.ref_column != b.ref_column
+            || a.on_update != b.on_update
+            || a.on_delete != b.on_delete
     }
 }

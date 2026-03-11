@@ -6,6 +6,37 @@ use serde::{Deserialize, Serialize};
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+
+/// 数据库类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DatabaseType {
+    /// Turso/SQLite
+    Turso,
+    /// PostgreSQL
+    Postgres,
+    /// MySQL
+    MySql,
+}
+
+impl DatabaseType {
+    /// 获取当前数据库类型（根据 feature flag）
+    pub fn current() -> Self {
+        #[cfg(feature = "postgres")]
+        {
+            return DatabaseType::Postgres;
+        }
+        #[cfg(feature = "mysql")]
+        {
+            return DatabaseType::MySql;
+        }
+        #[cfg(all(not(feature = "postgres"), not(feature = "mysql")))]
+        {
+            return DatabaseType::Turso;
+        }
+    }
+}
 
 /// 列类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,32 +54,46 @@ pub enum ColumnType {
 impl ColumnType {
     /// 转换为 SQL 类型字符串
     pub fn to_sql(&self) -> &'static str {
-        match self {
-            ColumnType::Integer => "INTEGER",
-            ColumnType::Real => "REAL",
-            ColumnType::Text => "TEXT",
-            ColumnType::Blob => "BLOB",
+        self.to_sql_for(DatabaseType::Turso)
+    }
+
+    /// 转换为指定数据库的 SQL 类型字符串
+    pub fn to_sql_for(&self, db_type: DatabaseType) -> &'static str {
+        match db_type {
+            DatabaseType::Turso => match self {
+                ColumnType::Integer => "INTEGER",
+                ColumnType::Real => "REAL",
+                ColumnType::Text => "TEXT",
+                ColumnType::Blob => "BLOB",
+            },
+            DatabaseType::Postgres => match self {
+                ColumnType::Integer => "BIGINT",
+                ColumnType::Real => "DOUBLE PRECISION",
+                ColumnType::Text => "TEXT",
+                ColumnType::Blob => "BYTEA",
+            },
+            DatabaseType::MySql => match self {
+                ColumnType::Integer => "BIGINT",
+                ColumnType::Real => "DOUBLE",
+                ColumnType::Text => "VARCHAR(255)",
+                ColumnType::Blob => "BLOB",
+            },
         }
     }
 
     /// 转换为 MySQL SQL 类型字符串
     #[cfg(feature = "mysql")]
     pub fn to_mysql_sql(&self) -> &'static str {
-        match self {
-            ColumnType::Integer => "BIGINT",
-            ColumnType::Real => "DOUBLE",
-            ColumnType::Text => "VARCHAR(255)",
-            ColumnType::Blob => "BLOB",
-        }
+        self.to_sql_for(DatabaseType::MySql)
     }
 
     /// 从 SQL 类型字符串解析
     pub fn from_sql(sql: &str) -> Self {
         match sql.to_uppercase().as_str() {
-            "INTEGER" | "INT" | "BIGINT" | "SMALLINT" | "TINYINT" => ColumnType::Integer,
-            "REAL" | "FLOAT" | "DOUBLE" | "NUMERIC" | "DECIMAL" => ColumnType::Real,
-            "TEXT" | "VARCHAR" | "CHAR" | "STRING" => ColumnType::Text,
-            "BLOB" | "BINARY" => ColumnType::Blob,
+            "INTEGER" | "INT" | "BIGINT" | "SMALLINT" | "TINYINT" | "SERIAL" | "BIGSERIAL" => ColumnType::Integer,
+            "REAL" | "FLOAT" | "DOUBLE" | "NUMERIC" | "DECIMAL" | "DOUBLE PRECISION" => ColumnType::Real,
+            "TEXT" | "VARCHAR" | "CHAR" | "STRING" | "VARCHAR(255)" | "TEXT[]" => ColumnType::Text,
+            "BLOB" | "BINARY" | "BYTEA" | "LONGBLOB" => ColumnType::Blob,
             _ => ColumnType::Text,
         }
     }
@@ -118,16 +163,30 @@ impl ColumnDef {
         self
     }
 
-    /// 生成建表 SQL 片段
+    /// 生成建表 SQL 片段（使用当前数据库类型）
     pub fn to_sql(&self) -> String {
-        let mut sql = format!("{} {}", self.name, self.col_type.to_sql());
+        self.to_sql_for(DatabaseType::current())
+    }
+
+    /// 生成指定数据库类型的建表 SQL 片段
+    pub fn to_sql_for(&self, db_type: DatabaseType) -> String {
+        let mut sql = format!("{} {}", self.name, self.col_type.to_sql_for(db_type));
 
         if self.primary_key {
             sql.push_str(" PRIMARY KEY");
         }
 
         if self.auto_increment {
-            sql.push_str(" AUTOINCREMENT");
+            match db_type {
+                DatabaseType::Turso => sql.push_str(" AUTOINCREMENT"),
+                DatabaseType::Postgres => {
+                    if self.primary_key && self.col_type == ColumnType::Integer {
+                        sql = format!("{} SERIAL", self.name);
+                        sql.push_str(" PRIMARY KEY");
+                    }
+                }
+                DatabaseType::MySql => sql.push_str(" AUTO_INCREMENT"),
+            }
         }
 
         if !self.nullable && !self.primary_key {
@@ -148,29 +207,7 @@ impl ColumnDef {
     /// 生成 MySQL 建表 SQL 片段
     #[cfg(feature = "mysql")]
     pub fn to_mysql_sql(&self) -> String {
-        let mut sql = format!("{} {}", self.name, self.col_type.to_mysql_sql());
-
-        if self.primary_key {
-            sql.push_str(" PRIMARY KEY");
-        }
-
-        if self.auto_increment {
-            sql.push_str(" AUTO_INCREMENT");
-        }
-
-        if !self.nullable && !self.primary_key {
-            sql.push_str(" NOT NULL");
-        }
-
-        if let Some(ref default) = self.default_value {
-            sql.push_str(&format!(" DEFAULT {}", default));
-        }
-
-        if self.unique && !self.primary_key {
-            sql.push_str(" UNIQUE");
-        }
-
-        sql
+        self.to_sql_for(DatabaseType::MySql)
     }
 }
 
@@ -199,11 +236,23 @@ impl IndexDef {
         self
     }
 
-    /// 生成创建索引 SQL
+    /// 生成创建索引 SQL（使用当前数据库类型）
     pub fn to_create_sql(&self) -> String {
+        self.to_create_sql_for(DatabaseType::current())
+    }
+
+    /// 生成创建索引 SQL（指定数据库类型）
+    pub fn to_create_sql_for(&self, db_type: DatabaseType) -> String {
         let unique_str = if self.unique { "UNIQUE " } else { "" };
         let columns = self.columns.join(", ");
-        format!("CREATE {}INDEX {} ON {} ({})", unique_str, self.name, self.table_name, columns)
+        match db_type {
+            DatabaseType::Turso | DatabaseType::Postgres => {
+                format!("CREATE {}INDEX {} ON {} ({})", unique_str, self.name, self.table_name, columns)
+            }
+            DatabaseType::MySql => {
+                format!("CREATE {}INDEX {} ON {} ({})", unique_str, self.name, self.table_name, columns)
+            }
+        }
     }
 
     /// 生成删除索引 SQL
@@ -221,12 +270,14 @@ pub struct TableSchema {
     pub columns: Vec<ColumnDef>,
     /// 索引定义列表
     pub indexes: Vec<IndexDef>,
+    /// 外键约束列表
+    pub foreign_keys: Vec<ForeignKeyDef>,
 }
 
 impl TableSchema {
     /// 创建新的表结构
     pub fn new(name: impl Into<String>) -> Self {
-        Self { name: name.into(), columns: Vec::new(), indexes: Vec::new() }
+        Self { name: name.into(), columns: Vec::new(), indexes: Vec::new(), foreign_keys: Vec::new() }
     }
 
     /// 添加列
@@ -241,17 +292,10 @@ impl TableSchema {
         self
     }
 
-    /// 生成建表 SQL
-    pub fn to_create_sql(&self) -> String {
-        let columns: Vec<String> = self.columns.iter().map(|c| c.to_sql()).collect();
-        format!("CREATE TABLE {} ({})", self.name, columns.join(", "))
-    }
-
-    /// 生成 MySQL 建表 SQL
-    #[cfg(feature = "mysql")]
-    pub fn to_mysql_create_sql(&self) -> String {
-        let columns: Vec<String> = self.columns.iter().map(|c| c.to_mysql_sql()).collect();
-        format!("CREATE TABLE {} ({}) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", self.name, columns.join(", "))
+    /// 添加外键约束
+    pub fn foreign_key(mut self, fk: ForeignKeyDef) -> Self {
+        self.foreign_keys.push(fk);
+        self
     }
 
     /// 生成删表 SQL
@@ -285,6 +329,55 @@ pub struct ForeignKeyDef {
     pub on_update: ReferentialAction,
     /// 删除行为
     pub on_delete: ReferentialAction,
+}
+
+impl ForeignKeyDef {
+    /// 创建新的外键定义
+    pub fn new(
+        name: impl Into<String>,
+        column: impl Into<String>,
+        ref_table: impl Into<String>,
+        ref_column: impl Into<String>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            column: column.into(),
+            ref_table: ref_table.into(),
+            ref_column: ref_column.into(),
+            on_update: ReferentialAction::NoAction,
+            on_delete: ReferentialAction::NoAction,
+        }
+    }
+
+    /// 设置更新时的引用行为
+    pub fn on_update(mut self, action: ReferentialAction) -> Self {
+        self.on_update = action;
+        self
+    }
+
+    /// 设置删除时的引用行为
+    pub fn on_delete(mut self, action: ReferentialAction) -> Self {
+        self.on_delete = action;
+        self
+    }
+
+    /// 生成约束 SQL 片段
+    pub fn to_constraint_sql(&self) -> String {
+        format!(
+            "CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {} ({}) ON UPDATE {} ON DELETE {}",
+            self.name, self.column, self.ref_table, self.ref_column, self.on_update.to_sql(), self.on_delete.to_sql()
+        )
+    }
+
+    /// 生成添加外键约束 SQL
+    pub fn to_add_sql(&self, table_name: &str) -> String {
+        format!("ALTER TABLE {} ADD {}", table_name, self.to_constraint_sql())
+    }
+
+    /// 生成删除外键约束 SQL
+    pub fn to_drop_sql(&self, table_name: &str) -> String {
+        format!("ALTER TABLE {} DROP CONSTRAINT {}", table_name, self.name)
+    }
 }
 
 /// 外键引用行为
@@ -358,4 +451,191 @@ pub mod col {
     pub fn json(name: &str) -> ColumnDef {
         ColumnDef::new(name, ColumnType::Text)
     }
+}
+
+/// 全局 Schema 注册表
+static SCHEMA_REGISTRY: Lazy<Mutex<HashMap<String, TableSchema>>> = Lazy::new(|| {
+    Mutex::new(HashMap::new())
+});
+
+/// 注册 TableSchema 到全局注册表
+pub fn register_schema(schema: TableSchema) {
+    let mut registry = SCHEMA_REGISTRY.lock().unwrap();
+    registry.insert(schema.name.clone(), schema);
+}
+
+/// 批量注册 TableSchema 到全局注册表
+pub fn register_schemas(schemas: Vec<TableSchema>) {
+    let mut registry = SCHEMA_REGISTRY.lock().unwrap();
+    for schema in schemas {
+        registry.insert(schema.name.clone(), schema);
+    }
+}
+
+/// 获取所有已注册的 TableSchema
+pub fn get_registered_schemas() -> Vec<TableSchema> {
+    let registry = SCHEMA_REGISTRY.lock().unwrap();
+    registry.values().cloned().collect()
+}
+
+/// 获取指定名称的 TableSchema
+pub fn get_schema(name: &str) -> Option<TableSchema> {
+    let registry = SCHEMA_REGISTRY.lock().unwrap();
+    registry.get(name).cloned()
+}
+
+/// 清空注册表
+pub fn clear_schemas() {
+    let mut registry = SCHEMA_REGISTRY.lock().unwrap();
+    registry.clear();
+}
+
+/// 将所有已注册的 TableSchema 导出为 YAML 字符串
+pub fn export_schemas_to_yaml() -> String {
+    let schemas = get_registered_schemas();
+    serde_yaml::to_string(&schemas).unwrap_or_else(|e| format!("# Error: {}", e))
+}
+
+/// 将所有已注册的 TableSchema 导出到 YAML 文件
+#[cfg(debug_assertions)]
+pub fn export_schemas_to_yaml_file(path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
+    use std::fs::File;
+    use std::io::Write;
+
+    let yaml = export_schemas_to_yaml();
+    let mut file = File::create(path)?;
+    file.write_all(yaml.as_bytes())?;
+    Ok(())
+}
+
+/// 在 debug 模式下自动导出 schema 到默认路径
+#[cfg(debug_assertions)]
+pub fn auto_export_schemas() {
+    let path = std::path::Path::new("schemas.yaml");
+    if let Err(e) = export_schemas_to_yaml_file(path) {
+        eprintln!("Warning: Failed to export schemas: {}", e);
+    } else {
+        println!("Schemas exported to: {}", path.display());
+    }
+}
+
+impl TableSchema {
+    /// 注册当前 TableSchema 到全局注册表
+    pub fn register(self) -> Self {
+        let name = self.name.clone();
+        register_schema(self);
+        get_schema(&name).unwrap()
+    }
+
+    /// 将当前 TableSchema 导出为 YAML 字符串
+    pub fn to_yaml(&self) -> String {
+        serde_yaml::to_string(self).unwrap_or_else(|e| format!("# Error: {}", e))
+    }
+
+    /// 生成建表 SQL（使用当前数据库类型）
+    pub fn to_create_sql(&self) -> String {
+        self.to_create_sql_for(DatabaseType::current())
+    }
+
+    /// 生成指定数据库类型的建表 SQL
+    pub fn to_create_sql_for(&self, db_type: DatabaseType) -> String {
+        let mut parts: Vec<String> = self.columns.iter().map(|c| c.to_sql_for(db_type)).collect();
+        for fk in &self.foreign_keys {
+            parts.push(fk.to_constraint_sql());
+        }
+        match db_type {
+            DatabaseType::Turso | DatabaseType::Postgres => {
+                format!("CREATE TABLE {} ({})", self.name, parts.join(", "))
+            }
+            DatabaseType::MySql => {
+                format!("CREATE TABLE {} ({}) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", self.name, parts.join(", "))
+            }
+        }
+    }
+
+    /// 生成 MySQL 建表 SQL
+    #[cfg(feature = "mysql")]
+    pub fn to_mysql_create_sql(&self) -> String {
+        self.to_create_sql_for(DatabaseType::MySql)
+    }
+
+    /// 生成所有创建索引的 SQL（使用当前数据库类型）
+    pub fn to_create_indexes_sql(&self) -> Vec<String> {
+        self.to_create_indexes_sql_for(DatabaseType::current())
+    }
+
+    /// 生成所有创建索引的 SQL（指定数据库类型）
+    pub fn to_create_indexes_sql_for(&self, db_type: DatabaseType) -> Vec<String> {
+        self.indexes.iter().map(|idx| idx.to_create_sql_for(db_type)).collect()
+    }
+
+    /// 生成完整的建表和索引 SQL（使用当前数据库类型）
+    pub fn to_full_create_sql(&self) -> Vec<String> {
+        self.to_full_create_sql_for(DatabaseType::current())
+    }
+
+    /// 生成完整的建表和索引 SQL（指定数据库类型）
+    pub fn to_full_create_sql_for(&self, db_type: DatabaseType) -> Vec<String> {
+        let mut sqls = vec![self.to_create_sql_for(db_type)];
+        sqls.extend(self.to_create_indexes_sql_for(db_type));
+        sqls
+    }
+}
+
+/// 从 YAML 字符串解析 TableSchema 列表
+pub fn load_schemas_from_yaml(yaml_str: &str) -> Result<Vec<TableSchema>, serde_yaml::Error> {
+    serde_yaml::from_str(yaml_str)
+}
+
+/// 从 YAML 文件加载 TableSchema 列表
+pub fn load_schemas_from_yaml_file(path: impl AsRef<Path>) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
+    let content = fs::read_to_string(path)?;
+    let schemas = load_schemas_from_yaml(&content)?;
+    Ok(schemas)
+}
+
+/// 从 YAML 文件加载并注册所有 TableSchema
+pub fn load_and_register_schemas_from_yaml_file(path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+    let schemas = load_schemas_from_yaml_file(path)?;
+    register_schemas(schemas);
+    Ok(())
+}
+
+/// 为所有已注册的 schema 生成完整的 SQL（使用当前数据库类型）
+pub fn generate_full_sql_for_registered_schemas() -> Vec<String> {
+    generate_full_sql_for_registered_schemas_for(DatabaseType::current())
+}
+
+/// 为所有已注册的 schema 生成完整的 SQL（指定数据库类型）
+pub fn generate_full_sql_for_registered_schemas_for(db_type: DatabaseType) -> Vec<String> {
+    let schemas = get_registered_schemas();
+    let mut all_sql = Vec::new();
+    for schema in schemas {
+        all_sql.extend(schema.to_full_create_sql_for(db_type));
+    }
+    all_sql
+}
+
+/// 导出所有数据库类型的 SQL 到文件
+#[cfg(debug_assertions)]
+pub fn export_sql_for_all_databases(output_dir: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+    let output_dir = output_dir.as_ref();
+    fs::create_dir_all(output_dir)?;
+
+    let db_types = [DatabaseType::Turso, DatabaseType::Postgres, DatabaseType::MySql];
+
+    for &db_type in &db_types {
+        let sqls = generate_full_sql_for_registered_schemas_for(db_type);
+        let db_name = match db_type {
+            DatabaseType::Turso => "turso",
+            DatabaseType::Postgres => "postgres",
+            DatabaseType::MySql => "mysql",
+        };
+        let file_path = output_dir.join(format!("schema_{}.sql", db_name));
+        let content = sqls.join(";\n\n") + ";\n";
+        fs::write(&file_path, content)?;
+        println!("Exported SQL for {} to: {}", db_name, file_path.display());
+    }
+
+    Ok(())
 }

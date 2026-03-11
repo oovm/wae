@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
-use wae_https::*;
+use wae_https::{
+    router::RouterBuilder,
+    response::JsonResponse,
+    ApiResponse, HttpsServerBuilder, Router,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct User {
@@ -21,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut router = RouterBuilder::new();
 
-    router = router.get("/", || {
+    router = router.get("/", || async {
         println!("收到根路径请求");
         JsonResponse::success(ApiStatus {
             service: "wae-https-basic".to_string(),
@@ -30,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
     });
 
-    router = router.get("/health", || {
+    router = router.get("/health", || async {
         println!("收到健康检查请求");
         JsonResponse::success(ApiStatus {
             service: "wae-https-basic".to_string(),
@@ -39,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
     });
 
-    router = router.get("/users", || {
+    router = router.get("/users", || async {
         println!("收到获取用户列表请求");
         let users = vec![
             User {
@@ -56,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         JsonResponse::success(users)
     });
 
-    router = router.get("/users/:id", || {
+    router = router.get("/users/:id", || async {
         println!("收到获取用户详情请求");
         let user = User {
             id: Some(1),
@@ -66,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         JsonResponse::success(user)
     });
 
-    router = router.post("/users", || {
+    router = router.post("/users", || async {
         println!("收到创建用户请求");
         let user = User {
             id: Some(3),
@@ -76,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         JsonResponse::success(user)
     });
 
-    router = router.put("/users/:id", || {
+    router = router.put("/users/:id", || async {
         println!("收到更新用户请求");
         let user = User {
             id: Some(1),
@@ -86,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         JsonResponse::success(user)
     });
 
-    router = router.delete("/users/:id", || {
+    router = router.delete("/users/:id", || async {
         println!("收到删除用户请求");
         JsonResponse::success(())
     });

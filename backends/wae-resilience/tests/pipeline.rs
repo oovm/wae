@@ -68,13 +68,16 @@ async fn test_resilience_pipeline_with_retry() {
     };
 
     let pipeline = ResiliencePipeline::new("test-retry", config);
-    let mut attempts = 0;
+    let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
 
     let result = pipeline
         .execute(|| {
-            attempts += 1;
+            let attempts_clone = attempts.clone();
             async move {
-                if attempts < 2 {
+                let mut lock = attempts_clone.lock().unwrap();
+                *lock += 1;
+                let current = *lock;
+                if current < 2 {
                     Err("temporary error")
                 } else {
                     Ok("success")
@@ -84,7 +87,7 @@ async fn test_resilience_pipeline_with_retry() {
         .await;
 
     assert_eq!(result.unwrap(), "success");
-    assert_eq!(attempts, 2);
+    assert_eq!(*attempts.lock().unwrap(), 2);
 }
 
 #[tokio::test]
@@ -173,3 +176,13 @@ async fn test_resilience_pipeline_record_success() {
     let config = ResiliencePipelineConfig {
         circuit_breaker: Some(CircuitBreakerConfig::new().failure_threshold(2).time_window(Duration::from_secs(60))),
         ..Default::default()
+    };
+
+    let pipeline = ResiliencePipeline::new("test-record-success", config);
+
+    pipeline.execute(|| async { Err::<(), &str>("error") }).await.unwrap_err();
+
+    pipeline.execute(|| async { Ok::<_, &str>("success") }).await.unwrap();
+
+    assert_eq!(pipeline.circuit_breaker().unwrap().failure_count(), 0);
+}

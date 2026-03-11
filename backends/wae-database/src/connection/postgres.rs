@@ -1,18 +1,83 @@
 //! PostgreSQL 数据库实现
 
 use crate::connection::{
-    config::{DatabaseConfig, DatabaseResult},
+    config::{DatabaseConfig, DatabaseResult, PoolConfig, RecyclingMethod},
     row::DatabaseRows,
     statement::DatabaseStatement,
     trait_impl::{DatabaseBackend, DatabaseConnection},
 };
 use async_trait::async_trait;
-use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
+use deadpool_postgres::{Manager, ManagerConfig, Pool, PoolError, RecyclingMethod as DeadpoolRecyclingMethod};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio_postgres::{
     Config, NoTls,
     types::{ToSql, private::BytesMut},
 };
 use wae_types::{WaeError, WaeErrorKind};
+
+/// 连接池监控指标
+#[derive(Debug, Clone)]
+pub struct PoolMetrics {
+    /// 总连接创建次数
+    pub connections_created: u64,
+    /// 总连接销毁次数
+    pub connections_destroyed: u64,
+    /// 成功获取连接次数
+    pub get_success: u64,
+    /// 获取连接超时次数
+    pub get_timeout: u64,
+    /// 获取连接错误次数
+    pub get_error: u64,
+    /// 当前空闲连接数
+    pub idle_connections: usize,
+    /// 当前使用中的连接数
+    pub active_connections: usize,
+    /// 最大连接数
+    pub max_connections: usize,
+}
+
+/// 原子连接池监控指标
+#[derive(Debug)]
+struct AtomicPoolMetrics {
+    connections_created: AtomicU64,
+    connections_destroyed: AtomicU64,
+    get_success: AtomicU64,
+    get_timeout: AtomicU64,
+    get_error: AtomicU64,
+}
+
+impl AtomicPoolMetrics {
+    fn new() -> Self {
+        Self {
+            connections_created: AtomicU64::new(0),
+            connections_destroyed: AtomicU64::new(0),
+            get_success: AtomicU64::new(0),
+            get_timeout: AtomicU64::new(0),
+            get_error: AtomicU64::new(0),
+        }
+    }
+
+    fn increment_connections_created(&self) {
+        self.connections_created.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_connections_destroyed(&self) {
+        self.connections_destroyed.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_get_success(&self) {
+        self.get_success.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_get_timeout(&self) {
+        self.get_timeout.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn increment_get_error(&self) {
+        self.get_error.fetch_add(1, Ordering::Relaxed);
+    }
+}
 
 /// PostgreSQL 参数值
 ///
@@ -71,6 +136,16 @@ pub struct PostgresConnection {
 impl PostgresConnection {
     pub(crate) fn new(client: deadpool_postgres::Client) -> Self {
         Self { client }
+    }
+
+    /// 检查连接是否健康
+    pub async fn health_check(&self) -> DatabaseResult<()> {
+        self.client.simple_query("SELECT 1").await.map_err(|e| {
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: format!("Health check failed: {}", e),
+            })
+        })?;
+        Ok(())
     }
 }
 
@@ -141,6 +216,8 @@ impl DatabaseConnection for PostgresConnection {
 /// PostgreSQL 数据库服务
 pub struct PostgresDatabaseService {
     pool: Pool,
+    metrics: Arc<AtomicPoolMetrics>,
+    pool_config: PoolConfig,
 }
 
 impl PostgresDatabaseService {
@@ -151,21 +228,42 @@ impl PostgresDatabaseService {
             DatabaseConfig::Turso { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use DatabaseService for Turso".to_string(),
             })),
-            DatabaseConfig::Postgres { connection_string, max_connections } => {
-                let config: Config = connection_string.parse().map_err(|e| {
+            DatabaseConfig::Postgres { connection_string, pool_config } => {
+                let pg_config: Config = connection_string.parse().map_err(|e| {
                     WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                         reason: format!("Invalid connection string: {}", e),
                     })
                 })?;
-                let manager_config = ManagerConfig { recycling_method: RecyclingMethod::Fast };
-                let manager = Manager::from_config(config, NoTls, manager_config);
-                let max_size = max_connections.unwrap_or(10);
-                let pool = Pool::builder(manager).max_size(max_size).build().map_err(|e| {
+                
+                let recycling_method = match pool_config.recycling_method {
+                    RecyclingMethod::Fast => DeadpoolRecyclingMethod::Fast,
+                    RecyclingMethod::Verified => DeadpoolRecyclingMethod::Verified,
+                    RecyclingMethod::Clean => DeadpoolRecyclingMethod::Clean,
+                };
+                
+                let manager_config = ManagerConfig { recycling_method };
+                let manager = Manager::from_config(pg_config, NoTls, manager_config);
+                
+                let mut pool_builder = Pool::builder(manager)
+                    .max_size(pool_config.max_connections);
+                
+                if let Some(wait_timeout) = pool_config.wait_timeout() {
+                    pool_builder = pool_builder.wait_timeout(Some(wait_timeout));
+                }
+                
+                let pool = pool_builder.build().map_err(|e| {
                     WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                         reason: format!("Failed to create pool: {}", e),
                     })
                 })?;
-                Ok(Self { pool })
+                
+                let metrics = Arc::new(AtomicPoolMetrics::new());
+                
+                Ok(Self { 
+                    pool, 
+                    metrics,
+                    pool_config: pool_config.clone(),
+                })
             }
             #[cfg(feature = "mysql")]
             DatabaseConfig::MySql { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
@@ -176,9 +274,61 @@ impl PostgresDatabaseService {
 
     /// 从连接池获取数据库连接
     pub async fn connect(&self) -> DatabaseResult<PostgresConnection> {
-        let client = self.pool.get().await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Failed to get connection: {}", e) })
-        })?;
-        Ok(PostgresConnection::new(client))
+        match self.pool.get().await {
+            Ok(client) => {
+                self.metrics.increment_get_success();
+                let conn = PostgresConnection::new(client);
+                
+                if self.pool_config.health_check_enabled {
+                    if let Err(e) = conn.health_check().await {
+                        self.metrics.increment_get_error();
+                        return Err(e);
+                    }
+                }
+                
+                Ok(conn)
+            }
+            Err(e) => {
+                if let PoolError::Timeout(_) = e {
+                    self.metrics.increment_get_timeout();
+                } else {
+                    self.metrics.increment_get_error();
+                }
+                Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed { 
+                    reason: format!("Failed to get connection: {}", e) 
+                }))
+            }
+        }
+    }
+
+    /// 获取连接池监控指标
+    pub fn metrics(&self) -> PoolMetrics {
+        let status = self.pool.status();
+        PoolMetrics {
+            connections_created: self.metrics.connections_created.load(Ordering::Relaxed),
+            connections_destroyed: self.metrics.connections_destroyed.load(Ordering::Relaxed),
+            get_success: self.metrics.get_success.load(Ordering::Relaxed),
+            get_timeout: self.metrics.get_timeout.load(Ordering::Relaxed),
+            get_error: self.metrics.get_error.load(Ordering::Relaxed),
+            idle_connections: status.available,
+            active_connections: status.size - status.available,
+            max_connections: status.max_size,
+        }
+    }
+
+    /// 获取连接池配置
+    pub fn pool_config(&self) -> &PoolConfig {
+        &self.pool_config
+    }
+
+    /// 预热连接池，创建最小数量的连接
+    pub async fn warmup(&self) -> DatabaseResult<()> {
+        if let Some(min_idle) = self.pool_config.min_idle {
+            let mut connections = Vec::with_capacity(min_idle);
+            for _ in 0..min_idle {
+                connections.push(self.connect().await?);
+            }
+        }
+        Ok(())
     }
 }

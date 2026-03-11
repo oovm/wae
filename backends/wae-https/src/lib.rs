@@ -14,6 +14,9 @@ pub use wae_session as session;
 pub use router::{RouterBuilder, MethodRouter, get, post, put, delete, patch, options, head, trace};
 pub use response::{JsonResponse, Html, Redirect, Attachment, StreamResponse};
 
+pub use router::Router;
+pub use {ApiResponse, ApiErrorBody};
+
 use http::{Response, StatusCode, header};
 use http_body_util::Full;
 use hyper::body::Bytes;
@@ -153,6 +156,33 @@ pub struct Router<S = ()> {
     state: S,
 }
 
+/// 可调用的处理函数 trait
+trait CallableHandler<S>: Send + Sync + 'static {
+    fn call(&self, parts: crate::extract::RequestParts, state: S) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response<Body>> + Send>>;
+    fn clone_box(&self) -> Box<dyn CallableHandler<S>>;
+}
+
+impl<S, H, T> CallableHandler<S> for H
+where
+    H: Handler<T, S> + Clone,
+    T: 'static,
+    S: Clone + Send + Sync + 'static,
+{
+    fn call(&self, parts: crate::extract::RequestParts, state: S) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response<Body>> + Send>> {
+        Box::pin(Handler::call(self.clone(), parts, state))
+    }
+
+    fn clone_box(&self) -> Box<dyn CallableHandler<S>> {
+        Box::new(self.clone())
+    }
+}
+
+impl<S> Clone for Box<dyn CallableHandler<S>> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
 /// 路由条目
 struct RouteEntry {
     /// HTTP 方法
@@ -160,7 +190,7 @@ struct RouteEntry {
     /// 路径模式
     path: String,
     /// 处理函数
-    handler: Box<dyn std::any::Any + Send + Sync + 'static>,
+    handler: Box<dyn CallableHandler<S>>,
 }
 
 impl<S: Clone> Clone for Router<S> {
@@ -211,13 +241,18 @@ impl<S> Router<S> {
     }
 
     /// 添加路由到路由表
-    pub fn add_route_inner(
+    pub fn add_route_inner<H, T>(
         &mut self,
         method: http::Method,
         path: String,
-        handler: Box<dyn std::any::Any + Send + Sync + 'static>,
-    ) {
-        let entry = RouteEntry { method: method.clone(), path: path.clone(), handler };
+        handler: H,
+    )
+    where
+        H: Handler<T, S> + Clone,
+        T: 'static,
+    {
+        let callable_handler: Box<dyn CallableHandler<S>> = Box::new(handler);
+        let entry = RouteEntry { method: method.clone(), path: path.clone(), handler: callable_handler };
         self.raw_routes.push(entry);
 
         let router = self.routes.entry(method).or_insert_with(matchit::Router::new);
@@ -529,7 +564,10 @@ pub struct HttpsServer<S = ()> {
     _marker: std::marker::PhantomData<S>,
 }
 
-impl HttpsServer<()> {
+impl<S> HttpsServer<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     /// 启动服务器
     pub async fn serve(self) -> HttpsResult<()> {
         let addr = self.config.addr;
@@ -547,22 +585,66 @@ impl HttpsServer<()> {
             None => self.serve_plain(listener).await,
         }
     }
-}
 
-impl<S> HttpsServer<S> {
-    async fn serve_plain(self, _listener: TcpListener) -> HttpsResult<()> {
-        // TODO: 使用 hyper::server 实现
-        // 暂时挂起，等待 Router 实现
+    /// 启动 HTTP 服务器
+    async fn serve_plain(self, listener: TcpListener) -> HttpsResult<()> {
+        let make_service = MakeRouterService::new(self.router);
+
         loop {
-            tokio::time::sleep(Duration::from_secs(3600)).await;
+            let (stream, _addr) = listener
+                .accept()
+                .await
+                .map_err(|e| WaeError::internal(format!("Accept error: {}", e)))?;
+
+            let make_service = make_service.clone();
+
+            tokio::spawn(async move {
+                let io = hyper_util::rt::tokio::TokioIo::new(stream);
+                let _ = hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new())
+                    .serve_connection_with_upgrades(io, make_service)
+                    .await;
+            });
         }
     }
 
-    async fn serve_tls(self, _listener: TcpListener, _tls_config: &TlsConfig) -> HttpsResult<()> {
-        // TODO: 使用 hyper::server 实现
-        // 暂时挂起，等待 Router 实现
+    /// 启动 HTTPS 服务器
+    async fn serve_tls(self, listener: TcpListener, tls_config: &TlsConfig) -> HttpsResult<()> {
+        let enable_http2 = matches!(
+            self.config.http_version,
+            HttpVersion::Http2Only | HttpVersion::Both
+        );
+
+        let acceptor = crate::tls::create_tls_acceptor_with_http2(
+            &tls_config.cert_path,
+            &tls_config.key_path,
+            enable_http2,
+        )?;
+
+        let make_service = MakeRouterService::new(self.router);
+
         loop {
-            tokio::time::sleep(Duration::from_secs(3600)).await;
+            let (stream, _addr) = listener
+                .accept()
+                .await
+                .map_err(|e| WaeError::internal(format!("Accept error: {}", e)))?;
+
+            let acceptor = acceptor.clone();
+            let make_service = make_service.clone();
+
+            tokio::spawn(async move {
+                let tls_stream = match acceptor.accept(stream).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::error!("TLS handshake error: {}", e);
+                        return;
+                    }
+                };
+
+                let io = hyper_util::rt::tokio::TokioIo::new(tls_stream);
+                let _ = hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new())
+                    .serve_connection_with_upgrades(io, make_service)
+                    .await;
+            });
         }
     }
 
@@ -684,3 +766,161 @@ where
         }
     }
 }
+
+/// 路由服务，实现 Service trait 用于处理 HTTP 请求
+pub struct RouterService<S = ()> {
+    router: Router<S>,
+}
+
+impl<S: Clone> Clone for RouterService<S> {
+    fn clone(&self) -> Self {
+        Self { router: self.router.clone() }
+    }
+}
+
+impl<S> From<Router<S>> for RouterService<S> {
+    fn from(router: Router<S>) -> Self {
+        Self { router }
+    }
+}
+
+impl<S> RouterService<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    /// 创建新的路由服务
+    pub fn new(router: Router<S>) -> Self {
+        Self { router }
+    }
+
+    /// 处理 HTTP 请求并返回响应
+    pub async fn handle_request(
+        &self,
+        request: hyper::Request<hyper::body::Incoming>,
+    ) -> http::Response<Body> {
+        let (parts, _body) = request.into_parts();
+        let method = parts.method.clone();
+        let uri = parts.uri.clone();
+        let version = parts.version;
+        let headers = parts.headers.clone();
+
+        let mut request_parts = crate::extract::RequestParts::new(method.clone(), uri.clone(), version, headers);
+
+        let path = uri.path();
+
+        let Some(method_router) = self.router.routes.get(&method) else {
+            return Response::builder()
+                .status(StatusCode::METHOD_NOT_ALLOWED)
+                .body(empty_body())
+                .unwrap();
+        };
+
+        let match_result = method_router.at(path);
+
+        let Ok(matched) = match_result else {
+            return Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(empty_body())
+                .unwrap();
+        };
+
+        for (key, value) in matched.params.iter() {
+            request_parts.path_params.push((key.to_string(), value.to_string()));
+        }
+
+        let route_path = matched.value;
+        let handler = self.find_handler(&method, route_path);
+
+        if let Some(handler) = handler {
+            let state = self.router.state.clone();
+            Self::call_handler(handler, request_parts, state).await
+        } else {
+            Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(empty_body())
+                .unwrap()
+        }
+    }
+
+    fn find_handler(&self, method: &http::Method, path: &str) -> Option<Box<dyn CallableHandler<S>>> {
+        for entry in &self.router.raw_routes {
+            if &entry.method == method && entry.path == path {
+                return Some(entry.handler.clone());
+            }
+        }
+        None
+    }
+
+    async fn call_handler(
+        handler: Box<dyn CallableHandler<S>>,
+        parts: crate::extract::RequestParts,
+        state: S,
+    ) -> Response<Body> {
+        handler.call(parts, state).await
+    }
+}
+
+impl<S> hyper::service::Service<hyper::Request<hyper::body::Incoming>> for RouterService<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    type Response = http::Response<Body>;
+    type Error = std::convert::Infallible;
+    type Future = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn call(&self, req: hyper::Request<hyper::body::Incoming>) -> Self::Future {
+        let this = self.clone();
+        Box::pin(async move {
+            let response = this.handle_request(req).await;
+            Ok(response)
+        })
+    }
+}
+
+/// 服务工厂，用于为每个连接创建新的服务实例
+pub struct MakeRouterService<S = ()> {
+    router: Router<S>,
+}
+
+impl<S: Clone> Clone for MakeRouterService<S> {
+    fn clone(&self) -> Self {
+        Self { router: self.router.clone() }
+    }
+}
+
+impl<S> From<Router<S>> for MakeRouterService<S> {
+    fn from(router: Router<S>) -> Self {
+        Self { router }
+    }
+}
+
+impl<S> MakeRouterService<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    /// 创建新的服务工厂
+    pub fn new(router: Router<S>) -> Self {
+        Self { router }
+    }
+}
+
+impl<S, T> hyper::service::Service<T> for MakeRouterService<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    type Response = RouterService<S>;
+    type Error = std::convert::Infallible;
+    type Future = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn call(&self, _: T) -> Self::Future {
+        let router = self.router.clone();
+        Box::pin(async move {
+            Ok(RouterService::new(router))
+        })
+    }
+}
+
+pub use {
+    HttpsServer, HttpsServerBuilder, HttpsServerConfig, HttpVersion,
+    Http2Config, Http3Config, TlsConfig, RouterService, MakeRouterService,
+};

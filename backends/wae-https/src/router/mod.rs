@@ -31,14 +31,6 @@ where
         Self { router, _marker: PhantomData }
     }
 
-    /// 添加路由处理
-    pub fn route(mut self, path: &str, method_router: MethodRouter<S>) -> Self {
-        for (method, handler) in method_router.handlers {
-            self.router.add_route_inner(method, path.to_string(), handler);
-        }
-        self
-    }
-
     /// 嵌套路由
     pub fn nest<T>(mut self, prefix: &str, router: T) -> Self
     where
@@ -57,80 +49,80 @@ where
     /// 添加 GET 方法路由（使用新的 Handler trait）
     pub fn get<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::GET, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::GET, path.to_string(), handler);
         self
     }
 
     /// 添加 POST 方法路由（使用新的 Handler trait）
     pub fn post<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::POST, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::POST, path.to_string(), handler);
         self
     }
 
     /// 添加 PUT 方法路由（使用新的 Handler trait）
     pub fn put<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::PUT, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::PUT, path.to_string(), handler);
         self
     }
 
     /// 添加 DELETE 方法路由（使用新的 Handler trait）
     pub fn delete<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::DELETE, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::DELETE, path.to_string(), handler);
         self
     }
 
     /// 添加 PATCH 方法路由（使用新的 Handler trait）
     pub fn patch<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::PATCH, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::PATCH, path.to_string(), handler);
         self
     }
 
     /// 添加 OPTIONS 方法路由（使用新的 Handler trait）
     pub fn options<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::OPTIONS, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::OPTIONS, path.to_string(), handler);
         self
     }
 
     /// 添加 HEAD 方法路由（使用新的 Handler trait）
     pub fn head<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::HEAD, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::HEAD, path.to_string(), handler);
         self
     }
 
     /// 添加 TRACE 方法路由（使用新的 Handler trait）
     pub fn trace<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S>,
+        H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::TRACE, path.to_string(), Box::new(handler));
+        self.router.add_route_inner(http::Method::TRACE, path.to_string(), handler);
         self
     }
 
@@ -174,187 +166,116 @@ where
 
 /// 方法路由类型
 pub struct MethodRouter<S = ()> {
-    /// 存储的处理函数
-    handlers: Vec<(http::Method, Box<dyn std::any::Any + Send + Sync + 'static>)>,
     /// 状态类型标记
     _marker: PhantomData<S>,
 }
 
 impl<S> Clone for MethodRouter<S> {
     fn clone(&self) -> Self {
-        Self { handlers: Vec::new(), _marker: PhantomData }
+        Self { _marker: PhantomData }
     }
 }
 
 impl<S> Default for MethodRouter<S> {
     fn default() -> Self {
-        Self { handlers: Vec::new(), _marker: PhantomData }
-    }
-}
-
-impl<S> MethodRouter<S>
-where
-    S: Clone + Send + Sync + 'static,
-{
-    /// 添加 GET 方法处理（使用新的 Handler trait）
-    pub fn get<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::GET, Box::new(handler)));
-        self
-    }
-
-    /// 添加 POST 方法处理（使用新的 Handler trait）
-    pub fn post<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::POST, Box::new(handler)));
-        self
-    }
-
-    /// 添加 PUT 方法处理（使用新的 Handler trait）
-    pub fn put<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::PUT, Box::new(handler)));
-        self
-    }
-
-    /// 添加 DELETE 方法处理（使用新的 Handler trait）
-    pub fn delete<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::DELETE, Box::new(handler)));
-        self
-    }
-
-    /// 添加 PATCH 方法处理（使用新的 Handler trait）
-    pub fn patch<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::PATCH, Box::new(handler)));
-        self
-    }
-
-    /// 添加 OPTIONS 方法处理（使用新的 Handler trait）
-    pub fn options<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::OPTIONS, Box::new(handler)));
-        self
-    }
-
-    /// 添加 HEAD 方法处理（使用新的 Handler trait）
-    pub fn head<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::HEAD, Box::new(handler)));
-        self
-    }
-
-    /// 添加 TRACE 方法处理（使用新的 Handler trait）
-    pub fn trace<H, T>(mut self, handler: H) -> Self
-    where
-        H: Handler<T, S>,
-        T: 'static,
-    {
-        self.handlers.push((http::Method::TRACE, Box::new(handler)));
-        self
+        Self { _marker: PhantomData }
     }
 }
 
 /// GET 方法路由（使用新的 Handler trait）
-pub fn get<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn get<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().get::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::GET, path.to_string(), handler);
+    }
 }
 
 /// POST 方法路由（使用新的 Handler trait）
-pub fn post<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn post<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().post::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::POST, path.to_string(), handler);
+    }
 }
 
 /// PUT 方法路由（使用新的 Handler trait）
-pub fn put<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn put<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().put::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::PUT, path.to_string(), handler);
+    }
 }
 
 /// DELETE 方法路由（使用新的 Handler trait）
-pub fn delete<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn delete<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().delete::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::DELETE, path.to_string(), handler);
+    }
 }
 
 /// PATCH 方法路由（使用新的 Handler trait）
-pub fn patch<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn patch<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().patch::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::PATCH, path.to_string(), handler);
+    }
 }
 
 /// OPTIONS 方法路由（使用新的 Handler trait）
-pub fn options<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn options<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().options::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::OPTIONS, path.to_string(), handler);
+    }
 }
 
 /// HEAD 方法路由（使用新的 Handler trait）
-pub fn head<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn head<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().head::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::HEAD, path.to_string(), handler);
+    }
 }
 
 /// TRACE 方法路由（使用新的 Handler trait）
-pub fn trace<H, T, S>(handler: H) -> MethodRouter<S>
+pub fn trace<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S>,
+    H: Handler<T, S> + Clone,
     T: 'static,
     S: Clone + Send + Sync + 'static,
 {
-    MethodRouter::default().trace::<H, T>(handler)
+    move |router, path| {
+        router.add_route_inner(http::Method::TRACE, path.to_string(), handler);
+    }
 }
 
 /// 健康检查路由

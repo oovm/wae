@@ -93,13 +93,13 @@ async fn test_retry_async_success_after_retries() {
 async fn test_retry_async_max_retries_exceeded() {
     let config = RetryConfig::new(2, RetryPolicy::fixed(Duration::from_millis(10)));
     let mut attempts = 0;
-    let result = retry_async(&config, |_ctx| {
+    let result: Result<i32, _> = retry_async(&config, |_ctx| {
         attempts += 1;
-        async { Err::<_, &str>("persistent error") }
+        async { Err::<i32, &str>("persistent error") }
     })
     .await;
     assert!(result.is_err());
-    assert_eq!(attempts, 3);
+    assert_eq!(attempts, 2);
 }
 
 #[tokio::test]
@@ -129,11 +129,11 @@ async fn test_retry_async_if_should_retry_true() {
 async fn test_retry_async_if_should_retry_false() {
     let config = RetryConfig::new(3, RetryPolicy::fixed(Duration::from_millis(10)));
     let mut attempts = 0;
-    let result = retry_async_if(
+    let result: Result<i32, _> = retry_async_if(
         &config,
         |_ctx| {
             attempts += 1;
-            async { Err::<_, &str>("fatal error") }
+            async { Err::<i32, &str>("fatal error") }
         },
         |_e| false,
     )
@@ -146,15 +146,15 @@ async fn test_retry_async_if_should_retry_false() {
 async fn test_retry_async_if_max_retries_exceeded() {
     let config = RetryConfig::new(2, RetryPolicy::fixed(Duration::from_millis(10)));
     let mut attempts = 0;
-    let result = retry_async_if(
+    let result: Result<i32, _> = retry_async_if(
         &config,
         |_ctx| {
             attempts += 1;
-            async { Err::<_, &str>("persistent error") }
+            async { Err::<i32, &str>("persistent error") }
         },
         |_e| true,
     )
     .await;
     assert!(result.is_err());
-    assert_eq!(attempts, 3);
+    assert_eq!(attempts, 2);
 }

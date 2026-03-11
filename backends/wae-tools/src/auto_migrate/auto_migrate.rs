@@ -23,10 +23,16 @@ pub struct AutoMigratorConfig {
     pub add_columns: bool,
     /// 是否自动删除未定义的列 (危险操作)
     pub drop_columns: bool,
+    /// 是否自动修改列
+    pub alter_columns: bool,
     /// 是否自动创建索引
     pub create_indexes: bool,
     /// 是否自动删除未定义的索引
     pub drop_indexes: bool,
+    /// 是否自动创建外键约束
+    pub create_foreign_keys: bool,
+    /// 是否自动删除未定义的外键约束
+    pub drop_foreign_keys: bool,
     /// 是否在执行前打印 SQL
     pub dry_run: bool,
 }
@@ -38,8 +44,11 @@ impl Default for AutoMigratorConfig {
             drop_tables: false,
             add_columns: true,
             drop_columns: false,
+            alter_columns: false,
             create_indexes: true,
             drop_indexes: true,
+            create_foreign_keys: true,
+            drop_foreign_keys: true,
             dry_run: false,
         }
     }
@@ -53,8 +62,11 @@ impl AutoMigratorConfig {
             drop_tables: false,
             add_columns: true,
             drop_columns: false,
+            alter_columns: false,
             create_indexes: true,
             drop_indexes: false,
+            create_foreign_keys: true,
+            drop_foreign_keys: false,
             dry_run: false,
         }
     }
@@ -66,8 +78,11 @@ impl AutoMigratorConfig {
             drop_tables: true,
             add_columns: true,
             drop_columns: true,
+            alter_columns: true,
             create_indexes: true,
             drop_indexes: true,
+            create_foreign_keys: true,
+            drop_foreign_keys: true,
             dry_run: false,
         }
     }
@@ -203,11 +218,13 @@ impl AutoMigrator {
                                 }
                             }
                             crate::auto_migrate::diff::DiffAction::Alter => {
-                                warn!(
-                                    table = %table_diff.table_name,
-                                    column = %col_diff.column_name,
-                                    "SQLite does not support ALTER COLUMN, table rebuild required"
-                                );
+                                if self.config.alter_columns {
+                                    warn!(
+                                        table = %table_diff.table_name,
+                                        column = %col_diff.column_name,
+                                        "Column alteration may require table rebuild depending on database backend"
+                                    );
+                                }
                             }
                         }
                     }
@@ -231,6 +248,32 @@ impl AutoMigrator {
                             crate::auto_migrate::diff::DiffAction::Alter => {
                                 if self.config.create_indexes && self.config.drop_indexes {
                                     if let Some(sql) = idx_diff.to_sql() {
+                                        sqls.push(sql);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    for fk_diff in &table_diff.foreign_key_diffs {
+                        match fk_diff.action {
+                            crate::auto_migrate::diff::DiffAction::Create => {
+                                if self.config.create_foreign_keys {
+                                    if let Some(sql) = fk_diff.to_sql(&table_diff.table_name) {
+                                        sqls.push(sql);
+                                    }
+                                }
+                            }
+                            crate::auto_migrate::diff::DiffAction::Drop => {
+                                if self.config.drop_foreign_keys {
+                                    if let Some(sql) = fk_diff.to_sql(&table_diff.table_name) {
+                                        sqls.push(sql);
+                                    }
+                                }
+                            }
+                            crate::auto_migrate::diff::DiffAction::Alter => {
+                                if self.config.create_foreign_keys && self.config.drop_foreign_keys {
+                                    if let Some(sql) = fk_diff.to_sql(&table_diff.table_name) {
                                         sqls.push(sql);
                                     }
                                 }

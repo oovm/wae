@@ -14,7 +14,7 @@ mod reflect;
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub use auto_migrate::{AutoMigrate, AutoMigrator, AutoMigratorConfig, MigrationPlan};
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-pub use diff::{ColumnDiff, DiffAction, IndexDiff, SchemaDiff, TableDiff};
+pub use diff::{ColumnDiff, DiffAction, ForeignKeyDiff, IndexDiff, SchemaDiff, TableDiff};
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub use generate::CodeGenerator;
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
