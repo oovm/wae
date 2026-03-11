@@ -1,8 +1,7 @@
 #![doc = include_str!("readme.md")]
 
-use http::{Method, Uri, Version, header::HeaderMap, HeaderValue};
+use http::{Method, Uri, Version, header::HeaderMap};
 use std::fmt;
-use std::marker::PhantomData;
 use bytes::Bytes;
 use serde::de::DeserializeOwned;
 
@@ -400,8 +399,6 @@ where
 #[derive(Debug, Clone)]
 pub struct WebSocketUpgrade;
 
-pub use bytes::Bytes;
-
 /// 流式请求体提取器
 ///
 /// 用于从请求中提取流式数据。
@@ -410,7 +407,7 @@ pub type Stream = crate::Body;
 /// 元组提取器支持（最多支持 16 个参数）
 macro_rules! impl_from_request_parts_tuple {
     ($($ty:ident),*) => {
-        #[allow(non_snake_case)]
+        #[allow(non_snake_case, unused_variables)]
         impl<S, $($ty,)*> FromRequestParts<S> for ($($ty,)*)
         where
             $($ty: FromRequestParts<S, Error = ExtractorError>,)*

@@ -21,6 +21,8 @@ deadpool-postgres = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
 async-trait = { workspace = true }
 http = { workspace = true }
+tower = { workspace = true }
+pin-project-lite = { workspace = true }
 
 [features]
 default = ["turso"]

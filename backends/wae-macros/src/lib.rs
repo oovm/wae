@@ -368,3 +368,102 @@ pub fn execute(input: TokenStream) -> TokenStream {
 pub fn query_scalar(input: TokenStream) -> TokenStream {
     query::expand_query_scalar(input)
 }
+
+/// 使用效果宏 - 获取依赖的便捷宏
+///
+/// 支持多种语法：
+/// - `use_effect!(effectful, MyType)` - 按类型获取依赖
+/// - `use_effect!(effectful, "name", MyType)` - 按字符串键和类型获取依赖
+/// - `use_effect!(effectful, config, MyConfig)` - 便捷地获取配置
+/// - `use_effect!(effectful, auth, MyAuthService)` - 便捷地获取认证服务
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use wae_macros::use_effect;
+///
+/// async fn handler(effectful: Effectful) -> WaeResult<()> {
+///     let config: MyConfig = use_effect!(effectful, MyConfig)?;
+///     let auth: Arc<dyn AuthService> = use_effect!(effectful, auth, Arc<dyn AuthService>)?;
+///     Ok(())
+/// }
+/// ```
+#[proc_macro]
+pub fn use_effect(input: TokenStream) -> TokenStream {
+    let input = proc_macro2::TokenStream::from(input);
+    let parsed = syn::parse_macro_input!(input as UseEffectInput);
+
+    let expanded = match parsed {
+        UseEffectInput::TypeOnly { effectful, ty } => {
+            quote! {
+                #effectful.get_type::<#ty>()
+            }
+        }
+        UseEffectInput::Named { effectful, name, ty } => {
+            quote! {
+                #effectful.get::<#ty>(#name)
+            }
+        }
+        UseEffectInput::Config { effectful, ty } => {
+            quote! {
+                #effectful.use_config::<#ty>()
+            }
+        }
+        UseEffectInput::Auth { effectful, ty } => {
+            quote! {
+                #effectful.use_auth::<#ty>()
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+enum UseEffectInput {
+    TypeOnly {
+        effectful: syn::Expr,
+        ty: syn::Type,
+    },
+    Named {
+        effectful: syn::Expr,
+        name: syn::LitStr,
+        ty: syn::Type,
+    },
+    Config {
+        effectful: syn::Expr,
+        ty: syn::Type,
+    },
+    Auth {
+        effectful: syn::Expr,
+        ty: syn::Type,
+    },
+}
+
+impl syn::parse::Parse for UseEffectInput {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let effectful: syn::Expr = input.parse()?;
+        let _: syn::Token![,] = input.parse()?;
+
+        if input.peek(syn::Ident) {
+            let ident: syn::Ident = input.parse()?;
+            let _: syn::Token![,] = input.parse()?;
+            let ty: syn::Type = input.parse()?;
+
+            if ident == "config" {
+                Ok(UseEffectInput::Config { effectful, ty })
+            } else if ident == "auth" {
+                Ok(UseEffectInput::Auth { effectful, ty })
+            } else {
+                Err(syn::Error::new_spanned(ident, "Expected 'config' or 'auth'"))
+            }
+        } else if input.peek(syn::LitStr) {
+            let name: syn::LitStr = input.parse()?;
+            let _: syn::Token![,] = input.parse()?;
+            let ty: syn::Type = input.parse()?;
+            Ok(UseEffectInput::Named { effectful, name, ty })
+        } else {
+            let ty: syn::Type = input.parse()?;
+            Ok(UseEffectInput::TypeOnly { effectful, ty })
+        }
+    }
+}

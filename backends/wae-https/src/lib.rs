@@ -103,7 +103,7 @@ pub trait Handler<T, S>: Clone + Send + Sync + 'static {
     async fn call(self, parts: crate::extract::RequestParts, state: S) -> Response<Body>;
 }
 
-/// 元组处理函数支持（最多支持 16 个参数）
+/// 元组处理函数支持（最多支持 1 个参数）
 macro_rules! impl_handler {
     (
         [$($ty:ident),*],
@@ -119,7 +119,7 @@ macro_rules! impl_handler {
             $last: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError>,
         {
             async fn call(self, parts: crate::extract::RequestParts, state: S) -> Response<Body> {
-                match <($($ty,)* $last,) as crate::extract::FromRequestParts<S>>::from_request_parts(&parts, &state).await {
+                let result: Response<Body> = match <($($ty,)* $last,) as crate::extract::FromRequestParts<S>>::from_request_parts(&parts, &state).await {
                     Ok(($($ty,)* $last,)) => {
                         self($($ty,)* $last,).await
                     }
@@ -131,31 +131,16 @@ macro_rules! impl_handler {
                             .body(full_body(error_msg))
                             .unwrap()
                     }
-                }
+                };
+                result
             }
         }
     };
 }
 
 impl_handler!([], T1);
-impl_handler!([T1], T2);
-impl_handler!([T1, T2], T3);
-impl_handler!([T1, T2, T3], T4);
-impl_handler!([T1, T2, T3, T4], T5);
-impl_handler!([T1, T2, T3, T4, T5], T6);
-impl_handler!([T1, T2, T3, T4, T5, T6], T7);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7], T8);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8], T9);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9], T10);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10], T11);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11], T12);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12], T13);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13], T14);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14], T15);
-impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15], T16);
 
 /// 自定义路由类型
-#[derive(Clone)]
 pub struct Router<S = ()> {
     /// 按 HTTP 方法存储的路由表
     routes: std::collections::HashMap<http::Method, matchit::Router<Box<dyn std::any::Any + Send + Sync + 'static>>>,
@@ -173,6 +158,16 @@ struct RouteEntry {
     path: String,
     /// 处理函数
     handler: Box<dyn std::any::Any + Send + Sync + 'static>,
+}
+
+impl<S: Clone> Clone for Router<S> {
+    fn clone(&self) -> Self {
+        Self {
+            routes: std::collections::HashMap::new(),
+            raw_routes: Vec::new(),
+            state: self.state.clone(),
+        }
+    }
 }
 
 impl Default for Router<()> {
@@ -215,7 +210,7 @@ impl<S> Router<S> {
         self.raw_routes.push(entry);
 
         let router = self.routes.entry(method).or_insert_with(matchit::Router::new);
-        router.insert(path, handler).ok();
+        let _ = router.insert(path, Box::new(()));
     }
 }
 

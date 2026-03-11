@@ -7045,6 +7045,7 @@ version = "0.0.1"
 dependencies = [
  "figment",
  "serde",
+ "tempfile",
  "wae-types",
 ]
 
@@ -7058,6 +7059,7 @@ dependencies = [
  "hex",
  "hmac",
  "rand 0.10.0",
+ "rand_core 0.10.0",
  "sha1",
  "sha2",
  "wae-types",
@@ -7072,10 +7074,12 @@ dependencies = [
  "deadpool-postgres",
  "http",
  "mysql_async",
+ "pin-project-lite",
  "serde",
  "serde_json",
  "tokio",
  "tokio-postgres",
+ "tower",
  "turso",
  "wae-types",
 ]
