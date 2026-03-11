@@ -8,7 +8,9 @@ members = [
     "examples/effect-advanced",
     "examples/database-basic",
     "examples/auth-basic",
+    "examples/cache-basic",
     "examples/observability-basic",
+    "examples/error-handling",
 ]
 default-members = [
     "backends/wae-server",

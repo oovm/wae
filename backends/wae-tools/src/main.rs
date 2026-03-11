@@ -91,6 +91,18 @@ enum MigrateCommands {
         #[arg(long, short)]
         migrations: Option<String>,
     },
+    /// 从 schemas.yaml 同步数据库 schema
+    Sync {
+        /// schemas.yaml 文件路径
+        #[arg(long, short, default_value = "schemas.yaml")]
+        schema: String,
+        /// 数据库连接字符串
+        #[arg(long, short)]
+        database: String,
+        /// 是否自动执行迁移（否则仅打印计划）
+        #[arg(long, short, default_value_t = false)]
+        execute: bool,
+    },
 }
 
 #[tokio::main]
