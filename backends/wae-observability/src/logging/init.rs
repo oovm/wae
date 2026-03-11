@@ -3,7 +3,7 @@
 //! 提供 JSON 日志初始化功能。
 
 use crate::logging::json::JsonFormatterConfig;
-use tracing::Level;
+use ::tracing::Level;
 
 /// 日志输出目标
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,7 +72,7 @@ impl JsonLoggerConfig {
 ///
 /// init_json_logger(JsonLoggerConfig::default());
 /// ```
-pub fn init_json_logger(config: JsonLoggerConfig) {
+pub fn init_json_logger(_config: JsonLoggerConfig) {
     tracing::info!("JSON logger initialized (lightweight implementation)");
 }
 

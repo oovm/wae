@@ -3,7 +3,6 @@
 //! 提供从 HTTP 头提取和注入 traceparent 和 tracestate 的功能。
 
 use http::{HeaderMap, HeaderValue};
-use rand::RngCore;
 use std::fmt;
 
 /// Trace ID
@@ -29,7 +28,7 @@ impl TraceId {
     /// 创建新的 Trace ID
     pub fn new() -> Self {
         let mut bytes = [0u8; 16];
-        rand::thread_rng().fill_bytes(&mut bytes);
+        rand::thread_rng().fill(&mut bytes);
         TraceId(bytes)
     }
 
@@ -75,7 +74,7 @@ impl SpanId {
     /// 创建新的 Span ID
     pub fn new() -> Self {
         let mut bytes = [0u8; 8];
-        rand::rng().fill(&mut bytes);
+        rand::thread_rng().fill(&mut bytes);
         SpanId(bytes)
     }
 

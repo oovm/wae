@@ -26,10 +26,7 @@ use std::collections::HashMap;
 use wae_types::WaeError;
 
 #[cfg(feature = "json-log")]
-use tracing::Level;
-
-#[cfg(any(feature = "profiling", feature = "otlp"))]
-use tracing::info;
+use ::tracing::Level;
 
 #[cfg(any(feature = "metrics", feature = "health", feature = "profiling"))]
 use std::sync::Arc;
@@ -366,14 +363,14 @@ pub fn init_observability(config: ObservabilityConfig) -> ObservabilityResult<Ob
 
     #[cfg(feature = "otlp")]
     if config.enable_otlp {
-        info!("OTLP tracing initialized");
+        tracing::info!("OTLP tracing initialized");
     }
 
     #[cfg(feature = "profiling")]
     if config.enable_profiling {
         let console = profiling::TokioConsole::new();
         console.init(&config.profiling_config);
-        info!("Tokio Console initialized on {}", config.profiling_config.bind_addr);
+        tracing::info!("Tokio Console initialized on {}", config.profiling_config.bind_addr);
     }
 
     #[allow(unused_mut)]
