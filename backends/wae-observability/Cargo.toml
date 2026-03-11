@@ -15,7 +15,7 @@ default = []
 health = []
 metrics = []
 json-log = []
-otlp = []
+otlp = ["opentelemetry", "rand_core"]
 profiling = []
 full = ["health", "metrics", "json-log", "otlp", "profiling"]
 
@@ -38,3 +38,6 @@ bytes = { workspace = true }
 parking_lot = { workspace = true }
 rand = { workspace = true }
 hex = { workspace = true }
+
+opentelemetry = { version = "0.26", optional = true }
+rand_core = { workspace = true, optional = true }

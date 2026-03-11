@@ -2,8 +2,7 @@
 //!
 //! 提供 JSON 日志初始化功能。
 
-use crate::logging::json::{JsonFormatter, JsonFormatterConfig};
-use std::io;
+use crate::logging::json::JsonFormatterConfig;
 use tracing::Level;
 
 /// 日志输出目标

@@ -3,9 +3,11 @@
 //! 提供基于 Docker CLI 的轻量级测试容器支持，包括 PostgreSQL、MySQL 和 Redis。
 //! 不依赖任何第三方 Docker 客户端库，直接调用 docker 命令。
 
-use std::collections::HashMap;
-use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::{
+    collections::HashMap,
+    process::{Command, Stdio},
+    time::{Duration, Instant},
+};
 
 /// 测试容器错误类型
 #[derive(Debug, thiserror::Error)]
@@ -13,15 +15,15 @@ pub enum ContainerError {
     /// Docker 命令执行失败
     #[error("Docker command failed: {0}")]
     CommandFailed(String),
-    
+
     /// 容器启动超时
     #[error("Container startup timeout")]
     Timeout,
-    
+
     /// 容器未找到
     #[error("Container not found: {0}")]
     NotFound(String),
-    
+
     /// IO 错误
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -49,11 +51,7 @@ pub trait TestContainer {
 
 /// 检查 Docker 是否可用
 pub fn is_docker_available() -> bool {
-    let output = Command::new("docker")
-        .arg("--version")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .output();
+    let output = Command::new("docker").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).output();
 
     match output {
         Ok(output) => output.status.success(),
@@ -63,11 +61,7 @@ pub fn is_docker_available() -> bool {
 
 /// 执行 Docker 命令
 fn docker_command(args: &[&str]) -> ContainerResult<String> {
-    let output = Command::new("docker")
-        .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()?;
+    let output = Command::new("docker").args(args).stdout(Stdio::piped()).stderr(Stdio::piped()).output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -79,13 +73,9 @@ fn docker_command(args: &[&str]) -> ContainerResult<String> {
 }
 
 /// 等待容器就绪
-async fn wait_for_ready(
-    _container_id: &str,
-    check_fn: impl Fn() -> bool,
-    timeout: Duration,
-) -> ContainerResult<()> {
+async fn wait_for_ready(_container_id: &str, check_fn: impl Fn() -> bool, timeout: Duration) -> ContainerResult<()> {
     let start = Instant::now();
-    
+
     while start.elapsed() < timeout {
         if check_fn() {
             return Ok(());
@@ -98,11 +88,7 @@ async fn wait_for_ready(
 
 /// 检查容器日志是否包含特定消息
 fn check_container_log(container_id: &str, message: &str) -> bool {
-    let output = Command::new("docker")
-        .args(["logs", container_id])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output();
+    let output = Command::new("docker").args(["logs", container_id]).stdout(Stdio::piped()).stderr(Stdio::piped()).output();
 
     match output {
         Ok(output) => {
@@ -157,11 +143,7 @@ impl PostgresContainer {
         env_vars.insert("POSTGRES_PASSWORD", image.password.clone());
         env_vars.insert("POSTGRES_DB", image.database.clone());
 
-        let container_id = run_container(
-            &format!("postgres:{}", image.tag),
-            &[5432],
-            &env_vars,
-        )?;
+        let container_id = run_container(&format!("postgres:{}", image.tag), &[5432], &env_vars)?;
 
         let port = get_host_port(&container_id, 5432)?;
         let host = "127.0.0.1".to_string();
@@ -175,14 +157,7 @@ impl PostgresContainer {
 
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        Ok(Self {
-            container_id,
-            host,
-            port,
-            username: image.username,
-            password: image.password,
-            database: image.database,
-        })
+        Ok(Self { container_id, host, port, username: image.username, password: image.password, database: image.database })
     }
 
     /// 获取容器主机
@@ -213,10 +188,7 @@ impl PostgresContainer {
 
 impl TestContainer for PostgresContainer {
     fn connection_url(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database
-        )
+        format!("postgres://{}:{}@{}:{}/{}", self.username, self.password, self.host, self.port, self.database)
     }
 
     async fn start() -> ContainerResult<Self> {
@@ -280,32 +252,17 @@ impl MySqlContainer {
         env_vars.insert("MYSQL_PASSWORD", image.password.clone());
         env_vars.insert("MYSQL_DATABASE", image.database.clone());
 
-        let container_id = run_container(
-            &format!("mysql:{}", image.tag),
-            &[3306],
-            &env_vars,
-        )?;
+        let container_id = run_container(&format!("mysql:{}", image.tag), &[3306], &env_vars)?;
 
         let port = get_host_port(&container_id, 3306)?;
         let host = "127.0.0.1".to_string();
 
-        wait_for_ready(
-            &container_id,
-            || check_container_log(&container_id, "ready for connections"),
-            Duration::from_secs(60),
-        )
-        .await?;
+        wait_for_ready(&container_id, || check_container_log(&container_id, "ready for connections"), Duration::from_secs(60))
+            .await?;
 
         tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        Ok(Self {
-            container_id,
-            host,
-            port,
-            username: image.username,
-            password: image.password,
-            database: image.database,
-        })
+        Ok(Self { container_id, host, port, username: image.username, password: image.password, database: image.database })
     }
 
     /// 获取容器主机
@@ -336,10 +293,7 @@ impl MySqlContainer {
 
 impl TestContainer for MySqlContainer {
     fn connection_url(&self) -> String {
-        format!(
-            "mysql://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database
-        )
+        format!("mysql://{}:{}@{}:{}/{}", self.username, self.password, self.host, self.port, self.database)
     }
 
     async fn start() -> ContainerResult<Self> {
@@ -374,10 +328,7 @@ pub struct RedisImage {
 
 impl Default for RedisImage {
     fn default() -> Self {
-        Self {
-            tag: "7-alpine".to_string(),
-            password: None,
-        }
+        Self { tag: "7-alpine".to_string(), password: None }
     }
 }
 
@@ -416,12 +367,7 @@ impl RedisContainer {
 
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        Ok(Self {
-            container_id,
-            host,
-            port,
-            password: image.password,
-        })
+        Ok(Self { container_id, host, port, password: image.password })
     }
 
     /// 获取容器主机
@@ -464,11 +410,7 @@ impl TestContainer for RedisContainer {
 }
 
 /// 运行容器
-fn run_container(
-    image: &str,
-    ports: &[u16],
-    env_vars: &HashMap<&str, String>,
-) -> ContainerResult<String> {
+fn run_container(image: &str, ports: &[u16], env_vars: &HashMap<&str, String>) -> ContainerResult<String> {
     run_container_with_cmd(image, ports, env_vars, None)
 }
 
@@ -506,19 +448,12 @@ fn run_container_with_cmd(
 
 /// 获取主机端口映射
 fn get_host_port(container_id: &str, container_port: u16) -> ContainerResult<u16> {
-    let output = docker_command(&[
-        "port",
-        container_id,
-        &container_port.to_string(),
-    ])?;
+    let output = docker_command(&["port", container_id, &container_port.to_string()])?;
 
-    let port_str = output.split(':').last().ok_or_else(|| {
-        ContainerError::CommandFailed("Failed to parse port mapping".to_string())
-    })?;
+    let port_str =
+        output.split(':').last().ok_or_else(|| ContainerError::CommandFailed("Failed to parse port mapping".to_string()))?;
 
-    let port = port_str.parse().map_err(|_| {
-        ContainerError::CommandFailed("Failed to parse port number".to_string())
-    })?;
+    let port = port_str.parse().map_err(|_| ContainerError::CommandFailed("Failed to parse port number".to_string()))?;
 
     Ok(port)
 }

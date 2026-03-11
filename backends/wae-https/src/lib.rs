@@ -327,6 +327,7 @@ impl Default for HttpsServerBuilder {
 /// 提供 HTTP/HTTPS 服务的核心类型。
 pub struct HttpsServer {
     config: HttpsServerConfig,
+    #[expect(dead_code)]
     router: Router,
 }
 

@@ -2,8 +2,7 @@
 //!
 //! 提供 JSON 结构化日志记录功能。
 
-pub mod json;
 pub mod init;
+pub mod json;
 
-pub use self::init::*;
-pub use self::json::*;
+pub use self::{init::*, json::*};

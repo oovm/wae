@@ -1,9 +1,8 @@
-//! OpenTelemetry 中间件模块
+//! 追踪中间件模块
 //!
-//! 提供 OpenTelemetry 中间件，用于自动提取和注入 trace context。
+//! 提供追踪中间件，用于自动提取和注入 trace context。
 
 use http::{Request, Response};
-use opentelemetry::Context;
 use pin_project_lite::pin_project;
 use std::{
     future::Future,
@@ -12,9 +11,9 @@ use std::{
 };
 use tower::{Layer, Service};
 
-use crate::tracing::{extract_context_from_headers, inject_context_to_headers, set_global_text_map_propagator};
+use crate::tracing::{extract_context_from_headers, inject_context_to_headers, set_global_text_map_propagator, TraceContext};
 
-/// OpenTelemetry 中间件 Layer
+/// 追踪中间件 Layer
 #[derive(Clone, Debug, Default)]
 pub struct OpenTelemetryLayer {
     _private: (),
@@ -36,7 +35,7 @@ impl<S> Layer<S> for OpenTelemetryLayer {
     }
 }
 
-/// OpenTelemetry 中间件 Service
+/// 追踪中间件 Service
 #[derive(Clone, Debug)]
 pub struct OpenTelemetryService<S> {
     inner: S,
@@ -56,18 +55,22 @@ where
     }
 
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
-        let context = extract_context_from_headers(req.headers());
-        let _guard = context.attach();
+        let context = extract_context_from_headers(req.headers()).unwrap_or_else(TraceContext::new);
+        let child_context = context.child();
 
-        OpenTelemetryFuture { inner: self.inner.call(req) }
+        OpenTelemetryFuture {
+            inner: self.inner.call(req),
+            context: child_context,
+        }
     }
 }
 
 pin_project! {
-    /// OpenTelemetry 中间件 Future
+    /// 追踪中间件 Future
     pub struct OpenTelemetryFuture<F> {
         #[pin]
         inner: F,
+        context: TraceContext,
     }
 }
 
@@ -83,8 +86,7 @@ where
         let result = futures_util::ready!(this.inner.poll(cx));
         match result {
             Ok(mut res) => {
-                let context = Context::current();
-                inject_context_to_headers(&context, res.headers_mut());
+                inject_context_to_headers(this.context, res.headers_mut());
                 Poll::Ready(Ok(res))
             }
             Err(e) => Poll::Ready(Err(e)),

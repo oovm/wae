@@ -2,9 +2,6 @@
 //!
 //! 提供 JSON 格式的日志记录，包含 timestamp、level、message、trace_id、span_id 等字段。
 
-use std::fmt;
-use tracing::Level;
-
 /// 自定义 JSON 字段配置
 #[derive(Debug, Clone)]
 pub struct JsonFormatterConfig {

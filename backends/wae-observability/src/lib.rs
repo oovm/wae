@@ -25,8 +25,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use wae_types::WaeError;
 
-#[cfg(any(feature = "metrics", feature = "health", feature = "profiling", feature = "otlp", feature = "json-log"))]
-use tracing::{Level, info};
+#[cfg(feature = "json-log")]
+use tracing::Level;
+
+#[cfg(any(feature = "profiling", feature = "otlp"))]
+use tracing::info;
 
 #[cfg(any(feature = "metrics", feature = "health", feature = "profiling"))]
 use std::sync::Arc;

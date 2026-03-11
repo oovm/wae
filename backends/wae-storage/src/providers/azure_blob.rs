@@ -66,12 +66,13 @@ impl StorageProvider for AzureBlobProvider {
             .decode(&config.secret_key)
             .map_err(|e| WaeError::invalid_params("secret_key", format!("Invalid base64: {}", e)))?;
 
+        let resource_path = format!("/{}/{}/{}", config.secret_id, config.bucket, clean_path);
         let string_to_sign = format!(
             "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
             permissions,
             start,
             expiry,
-            format!("/{}/{}/{}", config.secret_id, config.bucket, clean_path),
+            resource_path,
             "",
             "",
             "",
@@ -117,6 +118,8 @@ impl StorageProvider for AzureBlobProvider {
         let permissions = "w";
         let resource = "b";
         let version = x_ms_version;
+        let expiry = (Utc::now() + Duration::seconds(900)).format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let resource_path = format!("/{}/{}/{}", config.secret_id, config.bucket, clean_key);
 
         let account_key = STANDARD
             .decode(&config.secret_key)
@@ -126,8 +129,8 @@ impl StorageProvider for AzureBlobProvider {
             "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
             permissions,
             "",
-            &format!("{}", (Utc::now() + Duration::seconds(900)).format("%Y-%m-%dT%H:%M:%SZ")),
-            format!("/{}/{}/{}", config.secret_id, config.bucket, clean_key),
+            expiry,
+            resource_path,
             "",
             "",
             "",
@@ -147,7 +150,7 @@ impl StorageProvider for AzureBlobProvider {
             .append_pair("sv", version)
             .append_pair("sr", resource)
             .append_pair("sp", permissions)
-            .append_pair("se", &format!("{}", (Utc::now() + Duration::seconds(900)).format("%Y-%m-%dT%H:%M:%SZ")))
+            .append_pair("se", &expiry)
             .append_pair("sig", &signature_base64);
 
         Ok(url)

@@ -51,9 +51,9 @@ impl Metric {
         
         let mut values = self.values.write();
         values.entry(key).or_insert_with(|| match self.metric_type {
-            MetricType::Counter => MetricValue::Counter(AtomicU64::new(0)),
-            MetricType::Gauge => MetricValue::Gauge(AtomicU64::new(0)),
-            MetricType::Histogram => MetricValue::Histogram(Histogram::default()),
+            MetricType::Counter => MetricValue::Counter(Arc::new(AtomicU64::new(0))),
+            MetricType::Gauge => MetricValue::Gauge(Arc::new(AtomicU64::new(0))),
+            MetricType::Histogram => MetricValue::Histogram(Arc::new(parking_lot::RwLock::new(Histogram::new(vec![0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0])))),
         }).clone()
     }
 
@@ -85,7 +85,7 @@ impl Metric {
     pub fn observe(&self, label_values: &[&str], value: f64) {
         let metric_value = self.get_or_create_value(label_values);
         if let MetricValue::Histogram(histogram) = metric_value {
-            histogram.observe(value);
+            histogram.write().observe(value);
         }
     }
 
@@ -144,7 +144,6 @@ impl MetricValue {
 }
 
 /// 直方图
-#[derive(Default, Clone)]
 struct Histogram {
     /// 桶边界
     buckets: Vec<f64>,
@@ -212,12 +211,6 @@ impl Histogram {
         writeln!(output, "{}_bucket{{{}}} {}", name, inf_label, inf_count).unwrap();
         writeln!(output, "{}_sum{} {}", name, labels, sum).unwrap();
         writeln!(output, "{}_count{} {}", name, labels, count).unwrap();
-    }
-}
-
-impl Default for Histogram {
-    fn default() -> Self {
-        Self::new(vec![0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0])
     }
 }
 
