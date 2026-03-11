@@ -7,7 +7,7 @@ repository = "https://github.com/oovm/wae/tree/main/backends/wae-observability"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-observability"
 description = "WAE Observability - 可观测性服务抽象层，提供健康检查、指标、日志和追踪能力"
 keywords = ["observability", "health", "metrics", "tracing", "logging"]
-categories = ["observability", "asynchronous", "web-programming"]
+categories = ["asynchronous", "web-programming"]
 documentation = "https://docs.rs/wae-observability"
 
 [features]

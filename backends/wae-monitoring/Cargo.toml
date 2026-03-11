@@ -7,7 +7,7 @@ repository = "https://github.com/oovm/wae/tree/main/backends/wae-monitoring"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-monitoring"
 description = "WAE Monitoring - 告警服务抽象层，支持 AlertManager 和 PagerDuty"
 keywords = ["monitoring", "alerting", "alertmanager", "pagerduty"]
-categories = ["monitoring", "web-programming"]
+categories = ["api-bindings", "web-programming"]
 documentation = "https://docs.rs/wae-monitoring"
 
 [features]
