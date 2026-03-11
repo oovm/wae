@@ -3,8 +3,7 @@
 //! 提供从 HTTP 请求扩展中提取数据库连接的提取器。
 
 use crate::connection::{DatabaseBackend, DatabaseConnection};
-use std::fmt;
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 use wae_types::WaeError;
 
 /// 数据库连接提取错误
@@ -48,9 +47,17 @@ impl std::error::Error for DatabaseRejection {}
 ///     let rows = db.query("SELECT * FROM users").await.unwrap();
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DatabaseConnectionExtractor {
     connection: Arc<dyn DatabaseConnection + Send + Sync>,
+}
+
+impl fmt::Debug for DatabaseConnectionExtractor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DatabaseConnectionExtractor")
+            .field("backend", &self.connection.backend())
+            .finish()
+    }
 }
 
 impl DatabaseConnectionExtractor {
@@ -66,11 +73,7 @@ impl DatabaseConnectionExtractor {
             .get::<Arc<dyn DatabaseConnection + Send + Sync>>()
             .cloned()
             .map(|connection| DatabaseConnectionExtractor { connection })
-            .ok_or_else(|| {
-                DatabaseRejection::new(WaeError::internal(
-                    "Database connection not found in request extensions",
-                ))
-            })
+            .ok_or_else(|| DatabaseRejection::new(WaeError::internal("Database connection not found in request extensions")))
     }
 
     /// 获取内部数据库连接的引用
@@ -103,11 +106,7 @@ impl DatabaseConnectionExtractor {
     }
 
     /// 执行带参数的语句
-    pub async fn execute_with(
-        &self,
-        sql: &str,
-        params: Vec<wae_types::Value>,
-    ) -> crate::connection::DatabaseResult<u64> {
+    pub async fn execute_with(&self, sql: &str, params: Vec<wae_types::Value>) -> crate::connection::DatabaseResult<u64> {
         self.connection.execute_with(sql, params).await
     }
 
@@ -136,9 +135,18 @@ impl DatabaseConnectionExtractor {
 /// Turso 数据库连接提取器
 ///
 /// 用于从 HTTP 请求的扩展中提取 Turso 数据库连接。
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TursoConnectionExtractor {
     connection: Arc<crate::connection::TursoConnection>,
+}
+
+#[cfg(feature = "turso")]
+impl fmt::Debug for TursoConnectionExtractor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TursoConnectionExtractor")
+            .field("backend", &DatabaseBackend::Turso)
+            .finish()
+    }
 }
 
 #[cfg(feature = "turso")]
@@ -155,11 +163,7 @@ impl TursoConnectionExtractor {
             .get::<Arc<crate::connection::TursoConnection>>()
             .cloned()
             .map(|connection| TursoConnectionExtractor { connection })
-            .ok_or_else(|| {
-                DatabaseRejection::new(WaeError::internal(
-                    "Turso connection not found in request extensions",
-                ))
-            })
+            .ok_or_else(|| DatabaseRejection::new(WaeError::internal("Turso connection not found in request extensions")))
     }
 
     /// 获取内部 Turso 连接的引用
@@ -192,11 +196,7 @@ impl TursoConnectionExtractor {
     }
 
     /// 执行带参数的语句
-    pub async fn execute_with(
-        &self,
-        sql: &str,
-        params: Vec<wae_types::Value>,
-    ) -> crate::connection::DatabaseResult<u64> {
+    pub async fn execute_with(&self, sql: &str, params: Vec<wae_types::Value>) -> crate::connection::DatabaseResult<u64> {
         self.connection.execute_with(sql, params).await
     }
 
@@ -232,11 +232,7 @@ impl TursoConnectionExtractor {
 
     #[cfg(feature = "turso")]
     /// 执行带参数的语句 (内部使用 turso::Value)
-    pub async fn execute_with_turso(
-        &self,
-        sql: &str,
-        params: Vec<turso::Value>,
-    ) -> crate::connection::DatabaseResult<u64> {
+    pub async fn execute_with_turso(&self, sql: &str, params: Vec<turso::Value>) -> crate::connection::DatabaseResult<u64> {
         self.connection.execute_with_turso(sql, params).await
     }
 }
@@ -245,9 +241,18 @@ impl TursoConnectionExtractor {
 /// PostgreSQL 数据库连接提取器
 ///
 /// 用于从 HTTP 请求的扩展中提取 PostgreSQL 数据库连接。
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PostgresConnectionExtractor {
     connection: Arc<crate::connection::PostgresConnection>,
+}
+
+#[cfg(feature = "postgres")]
+impl fmt::Debug for PostgresConnectionExtractor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PostgresConnectionExtractor")
+            .field("backend", &DatabaseBackend::Postgres)
+            .finish()
+    }
 }
 
 #[cfg(feature = "postgres")]
@@ -264,11 +269,7 @@ impl PostgresConnectionExtractor {
             .get::<Arc<crate::connection::PostgresConnection>>()
             .cloned()
             .map(|connection| PostgresConnectionExtractor { connection })
-            .ok_or_else(|| {
-                DatabaseRejection::new(WaeError::internal(
-                    "PostgreSQL connection not found in request extensions",
-                ))
-            })
+            .ok_or_else(|| DatabaseRejection::new(WaeError::internal("PostgreSQL connection not found in request extensions")))
     }
 
     /// 获取内部 PostgreSQL 连接的引用
@@ -301,11 +302,7 @@ impl PostgresConnectionExtractor {
     }
 
     /// 执行带参数的语句
-    pub async fn execute_with(
-        &self,
-        sql: &str,
-        params: Vec<wae_types::Value>,
-    ) -> crate::connection::DatabaseResult<u64> {
+    pub async fn execute_with(&self, sql: &str, params: Vec<wae_types::Value>) -> crate::connection::DatabaseResult<u64> {
         self.connection.execute_with(sql, params).await
     }
 
@@ -334,9 +331,18 @@ impl PostgresConnectionExtractor {
 /// MySQL 数据库连接提取器
 ///
 /// 用于从 HTTP 请求的扩展中提取 MySQL 数据库连接。
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MySqlConnectionExtractor {
     connection: Arc<crate::connection::MySqlConnection>,
+}
+
+#[cfg(feature = "mysql")]
+impl fmt::Debug for MySqlConnectionExtractor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MySqlConnectionExtractor")
+            .field("backend", &DatabaseBackend::MySql)
+            .finish()
+    }
 }
 
 #[cfg(feature = "mysql")]
@@ -353,11 +359,7 @@ impl MySqlConnectionExtractor {
             .get::<Arc<crate::connection::MySqlConnection>>()
             .cloned()
             .map(|connection| MySqlConnectionExtractor { connection })
-            .ok_or_else(|| {
-                DatabaseRejection::new(WaeError::internal(
-                    "MySQL connection not found in request extensions",
-                ))
-            })
+            .ok_or_else(|| DatabaseRejection::new(WaeError::internal("MySQL connection not found in request extensions")))
     }
 
     /// 获取内部 MySQL 连接的引用
@@ -390,11 +392,7 @@ impl MySqlConnectionExtractor {
     }
 
     /// 执行带参数的语句
-    pub async fn execute_with(
-        &self,
-        sql: &str,
-        params: Vec<wae_types::Value>,
-    ) -> crate::connection::DatabaseResult<u64> {
+    pub async fn execute_with(&self, sql: &str, params: Vec<wae_types::Value>) -> crate::connection::DatabaseResult<u64> {
         self.connection.execute_with(sql, params).await
     }
 

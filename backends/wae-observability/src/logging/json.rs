@@ -39,15 +39,9 @@ impl Default for JsonFormatterConfig {
 }
 
 /// JSON 日志格式化器
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct JsonFormatter {
     config: JsonFormatterConfig,
-}
-
-impl Default for JsonFormatter {
-    fn default() -> Self {
-        Self { config: JsonFormatterConfig::default() }
-    }
 }
 
 impl JsonFormatter {

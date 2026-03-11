@@ -33,3 +33,4 @@ askama = { workspace = true }
 bytes = { workspace = true }
 matchit = { workspace = true }
 mime_guess = { workspace = true }
+serde_urlencoded = { workspace = true }

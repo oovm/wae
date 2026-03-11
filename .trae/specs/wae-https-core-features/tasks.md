@@ -1,6 +1,6 @@
 # wae-https 核心功能 - 实现计划
 
-## [/] 任务 1: 路由系统核心实现
+## [x] 任务 1: 路由系统核心实现
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -15,7 +15,7 @@
   - `human-judgement` TR-1.3: 所有公共 API 都有文档注释
 - **Notes**: 保持现有 API 接口不变
 
-## [ ] 任务 2: 提取器系统实现
+## [/] 任务 2: 提取器系统实现
 - **Priority**: P0
 - **Depends On**: 任务 1
 - **Description**:

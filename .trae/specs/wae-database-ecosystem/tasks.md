@@ -1,6 +1,6 @@
 # wae-database 生态完善 - The Implementation Plan (Decomposed and Prioritized Task List)
 
-## [ ] Task 1: 数据库连接提取器实现
+## [x] Task 1: 数据库连接提取器实现
 - **Priority**: P0
 - **Depends On**: None
 - **Description**:

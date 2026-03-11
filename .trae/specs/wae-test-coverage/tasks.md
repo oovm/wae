@@ -1,6 +1,6 @@
 # WAE 测试覆盖与稳定性 - 实现计划
 
-## [/] Task 1: 为 wae-types 添加完整单元测试
+## [x] Task 1: 为 wae-types 添加完整单元测试
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 

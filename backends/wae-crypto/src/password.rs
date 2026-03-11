@@ -1,6 +1,9 @@
 //! 密码哈希和验证模块
 
 use crate::error::{CryptoError, CryptoResult};
+use argon2::{Argon2, PasswordHash, PasswordHasher as Argon2PasswordHasher, PasswordVerifier, Version};
+use argon2::password_hash::SaltString;
+use rand_core::OsRng;
 use zeroize::Zeroize;
 
 /// 密码哈希算法
@@ -19,11 +22,23 @@ pub struct PasswordHasherConfig {
     pub algorithm: PasswordAlgorithm,
     /// bcrypt 成本因子
     pub bcrypt_cost: u32,
+    /// argon2 内存成本（KB）
+    pub argon2_memory_cost: u32,
+    /// argon2 时间成本
+    pub argon2_time_cost: u32,
+    /// argon2 并行度
+    pub argon2_parallelism: u32,
 }
 
 impl Default for PasswordHasherConfig {
     fn default() -> Self {
-        Self { algorithm: PasswordAlgorithm::Bcrypt, bcrypt_cost: 12 }
+        Self {
+            algorithm: PasswordAlgorithm::Bcrypt,
+            bcrypt_cost: 12,
+            argon2_memory_cost: 19456,
+            argon2_time_cost: 2,
+            argon2_parallelism: 1,
+        }
     }
 }
 
@@ -76,14 +91,28 @@ impl PasswordHasher {
         bcrypt::verify(password, hash).map_err(|_| CryptoError::PasswordVerifyError)
     }
 
-    /// 使用 argon2 哈希密码（预留）
-    fn hash_argon2(&self, _password: &[u8]) -> CryptoResult<String> {
-        Err(CryptoError::InvalidAlgorithm)
+    /// 使用 argon2 哈希密码
+    fn hash_argon2(&self, password: &[u8]) -> CryptoResult<String> {
+        let salt = SaltString::generate(&mut thread_rng());
+        let argon2 = Argon2::new(
+            argon2::Algorithm::Argon2id,
+            Version::V0x13,
+            argon2::Params::new(
+                self.config.argon2_memory_cost,
+                self.config.argon2_time_cost,
+                self.config.argon2_parallelism,
+                None,
+            ).map_err(|_| CryptoError::PasswordHashError)?,
+        );
+        let password_hash = argon2.hash_password(password, &salt).map_err(|_| CryptoError::PasswordHashError)?;
+        Ok(password_hash.to_string())
     }
 
-    /// 使用 argon2 验证密码（预留）
-    fn verify_argon2(&self, _password: &[u8], _hash: &str) -> CryptoResult<bool> {
-        Err(CryptoError::InvalidAlgorithm)
+    /// 使用 argon2 验证密码
+    fn verify_argon2(&self, password: &[u8], hash: &str) -> CryptoResult<bool> {
+        let parsed_hash = PasswordHash::new(hash).map_err(|_| CryptoError::PasswordVerifyError)?;
+        let argon2 = Argon2::default();
+        Ok(argon2.verify_password(password, &parsed_hash).is_ok())
     }
 }
 

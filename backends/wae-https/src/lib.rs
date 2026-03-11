@@ -39,6 +39,121 @@ pub type HttpsResult<T> = WaeResult<T>;
 /// HTTPS 错误类型
 pub type HttpsError = WaeError;
 
+/// 将类型转换为 HTTP 响应的 trait
+///
+/// 类似于 Axum 的 IntoResponse trait，用于将各种类型转换为 HTTP 响应。
+pub trait IntoResponse {
+    /// 将自身转换为 HTTP 响应
+    fn into_response(self) -> Response<Body>;
+}
+
+impl IntoResponse for Response<Body> {
+    fn into_response(self) -> Response<Body> {
+        self
+    }
+}
+
+impl IntoResponse for &'static str {
+    fn into_response(self) -> Response<Body> {
+        Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+            .body(full_body(self))
+            .unwrap()
+    }
+}
+
+impl IntoResponse for String {
+    fn into_response(self) -> Response<Body> {
+        Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+            .body(full_body(self))
+            .unwrap()
+    }
+}
+
+impl<T: IntoResponse> IntoResponse for (StatusCode, T) {
+    fn into_response(self) -> Response<Body> {
+        let mut res = self.1.into_response();
+        *res.status_mut() = self.0;
+        res
+    }
+}
+
+impl<T> IntoResponse for ApiResponse<T>
+where
+    T: serde::Serialize,
+{
+    fn into_response(self) -> Response<Body> {
+        self.into_response()
+    }
+}
+
+/// 处理函数 trait，类似于 Axum 的 Handler trait
+///
+/// 定义了如何将异步函数与提取器绑定并调用。
+pub trait Handler<T, S>: Clone + Send + Sync + 'static {
+    /// 调用处理函数
+    ///
+    /// # 参数
+    ///
+    /// * `parts` - 请求上下文
+    /// * `state` - 应用状态
+    async fn call(self, parts: crate::extract::RequestParts, state: S) -> Response<Body>;
+}
+
+/// 元组处理函数支持（最多支持 16 个参数）
+macro_rules! impl_handler {
+    (
+        [$($ty:ident),*],
+        $last:ident
+    ) => {
+        #[allow(non_snake_case, unused_mut)]
+        impl<F, Fut, S, $($ty,)* $last> Handler<($($ty,)* $last,), S> for F
+        where
+            F: FnOnce($($ty,)* $last,) -> Fut + Clone + Send + Sync + 'static,
+            Fut: std::future::Future<Output = Response<Body>> + Send,
+            S: Clone + Send + Sync + 'static,
+            $($ty: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError>,)*
+            $last: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError>,
+        {
+            async fn call(self, parts: crate::extract::RequestParts, state: S) -> Response<Body> {
+                match <($($ty,)* $last,) as crate::extract::FromRequestParts<S>>::from_request_parts(&parts, &state).await {
+                    Ok(($($ty,)* $last,)) => {
+                        self($($ty,)* $last,).await
+                    }
+                    Err(e) => {
+                        let error_msg = e.to_string();
+                        Response::builder()
+                            .status(StatusCode::BAD_REQUEST)
+                            .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+                            .body(full_body(error_msg))
+                            .unwrap()
+                    }
+                }
+            }
+        }
+    };
+}
+
+impl_handler!([], T1);
+impl_handler!([T1], T2);
+impl_handler!([T1, T2], T3);
+impl_handler!([T1, T2, T3], T4);
+impl_handler!([T1, T2, T3, T4], T5);
+impl_handler!([T1, T2, T3, T4, T5], T6);
+impl_handler!([T1, T2, T3, T4, T5, T6], T7);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7], T8);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8], T9);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9], T10);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10], T11);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11], T12);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12], T13);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13], T14);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14], T15);
+impl_handler!([T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15], T16);
+
 /// 自定义路由类型
 #[derive(Clone)]
 pub struct Router<S = ()> {
@@ -69,22 +184,14 @@ impl Default for Router<()> {
 impl Router<()> {
     /// 创建新的空路由
     pub fn new() -> Self {
-        Self {
-            routes: std::collections::HashMap::new(),
-            raw_routes: Vec::new(),
-            state: (),
-        }
+        Self { routes: std::collections::HashMap::new(), raw_routes: Vec::new(), state: () }
     }
 }
 
 impl<S> Router<S> {
     /// 创建带状态的路由
     pub fn with_state(state: S) -> Self {
-        Self {
-            routes: std::collections::HashMap::new(),
-            raw_routes: Vec::new(),
-            state,
-        }
+        Self { routes: std::collections::HashMap::new(), raw_routes: Vec::new(), state }
     }
 
     /// 获取路由状态
@@ -98,14 +205,15 @@ impl<S> Router<S> {
     }
 
     /// 添加路由到路由表
-    pub fn add_route_inner(&mut self, method: http::Method, path: String, handler: Box<dyn std::any::Any + Send + Sync + 'static>) {
-        let entry = RouteEntry {
-            method: method.clone(),
-            path: path.clone(),
-            handler,
-        };
+    pub fn add_route_inner(
+        &mut self,
+        method: http::Method,
+        path: String,
+        handler: Box<dyn std::any::Any + Send + Sync + 'static>,
+    ) {
+        let entry = RouteEntry { method: method.clone(), path: path.clone(), handler };
         self.raw_routes.push(entry);
-        
+
         let router = self.routes.entry(method).or_insert_with(matchit::Router::new);
         router.insert(path, handler).ok();
     }
@@ -324,11 +432,7 @@ pub struct HttpsServerBuilder<S = ()> {
 impl HttpsServerBuilder<()> {
     /// 创建新的 HTTPS 服务器构建器
     pub fn new() -> Self {
-        Self { 
-            config: HttpsServerConfig::default(), 
-            router: Router::new(),
-            _marker: std::marker::PhantomData,
-        }
+        Self { config: HttpsServerConfig::default(), router: Router::new(), _marker: std::marker::PhantomData }
     }
 }
 
@@ -406,11 +510,7 @@ where
 
     /// 构建 HTTPS 服务器
     pub fn build(self) -> HttpsServer<S> {
-        HttpsServer { 
-            config: self.config, 
-            router: self.router,
-            _marker: std::marker::PhantomData,
-        }
+        HttpsServer { config: self.config, router: self.router, _marker: std::marker::PhantomData }
     }
 }
 

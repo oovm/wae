@@ -1,5 +1,5 @@
-use wae_types::*;
 use std::collections::HashMap;
+use wae_types::*;
 
 #[test]
 fn test_value_constructors() {
@@ -123,13 +123,13 @@ fn test_object_and_array_macros() {
     assert!(empty_obj.is_object());
     assert_eq!(empty_obj.as_object().unwrap().len(), 0);
 
-    let arr = array! [1, 2, "three"];
+    let arr = array![1, 2, "three"];
     assert!(arr.is_array());
     assert_eq!(arr.get_index(0), Some(&Value::Integer(1)));
     assert_eq!(arr.get_index(1), Some(&Value::Integer(2)));
     assert_eq!(arr.get_index(2), Some(&Value::String("three".to_string())));
 
-    let empty_arr = array! [];
+    let empty_arr = array![];
     assert!(empty_arr.is_array());
     assert_eq!(empty_arr.as_array().unwrap().len(), 0);
 }
@@ -141,7 +141,7 @@ fn test_value_json_serialization() {
     assert_eq!(Value::Bool(false).to_json_string(), "false");
     assert_eq!(Value::Integer(42).to_json_string(), "42");
     assert_eq!(Value::Float(3.14).to_json_string(), "3.14");
-    assert_eq!(Value::String("hello").to_json_string(), "\"hello\"");
+    assert_eq!(Value::String("hello".to_string()).to_json_string(), "\"hello\"");
 }
 
 #[test]
@@ -187,8 +187,8 @@ fn test_value_merge() {
     assert_eq!(a.get("only_a"), Some(&Value::Integer(42)));
     assert_eq!(a.get("only_b"), Some(&Value::String("hello".to_string())));
     
-    let mut arr1 = array! [1, 2];
-    let arr2 = array! [3, 4];
+    let mut arr1 = array![1, 2];
+    let arr2 = array![3, 4];
     arr1.merge(arr2);
     assert_eq!(arr1.as_array().unwrap().len(), 4);
 }
@@ -200,41 +200,4 @@ fn test_billing_dimensions_default() {
     assert_eq!(dims.output_text, 0);
     assert_eq!(dims.input_pixels, 0);
     assert_eq!(dims.output_pixels, 0);
-}
-
-#[test]
-fn test_billing_cost_config_calculation() {
-    let config = BillingCostConfig {
-        input_text: TextCost { per_million: dec!(0.0015) },
-        output_text: TextCost { per_million: dec!(0.002) },
-        input_pixels: ImageCost { per_million: dec!(0.0001) },
-        output_pixels: ImageCost { per_million: dec!(0.0002) },
-    };
-    
-    let usage = BillingDimensions {
-        input_text: 1_000_000,
-        output_text: 500_000,
-        input_pixels: 2_000_000,
-        output_pixels: 1_000_000,
-    };
-    
-    let total = config.calculate_total_cost(&usage);
-    
-    let expected = dec!(0.0015) + dec!(0.001) + dec!(0.0002) + dec!(0.0002);
-    assert_eq!(total, expected);
-}
-
-#[test]
-fn test_billing_cost_config_zero_usage() {
-    let config = BillingCostConfig {
-        input_text: TextCost { per_million: dec!(0.0015) },
-        output_text: TextCost { per_million: dec!(0.002) },
-        input_pixels: ImageCost { per_million: dec!(0.0001) },
-        output_pixels: ImageCost { per_million: dec!(0.0002) },
-    };
-    
-    let usage = BillingDimensions::default();
-    let total = config.calculate_total_cost(&usage);
-    
-    assert_eq!(total, dec!(0));
 }

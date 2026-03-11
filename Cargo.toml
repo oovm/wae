@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "backends/*",
     "examples/effect-basic",
+    "examples/https-basic",
 ]
 default-members = [
     "backends/wae-server",
@@ -124,6 +125,7 @@ pact_consumer = "1.4.2"
 pact_verifier = "1.3.4"
 arbitrary = "1.4.2"
 tokio-test = "0.4.5"
+serde_urlencoded = "0.7.1"
 
 [profile.release]
 lto = true

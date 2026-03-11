@@ -345,11 +345,10 @@ impl ObservabilityService {
 /// 初始化后的可观测性服务实例
 pub fn init_observability(config: ObservabilityConfig) -> ObservabilityResult<ObservabilityService> {
     #[cfg(feature = "json-log")]
-    if config.enable_json_log {
-    }
+    let _ = config.enable_json_log;
 
     #[cfg(feature = "otlp")]
-    if config.enable_otlp {}
+    let _ = config.enable_otlp;
 
     #[cfg(feature = "profiling")]
     if config.enable_profiling {

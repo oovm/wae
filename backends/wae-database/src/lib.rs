@@ -22,16 +22,14 @@ pub use connection::{DatabaseService, TursoConnection};
 pub use connection::{MySqlConnection, MySqlDatabaseService};
 #[cfg(feature = "postgres")]
 pub use connection::{PostgresConnection, PostgresDatabaseService};
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
-pub use extract::{
-    DatabaseConnectionExtractor, DatabaseRejection,
-};
-#[cfg(feature = "turso")]
-pub use extract::TursoConnectionExtractor;
-#[cfg(feature = "postgres")]
-pub use extract::PostgresConnectionExtractor;
 #[cfg(feature = "mysql")]
 pub use extract::MySqlConnectionExtractor;
+#[cfg(feature = "postgres")]
+pub use extract::PostgresConnectionExtractor;
+#[cfg(feature = "turso")]
+pub use extract::TursoConnectionExtractor;
+#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+pub use extract::{DatabaseConnectionExtractor, DatabaseRejection};
 #[cfg(feature = "turso")]
 pub use orm::DbRepository;
 #[cfg(feature = "mysql")]

@@ -475,8 +475,10 @@ fn run_container_with_cmd(
 fn get_host_port(container_id: &str, container_port: u16) -> ContainerResult<u16> {
     let output = docker_command(&["port", container_id, &container_port.to_string()])?;
 
-    let port_str =
-        output.split(':').next_back().ok_or_else(|| ContainerError::CommandFailed("Failed to parse port mapping".to_string()))?;
+    let port_str = output
+        .split(':')
+        .next_back()
+        .ok_or_else(|| ContainerError::CommandFailed("Failed to parse port mapping".to_string()))?;
 
     let port = port_str.parse().map_err(|_| ContainerError::CommandFailed("Failed to parse port number".to_string()))?;
 

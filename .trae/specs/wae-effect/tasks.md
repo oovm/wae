@@ -15,7 +15,7 @@
   - `programmatic` TR-1.3: 现有字符串键 API 继续正常工作
 - **Notes**: 使用 std::any::TypeId 和 std::any::Any
 
-## [ ] Task 2: 实现作用域系统（Singleton, Request-scoped）
+## [x] Task 2: 实现作用域系统（Singleton, Request-scoped）
 - **Priority**: P0
 - **Depends On**: [Task 1]
 - **Description**: 

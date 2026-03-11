@@ -222,6 +222,7 @@ fn escape_label_value(value: &str) -> String {
 }
 
 impl MetricType {
+    #[allow(clippy::wrong_self_convention)]
     fn to_str(&self) -> &'static str {
         match self {
             MetricType::Counter => "counter",
