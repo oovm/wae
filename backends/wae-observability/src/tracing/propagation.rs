@@ -27,9 +27,8 @@ pub struct TraceContext {
 impl TraceId {
     /// 创建新的 Trace ID
     pub fn new() -> Self {
-        let mut bytes = [0u8; 16];
-        rand::thread_rng().fill(&mut bytes);
-        TraceId(bytes)
+        let uuid = uuid::Uuid::new_v4();
+        TraceId(*uuid.as_bytes())
     }
 
     /// 从字节创建
@@ -73,9 +72,11 @@ impl fmt::Display for TraceId {
 impl SpanId {
     /// 创建新的 Span ID
     pub fn new() -> Self {
-        let mut bytes = [0u8; 8];
-        rand::thread_rng().fill(&mut bytes);
-        SpanId(bytes)
+        let uuid = uuid::Uuid::new_v4();
+        let bytes = uuid.as_bytes();
+        let mut span_bytes = [0u8; 8];
+        span_bytes.copy_from_slice(&bytes[0..8]);
+        SpanId(span_bytes)
     }
 
     /// 从字节创建

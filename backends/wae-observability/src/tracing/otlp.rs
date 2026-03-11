@@ -3,7 +3,6 @@
 //! 提供轻量级 OTLP 导出器的配置和初始化功能。
 //! 不依赖任何第三方 OpenTelemetry 库，纯自主实现。
 
-use rand::Rng;
 use std::time::Duration;
 
 /// OTLP 配置

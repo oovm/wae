@@ -10,6 +10,7 @@ use std::{
 };
 
 /// 测试容器错误类型
+#[expect(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum ContainerError {
     /// Docker 命令执行失败
@@ -30,9 +31,11 @@ pub enum ContainerError {
 }
 
 /// 测试容器结果类型
+#[expect(dead_code)]
 pub type ContainerResult<T> = Result<T, ContainerError>;
 
 /// 测试容器 trait，定义容器生命周期管理方法
+#[expect(dead_code)]
 pub trait TestContainer {
     /// 获取容器的连接 URL
     fn connection_url(&self) -> String;
@@ -50,6 +53,7 @@ pub trait TestContainer {
 }
 
 /// 检查 Docker 是否可用
+#[expect(dead_code)]
 pub fn is_docker_available() -> bool {
     let output = Command::new("docker").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).output();
 
@@ -60,6 +64,7 @@ pub fn is_docker_available() -> bool {
 }
 
 /// 执行 Docker 命令
+#[expect(dead_code)]
 fn docker_command(args: &[&str]) -> ContainerResult<String> {
     let output = Command::new("docker").args(args).stdout(Stdio::piped()).stderr(Stdio::piped()).output()?;
 
@@ -73,6 +78,7 @@ fn docker_command(args: &[&str]) -> ContainerResult<String> {
 }
 
 /// 等待容器就绪
+#[expect(dead_code)]
 async fn wait_for_ready(_container_id: &str, check_fn: impl Fn() -> bool, timeout: Duration) -> ContainerResult<()> {
     let start = Instant::now();
 
@@ -87,6 +93,7 @@ async fn wait_for_ready(_container_id: &str, check_fn: impl Fn() -> bool, timeou
 }
 
 /// 检查容器日志是否包含特定消息
+#[expect(dead_code)]
 fn check_container_log(container_id: &str, message: &str) -> bool {
     let output = Command::new("docker").args(["logs", container_id]).stdout(Stdio::piped()).stderr(Stdio::piped()).output();
 
@@ -101,6 +108,7 @@ fn check_container_log(container_id: &str, message: &str) -> bool {
 }
 
 /// PostgreSQL 容器
+#[expect(dead_code)]
 pub struct PostgresContainer {
     container_id: String,
     host: String,
@@ -111,6 +119,7 @@ pub struct PostgresContainer {
 }
 
 /// PostgreSQL 镜像配置
+#[expect(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PostgresImage {
     tag: String,
@@ -119,6 +128,7 @@ pub struct PostgresImage {
     database: String,
 }
 
+#[expect(dead_code)]
 impl Default for PostgresImage {
     fn default() -> Self {
         Self {
@@ -130,6 +140,7 @@ impl Default for PostgresImage {
     }
 }
 
+#[expect(dead_code)]
 impl PostgresContainer {
     /// 创建默认 PostgreSQL 容器
     pub async fn default() -> ContainerResult<Self> {
@@ -186,6 +197,7 @@ impl PostgresContainer {
     }
 }
 
+#[expect(dead_code)]
 impl TestContainer for PostgresContainer {
     fn connection_url(&self) -> String {
         format!("postgres://{}:{}@{}:{}/{}", self.username, self.password, self.host, self.port, self.database)
@@ -207,6 +219,7 @@ impl TestContainer for PostgresContainer {
 }
 
 /// MySQL 容器
+#[expect(dead_code)]
 pub struct MySqlContainer {
     container_id: String,
     host: String,
@@ -217,6 +230,7 @@ pub struct MySqlContainer {
 }
 
 /// MySQL 镜像配置
+#[expect(dead_code)]
 #[derive(Debug, Clone)]
 pub struct MySqlImage {
     tag: String,
@@ -226,6 +240,7 @@ pub struct MySqlImage {
     root_password: String,
 }
 
+#[expect(dead_code)]
 impl Default for MySqlImage {
     fn default() -> Self {
         Self {
@@ -238,6 +253,7 @@ impl Default for MySqlImage {
     }
 }
 
+#[expect(dead_code)]
 impl MySqlContainer {
     /// 创建默认 MySQL 容器
     pub async fn default() -> ContainerResult<Self> {
