@@ -3,6 +3,9 @@
 //! 提供数据库表结构的元信息定义，用于自动迁移。
 
 use serde::{Deserialize, Serialize};
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+use std::collections::HashMap;
 
 /// 列类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

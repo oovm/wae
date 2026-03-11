@@ -16,7 +16,7 @@ fn test_base64_decode() {
 
 #[test]
 fn test_base64_roundtrip() {
-    let test_cases = vec![
+    let test_cases: Vec<&[u8]> = vec![
         b"",
         b"a",
         b"ab",
@@ -50,7 +50,7 @@ fn test_base64url_decode() {
 
 #[test]
 fn test_base64url_roundtrip() {
-    let test_cases = vec![
+    let test_cases: Vec<&[u8]> = vec![
         b"",
         b"a",
         b"ab",

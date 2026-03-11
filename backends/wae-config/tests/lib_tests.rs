@@ -4,12 +4,16 @@ use std::fs;
 use wae_config::*;
 use wae_types::WaeResult;
 
-unsafe fn set_env_var(key: &str, value: &str) {
-    env::set_var(key, value);
+fn set_env_var(key: &str, value: &str) {
+    unsafe {
+        env::set_var(key, value);
+    }
 }
 
-unsafe fn remove_env_var(key: &str) {
-    env::remove_var(key);
+fn remove_env_var(key: &str) {
+    unsafe {
+        env::remove_var(key);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -99,11 +103,9 @@ debug: false
 
 #[test]
 fn test_with_env() {
-    unsafe {
-        set_env_var("TEST_NAME", "env-app");
-        set_env_var("TEST_PORT", "1234");
-        set_env_var("TEST_DEBUG", "true");
-    }
+    set_env_var("TEST_NAME", "env-app");
+    set_env_var("TEST_PORT", "1234");
+    set_env_var("TEST_DEBUG", "true");
     
     let config: TestConfig = ConfigLoader::new()
         .with_env("TEST_")
@@ -114,19 +116,17 @@ fn test_with_env() {
     assert_eq!(config.port, 1234);
     assert!(config.debug);
     
-    unsafe {
-        remove_env_var("TEST_NAME");
-        remove_env_var("TEST_PORT");
-        remove_env_var("TEST_DEBUG");
-    }
+    remove_env_var("TEST_NAME");
+    remove_env_var("TEST_PORT");
+    remove_env_var("TEST_DEBUG");
 }
 
 #[test]
 fn test_with_env_separator() {
-    env::set_var("APP_DB_HOST", "localhost");
-    env::set_var("APP_DB_PORT", "5432");
-    env::set_var("APP_SERVER_ADDRESS", "0.0.0.0");
-    env::set_var("APP_SERVER_PORT", "8080");
+    set_env_var("APP_DATABASE_HOST", "localhost");
+    set_env_var("APP_DATABASE_PORT", "5432");
+    set_env_var("APP_SERVER_ADDRESS", "0.0.0.0");
+    set_env_var("APP_SERVER_PORT", "8080");
     
     let config: NestedConfig = ConfigLoader::new()
         .with_env_separator("APP_", "_")
@@ -138,10 +138,10 @@ fn test_with_env_separator() {
     assert_eq!(config.server.address, "0.0.0.0");
     assert_eq!(config.server.port, 8080);
     
-    env::remove_var("APP_DB_HOST");
-    env::remove_var("APP_DB_PORT");
-    env::remove_var("APP_SERVER_ADDRESS");
-    env::remove_var("APP_SERVER_PORT");
+    remove_env_var("APP_DATABASE_HOST");
+    remove_env_var("APP_DATABASE_PORT");
+    remove_env_var("APP_SERVER_ADDRESS");
+    remove_env_var("APP_SERVER_PORT");
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn test_extract_with_context_error() {
     assert!(result.is_err());
     
     let err = result.unwrap_err();
-    let err_msg = format!("{}", err);
+    let err_msg = format!("{:?}", err);
     assert!(err_msg.contains("Failed to load config"));
 }
 
@@ -216,9 +216,9 @@ debug = false
 
 #[test]
 fn test_from_env() {
-    env::set_var("FROMENV_NAME", "from-env");
-    env::set_var("FROMENV_PORT", "3000");
-    env::set_var("FROMENV_DEBUG", "false");
+    set_env_var("FROMENV_NAME", "from-env");
+    set_env_var("FROMENV_PORT", "3000");
+    set_env_var("FROMENV_DEBUG", "false");
     
     let config: TestConfig = from_env("FROMENV_").unwrap();
     
@@ -226,9 +226,9 @@ fn test_from_env() {
     assert_eq!(config.port, 3000);
     assert!(!config.debug);
     
-    env::remove_var("FROMENV_NAME");
-    env::remove_var("FROMENV_PORT");
-    env::remove_var("FROMENV_DEBUG");
+    remove_env_var("FROMENV_NAME");
+    remove_env_var("FROMENV_PORT");
+    remove_env_var("FROMENV_DEBUG");
 }
 
 #[test]
@@ -244,8 +244,8 @@ debug = false
     
     fs::write(&toml_path, toml_content).unwrap();
     
-    env::set_var("PRIORITY_NAME", "env-name");
-    env::set_var("PRIORITY_PORT", "2000");
+    set_env_var("PRIORITY_NAME", "env-name");
+    set_env_var("PRIORITY_PORT", "2000");
     
     let defaults = TestConfig {
         name: "default-name".to_string(),
@@ -264,6 +264,6 @@ debug = false
     assert_eq!(config.port, 2000);
     assert!(!config.debug);
     
-    env::remove_var("PRIORITY_NAME");
-    env::remove_var("PRIORITY_PORT");
+    remove_env_var("PRIORITY_NAME");
+    remove_env_var("PRIORITY_PORT");
 }

@@ -7059,7 +7059,6 @@ dependencies = [
  "hex",
  "hmac",
  "rand 0.10.0",
- "rand_core 0.10.0",
  "sha1",
  "sha2",
  "wae-types",

@@ -28,7 +28,7 @@
   - `programmatic` TR-2.2: Request-scoped 依赖在不同请求中返回不同实例
 - **Notes**: Request-scoped 依赖可以在 Effectful 中独立存储
 
-## [ ] Task 3: 为 AlgebraicEffect 和 Effectful 添加类型安全的便捷方法
+## [x] Task 3: 为 AlgebraicEffect 和 Effectful 添加类型安全的便捷方法
 - **Priority**: P1
 - **Depends On**: [Task 2]
 - **Description**: 
@@ -40,7 +40,7 @@
   - `programmatic` TR-3.1: with_type 和 use_type 方法正常工作
   - `programmatic` TR-3.2: 便捷方法（with_config, use_config 等）正常工作
 
-## [ ] Task 4: 在 wae-macros 中实现 use_xxx!() 宏
+## [x] Task 4: 在 wae-macros 中实现 use_xxx!() 宏
 - **Priority**: P1
 - **Depends On**: [Task 3]
 - **Description**: 
@@ -52,7 +52,7 @@
   - `programmatic` TR-4.1: use_effect! 宏能正确展开并获取依赖
   - `programmatic` TR-4.2: 宏的各种语法变体都能正常工作
 
-## [ ] Task 5: 编写完整的测试
+## [x] Task 5: 编写完整的测试
 - **Priority**: P1
 - **Depends On**: [Task 1, Task 2, Task 3, Task 4]
 - **Description**: 
@@ -65,7 +65,7 @@
   - `programmatic` TR-5.1: 所有新功能测试通过
   - `programmatic` TR-5.2: 所有现有测试通过
 
-## [ ] Task 6: 更新文档和示例
+## [x] Task 6: 更新文档和示例
 - **Priority**: P2
 - **Depends On**: [Task 5]
 - **Description**: 

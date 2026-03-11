@@ -15,7 +15,7 @@
   - `human-judgement` TR-1.3: 所有公共 API 都有文档注释
 - **Notes**: 保持现有 API 接口不变
 
-## [/] 任务 2: 提取器系统实现
+## [x] 任务 2: 提取器系统实现
 - **Priority**: P0
 - **Depends On**: 任务 1
 - **Description**:
@@ -32,7 +32,7 @@
   - `programmatic` TR-2.4: Form 体能正确提取和反序列化
   - `human-judgement` TR-2.5: 提取器实现有完整文档注释
 
-## [ ] 任务 3: 服务器启动实现
+## [/] 任务 3: 服务器启动实现
 - **Priority**: P0
 - **Depends On**: 任务 1, 任务 2
 - **Description**:

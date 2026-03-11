@@ -96,3 +96,27 @@ fn test_hmac_empty_input() {
 
 #[test]
 fn test_hmac_empty_secret() {
+    let secret = b"";
+    let data = b"hello world";
+    
+    let signature = hmac_sign(HmacAlgorithm::SHA256, secret, data).unwrap();
+    let result = hmac_verify(HmacAlgorithm::SHA256, secret, data, &signature).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_hmac_algorithm_clone_copy() {
+    let alg = HmacAlgorithm::SHA256;
+    let alg2 = alg;
+    assert_eq!(alg, alg2);
+    
+    let alg3 = alg.clone();
+    assert_eq!(alg, alg3);
+}
+
+#[test]
+fn test_hmac_algorithm_debug() {
+    let alg = HmacAlgorithm::SHA1;
+    let debug_str = format!("{:?}", alg);
+    assert!(debug_str.contains("SHA1"));
+}

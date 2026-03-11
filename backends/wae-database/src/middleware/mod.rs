@@ -2,7 +2,7 @@
 //!
 //! 提供请求级别的自动事务管理，在请求开始时开启事务，请求成功时提交，失败时回滚。
 
-use crate::connection::{DatabaseConnection, DatabaseResult};
+use crate::connection::DatabaseConnection;
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use std::{
@@ -133,7 +133,7 @@ where
 {
     type Response = S::Response;
     type Error = S::Error;
-    type Future = TransactionFuture<S::Future, C>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -142,65 +142,29 @@ where
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         req.extensions_mut().insert(self.connection.clone());
 
+        let config = self.config.clone();
+        let connection = self.connection.clone();
         let future = self.inner.call(req);
-        TransactionFuture {
-            inner: future,
-            config: self.config.clone(),
-            connection: self.connection.clone(),
-            transaction_started: false,
-        }
-    }
-}
 
-pin_project! {
-    /// 事务未来
-    pub struct TransactionFuture<F, C> {
-        #[pin]
-        inner: F,
-        config: TransactionConfig,
-        connection: Arc<C>,
-        transaction_started: bool,
-    }
-}
+        Box::pin(async move {
+            if !config.enabled {
+                return future.await;
+            }
 
-impl<F, C, Res, E> Future for TransactionFuture<F, C>
-where
-    F: Future<Output = Result<Res, E>>,
-    C: DatabaseConnection + Send + Sync + 'static,
-{
-    type Output = Result<Res, E>;
+            let _ = connection.begin_transaction().await;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut this = self.project();
+            let result = future.await;
 
-        if *this.config.enabled && !*this.transaction_started {
-            let connection = this.connection.clone();
-            match connection.begin_transaction() {
+            match &result {
                 Ok(_) => {
-                    *this.transaction_started = true;
+                    let _ = connection.commit().await;
                 }
                 Err(_) => {
-                    *this.transaction_started = false;
+                    let _ = connection.rollback().await;
                 }
             }
-        }
 
-        match this.inner.poll(cx) {
-            Poll::Ready(result) => {
-                if *this.config.enabled && *this.transaction_started {
-                    let connection = this.connection.clone();
-                    match result {
-                        Ok(_) => {
-                            let _ = connection.commit();
-                        }
-                        Err(_) => {
-                            let _ = connection.rollback();
-                        }
-                    }
-                }
-                Poll::Ready(result)
-            }
-            Poll::Pending => Poll::Pending,
-        }
+            result
+        })
     }
 }

@@ -11,6 +11,9 @@ pub mod tls;
 
 pub use wae_session as session;
 
+pub use router::{RouterBuilder, MethodRouter, get, post, put, delete, patch, options, head, trace};
+pub use response::{JsonResponse, Html, Redirect, Attachment, StreamResponse};
+
 use http::{Response, StatusCode, header};
 use http_body_util::Full;
 use hyper::body::Bytes;
@@ -162,9 +165,17 @@ struct RouteEntry {
 
 impl<S: Clone> Clone for Router<S> {
     fn clone(&self) -> Self {
+        let mut routes = std::collections::HashMap::new();
+        for (method, router) in &self.routes {
+            let mut new_router = matchit::Router::new();
+            for (path, _) in router.iter() {
+                let _ = new_router.insert(path.to_string(), Box::new(()));
+            }
+            routes.insert(method.clone(), new_router);
+        }
         Self {
-            routes: std::collections::HashMap::new(),
-            raw_routes: Vec::new(),
+            routes,
+            raw_routes: self.raw_routes.clone(),
             state: self.state.clone(),
         }
     }

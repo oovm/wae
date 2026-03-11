@@ -390,7 +390,6 @@ pub fn query_scalar(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn use_effect(input: TokenStream) -> TokenStream {
-    let input = proc_macro2::TokenStream::from(input);
     let parsed = syn::parse_macro_input!(input as UseEffectInput);
 
     let expanded = match parsed {
