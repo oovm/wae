@@ -11,7 +11,7 @@ AI 功能模块 - 提供人工智能服务的统一抽象和集成。
 
 ## 技术栈
 
-- **HTTP 客户端**: reqwest
+- **HTTP 客户端**: hyper, hyper-tls
 - **异步运行时**: Tokio
 - **序列化**: serde
 

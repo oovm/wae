@@ -51,7 +51,8 @@ impl<'a> SchemaReflector<'a> {
     }
 
     async fn get_table_names_mysql(&self) -> DatabaseResult<Vec<String>> {
-        let sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name != '_migrations'";
+        let sql =
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name != '_migrations'";
         let mut rows = self.conn.query(sql).await?;
 
         let mut tables = Vec::new();
@@ -324,7 +325,10 @@ impl<'a> SchemaReflector<'a> {
     }
 
     async fn table_exists_mysql(&self, table_name: &str) -> DatabaseResult<bool> {
-        let sql = format!("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '{}'", table_name);
+        let sql = format!(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '{}'",
+            table_name
+        );
         let mut rows = self.conn.query(&sql).await?;
 
         if let Some(row) = rows.next().await? {

@@ -250,9 +250,7 @@ pub mod memory {
 
     impl UnboundedStore {
         fn new() -> Self {
-            Self {
-                map: HashMap::new(),
-            }
+            Self { map: HashMap::new() }
         }
     }
 
@@ -265,11 +263,7 @@ pub mod memory {
 
     impl LruStore {
         fn new(max_capacity: Option<usize>) -> Self {
-            Self {
-                map: HashMap::new(),
-                order: Vec::new(),
-                max_capacity,
-            }
+            Self { map: HashMap::new(), order: Vec::new(), max_capacity }
         }
 
         fn touch(&mut self, key: &str) {
@@ -285,7 +279,8 @@ pub mod memory {
                     if let Some(key) = self.order.first().cloned() {
                         self.map.remove(&key);
                         self.order.remove(0);
-                    } else {
+                    }
+                    else {
                         break;
                     }
                 }
@@ -302,11 +297,7 @@ pub mod memory {
 
     impl LfuStore {
         fn new(max_capacity: Option<usize>) -> Self {
-            Self {
-                map: HashMap::new(),
-                frequencies: HashMap::new(),
-                max_capacity,
-            }
+            Self { map: HashMap::new(), frequencies: HashMap::new(), max_capacity }
         }
 
         fn increment_frequency(&mut self, key: &str) {
@@ -319,7 +310,8 @@ pub mod memory {
                     if let Some(key_to_evict) = self.find_least_frequent_key() {
                         self.map.remove(&key_to_evict);
                         self.frequencies.remove(&key_to_evict);
-                    } else {
+                    }
+                    else {
                         break;
                     }
                 }
@@ -358,7 +350,8 @@ pub mod memory {
                     if has_key {
                         store.touch(key);
                         store.map.get(key).cloned()
-                    } else {
+                    }
+                    else {
                         None
                     }
                 }
@@ -367,7 +360,8 @@ pub mod memory {
                     if has_key {
                         store.increment_frequency(key);
                         store.map.get(key).cloned()
-                    } else {
+                    }
+                    else {
                         None
                     }
                 }
@@ -382,7 +376,8 @@ pub mod memory {
                 CacheStore::Lru(store) => {
                     if store.map.contains_key(&key) {
                         store.touch(&key);
-                    } else {
+                    }
+                    else {
                         store.order.push(key.clone());
                     }
                     store.map.insert(key, entry);
@@ -391,7 +386,8 @@ pub mod memory {
                 CacheStore::Lfu(store) => {
                     if store.map.contains_key(&key) {
                         store.increment_frequency(&key);
-                    } else {
+                    }
+                    else {
                         *store.frequencies.entry(key.clone()).or_insert(0) = 1;
                     }
                     store.map.insert(key, entry);
@@ -409,7 +405,8 @@ pub mod memory {
                             store.order.remove(pos);
                         }
                         Some(entry)
-                    } else {
+                    }
+                    else {
                         None
                     }
                 }
@@ -417,7 +414,8 @@ pub mod memory {
                     if let Some(entry) = store.map.remove(key) {
                         store.frequencies.remove(key);
                         Some(entry)
-                    } else {
+                    }
+                    else {
                         None
                     }
                 }
@@ -439,7 +437,8 @@ pub mod memory {
                     if store.map.contains_key(key) {
                         store.touch(key);
                         store.map.get_mut(key)
-                    } else {
+                    }
+                    else {
                         None
                     }
                 }
@@ -447,7 +446,8 @@ pub mod memory {
                     if store.map.contains_key(key) {
                         store.increment_frequency(key);
                         store.map.get_mut(key)
-                    } else {
+                    }
+                    else {
                         None
                     }
                 }
@@ -526,10 +526,7 @@ pub mod memory {
                 EvictionPolicy::Lru => CacheStore::Lru(LruStore::new(config.max_capacity)),
                 EvictionPolicy::Lfu => CacheStore::Lfu(LfuStore::new(config.max_capacity)),
             };
-            Self {
-                config,
-                store: Arc::new(RwLock::new(store)),
-            }
+            Self { config, store: Arc::new(RwLock::new(store)) }
         }
 
         fn build_key(&self, key: &str) -> String {

@@ -40,10 +40,7 @@ impl Default for RedisConfig {
 impl RedisConfig {
     /// 创建新的 Redis 配置
     pub fn new(url: String) -> Self {
-        Self {
-            url,
-            ..Default::default()
-        }
+        Self { url, ..Default::default() }
     }
 
     /// 设置连接池大小
@@ -83,11 +80,7 @@ impl RedisCacheBackend {
     }
 
     fn build_key(&self, key: &str) -> String {
-        if self.config.key_prefix.is_empty() {
-            key.to_string()
-        } else {
-            format!("{}:{}", self.config.key_prefix, key)
-        }
+        if self.config.key_prefix.is_empty() { key.to_string() } else { format!("{}:{}", self.config.key_prefix, key) }
     }
 }
 
@@ -95,13 +88,14 @@ impl RedisCacheBackend {
 impl CacheBackend for RedisCacheBackend {
     async fn get_bytes(&self, key: &str) -> CacheResult<Option<Vec<u8>>> {
         let full_key = self.build_key(key);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let result: Option<Vec<u8>> = conn.get(full_key).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis GET failed: {}", e))
-        })?;
+        let result: Option<Vec<u8>> =
+            conn.get(full_key).await.map_err(|e| wae_types::WaeError::internal(format!("Redis GET failed: {}", e)))?;
 
         Ok(result)
     }
@@ -109,19 +103,24 @@ impl CacheBackend for RedisCacheBackend {
     async fn set_bytes(&self, key: &str, value: &[u8], ttl: Option<Duration>) -> CacheResult<()> {
         let full_key = self.build_key(key);
         let effective_ttl = ttl.or(self.config.default_ttl);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
         if let Some(ttl) = effective_ttl {
             let ttl_secs = ttl.as_secs() as u64;
-            let _: () = conn.set_ex(full_key, value, ttl_secs).await.map_err(|e| {
-                wae_types::WaeError::internal(format!("Redis SETEX failed: {}", e))
-            })?;
-        } else {
-            let _: () = conn.set(full_key, value).await.map_err(|e| {
-                wae_types::WaeError::internal(format!("Redis SET failed: {}", e))
-            })?;
+            let _: () = conn
+                .set_ex(full_key, value, ttl_secs)
+                .await
+                .map_err(|e| wae_types::WaeError::internal(format!("Redis SETEX failed: {}", e)))?;
+        }
+        else {
+            let _: () = conn
+                .set(full_key, value)
+                .await
+                .map_err(|e| wae_types::WaeError::internal(format!("Redis SET failed: {}", e)))?;
         }
 
         Ok(())
@@ -129,84 +128,86 @@ impl CacheBackend for RedisCacheBackend {
 
     async fn delete(&self, key: &str) -> CacheResult<bool> {
         let full_key = self.build_key(key);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let count: u64 = conn.del(full_key).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis DEL failed: {}", e))
-        })?;
+        let count: u64 =
+            conn.del(full_key).await.map_err(|e| wae_types::WaeError::internal(format!("Redis DEL failed: {}", e)))?;
 
         Ok(count > 0)
     }
 
     async fn exists(&self, key: &str) -> CacheResult<bool> {
         let full_key = self.build_key(key);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let count: u32 = conn.exists(full_key).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis EXISTS failed: {}", e))
-        })?;
+        let count: u32 =
+            conn.exists(full_key).await.map_err(|e| wae_types::WaeError::internal(format!("Redis EXISTS failed: {}", e)))?;
 
         Ok(count > 0)
     }
 
     async fn expire(&self, key: &str, ttl: Duration) -> CacheResult<bool> {
         let full_key = self.build_key(key);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
         let ttl_secs = ttl.as_secs() as i64;
-        let result: bool = conn.expire(full_key, ttl_secs).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis EXPIRE failed: {}", e))
-        })?;
+        let result: bool = conn
+            .expire(full_key, ttl_secs)
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Redis EXPIRE failed: {}", e)))?;
 
         Ok(result)
     }
 
     async fn ttl(&self, key: &str) -> CacheResult<Option<Duration>> {
         let full_key = self.build_key(key);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let ttl_secs: i64 = conn.ttl(full_key).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis TTL failed: {}", e))
-        })?;
+        let ttl_secs: i64 =
+            conn.ttl(full_key).await.map_err(|e| wae_types::WaeError::internal(format!("Redis TTL failed: {}", e)))?;
 
-        if ttl_secs < 0 {
-            Ok(None)
-        } else {
-            Ok(Some(Duration::from_secs(ttl_secs as u64)))
-        }
+        if ttl_secs < 0 { Ok(None) } else { Ok(Some(Duration::from_secs(ttl_secs as u64))) }
     }
 
     async fn mget_bytes(&self, keys: &[&str]) -> CacheResult<Vec<Option<Vec<u8>>>> {
         let full_keys: Vec<String> = keys.iter().map(|k| self.build_key(k)).collect();
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let result: Vec<Option<Vec<u8>>> = conn.mget(full_keys).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis MGET failed: {}", e))
-        })?;
+        let result: Vec<Option<Vec<u8>>> =
+            conn.mget(full_keys).await.map_err(|e| wae_types::WaeError::internal(format!("Redis MGET failed: {}", e)))?;
 
         Ok(result)
     }
 
     async fn mset_bytes(&self, items: &[(&str, &[u8])], ttl: Option<Duration>) -> CacheResult<()> {
         let effective_ttl = ttl.or(self.config.default_ttl);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let full_items: Vec<(String, &[u8])> = items
-            .iter()
-            .map(|(k, v)| (self.build_key(k), *v))
-            .collect();
+        let full_items: Vec<(String, &[u8])> = items.iter().map(|(k, v)| (self.build_key(k), *v)).collect();
 
         let mut pipe = redis::pipe();
         pipe.mset(&full_items);
@@ -218,63 +219,74 @@ impl CacheBackend for RedisCacheBackend {
             }
         }
 
-        let _: () = pipe.query_async(&mut conn).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis MSET failed: {}", e))
-        })?;
+        let _: () = pipe
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Redis MSET failed: {}", e)))?;
 
         Ok(())
     }
 
     async fn mdelete(&self, keys: &[&str]) -> CacheResult<u64> {
         let full_keys: Vec<String> = keys.iter().map(|k| self.build_key(k)).collect();
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let count: u64 = conn.del(full_keys).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis MDEL failed: {}", e))
-        })?;
+        let count: u64 =
+            conn.del(full_keys).await.map_err(|e| wae_types::WaeError::internal(format!("Redis MDEL failed: {}", e)))?;
 
         Ok(count)
     }
 
     async fn incr(&self, key: &str, delta: i64) -> CacheResult<i64> {
         let full_key = self.build_key(key);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let result: i64 = conn.incr(full_key, delta).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis INCRBY failed: {}", e))
-        })?;
+        let result: i64 = conn
+            .incr(full_key, delta)
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Redis INCRBY failed: {}", e)))?;
 
         Ok(result)
     }
 
     async fn decr(&self, key: &str, delta: i64) -> CacheResult<i64> {
         let full_key = self.build_key(key);
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
-        let result: i64 = conn.decr(full_key, delta).await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Redis DECRBY failed: {}", e))
-        })?;
+        let result: i64 = conn
+            .decr(full_key, delta)
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Redis DECRBY failed: {}", e)))?;
 
         Ok(result)
     }
 
     async fn clear(&self) -> CacheResult<()> {
-        let mut conn = self.pool.get().await.map_err(|e| {
-            wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e))
-        })?;
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
         if self.config.key_prefix.is_empty() {
             let _: () = redis::cmd("FLUSHDB")
                 .query_async(&mut conn)
                 .await
                 .map_err(|e| wae_types::WaeError::internal(format!("Redis FLUSHDB failed: {}", e)))?;
-        } else {
+        }
+        else {
             let pattern = format!("{}:*", self.config.key_prefix);
             let keys: Vec<String> = redis::cmd("KEYS")
                 .arg(pattern)
@@ -283,9 +295,8 @@ impl CacheBackend for RedisCacheBackend {
                 .map_err(|e| wae_types::WaeError::internal(format!("Redis KEYS failed: {}", e)))?;
 
             if !keys.is_empty() {
-                let _: u64 = conn.del(keys).await.map_err(|e| {
-                    wae_types::WaeError::internal(format!("Redis DEL failed: {}", e))
-                })?;
+                let _: u64 =
+                    conn.del(keys).await.map_err(|e| wae_types::WaeError::internal(format!("Redis DEL failed: {}", e)))?;
             }
         }
 

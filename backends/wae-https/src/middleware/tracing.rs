@@ -49,10 +49,7 @@ where
         let span = info_span!("http_request", method = %method, uri = %uri);
 
         let future = self.inner.call(req);
-        TracingFuture {
-            inner: future,
-            span,
-        }
+        TracingFuture { inner: future, span }
     }
 }
 

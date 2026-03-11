@@ -16,32 +16,60 @@ mod http_client;
 mod mock;
 mod service_mock;
 
+#[cfg(any(feature = "bench", feature = "load-test"))]
+mod benchmark;
+
+#[cfg(any(feature = "bench", feature = "load-test"))]
+mod load_test;
+
+#[cfg(feature = "fuzz")]
+mod fuzz;
+
+#[cfg(feature = "pact")]
+mod contract;
+
 pub use assertions::{AsyncAssert, assert_eventually, assert_json_contains, assert_matches_regex};
 
-pub use environment::{TestEnv, TestEnvBuilder, TestEnvConfig, TestEnvState, create_test_env, create_test_env_with_config};
+pub use environment::{
+    AsyncTestLifecycleHook, TestEnv, TestEnvBuilder, TestEnvConfig, TestEnvState, TestLifecycleHook, TestServiceConfig,
+    create_test_env, create_test_env_with_config,
+};
 
 pub use fixture::{
     Fixture, FixtureBuilder, FixtureGenerator, RandomBool, RandomChoice, RandomDateTime, RandomEmail, RandomNumber,
     RandomString, RandomUuid,
 };
 
-pub use mock::{Mock, MockBuilder, MockCall, MockExpectation, MockFn, MockResult, verify};
+pub use mock::{AsyncMock, Mock, MockBuilder, MockCall, MockExpectation, MockFn, MockResult, verify, verify_async};
 
-pub use http_client::{TestClient, RequestBuilder, TestResponse};
+#[cfg(feature = "mockall")]
+pub use mock::{automock, mock, mockall, predicate, sequence};
 
-pub use db_mock::{
-    DatabaseExpectation, DatabaseQuery, DatabaseResult, MockDatabase, MockDatabaseBuilder,
-};
+pub use http_client::{RequestBuilder, TestClient, TestResponse};
+
+pub use db_mock::{DatabaseExpectation, DatabaseQuery, DatabaseResult, MockDatabase, MockDatabaseBuilder};
 
 pub use service_mock::{
-    MockExternalService, MockExternalServiceBuilder, ServiceExpectation, ServiceMatchRule,
-    ServiceRequest, ServiceResponse, ServiceResponseConfig,
+    MockExternalService, MockExternalServiceBuilder, ServiceExpectation, ServiceMatchRule, ServiceRequest, ServiceResponse,
+    ServiceResponseConfig,
 };
 
 #[cfg(feature = "containers")]
 pub use containers::{
-    TestContainer, PostgresContainer, PostgresImage, MySqlContainer, MySqlImage, 
-    RedisContainer, RedisImage, is_docker_available
+    MySqlContainer, MySqlImage, PostgresContainer, PostgresImage, RedisContainer, RedisImage, TestContainer,
+    is_docker_available,
 };
 
 pub use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
+
+#[cfg(any(feature = "bench", feature = "load-test"))]
+pub use benchmark::{BenchmarkConfig, PerformanceStats, SimpleTimer};
+
+#[cfg(any(feature = "bench", feature = "load-test"))]
+pub use load_test::{LatencyStats, LoadTestConfig, LoadTestResult, RequestResult, SyncLoadTester};
+
+#[cfg(feature = "fuzz")]
+pub use fuzz::{Arbitrary, SafeArbitrary, SafeEmail, SafeHttpStatus, SafeUuid, Unstructured};
+
+#[cfg(feature = "pact")]
+pub use contract::*;

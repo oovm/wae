@@ -1,13 +1,11 @@
 //! CSRF 服务实现
 
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine;
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
-use crate::csrf::{CsrfConfig, CsrfResult, CsrfError};
+use crate::csrf::{CsrfConfig, CsrfError, CsrfResult};
 
 /// CSRF 令牌记录
 #[derive(Debug, Clone)]
@@ -38,14 +36,11 @@ pub struct CsrfService {
 
 impl CsrfService {
     /// 创建新的 CSRF 服务
-    /// 
+    ///
     /// # Arguments
     /// * `config` - CSRF 配置
     pub fn new(config: CsrfConfig) -> Self {
-        Self {
-            config,
-            tokens: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self { config, tokens: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// 使用默认配置创建 CSRF 服务
@@ -54,7 +49,7 @@ impl CsrfService {
     }
 
     /// 生成 CSRF 令牌
-    /// 
+    ///
     /// # Arguments
     /// * `session_id` - 会话 ID
     pub async fn generate_token(&self, session_id: &str) -> CsrfResult<CsrfToken> {
@@ -63,11 +58,7 @@ impl CsrfService {
         let token_hash = Self::hash_token(&token);
         let expires_at = Utc::now().timestamp() + self.config.token_ttl as i64;
 
-        let record = CsrfTokenRecord {
-            token_hash,
-            expires_at,
-            session_id: session_id.to_string(),
-        };
+        let record = CsrfTokenRecord { token_hash, expires_at, session_id: session_id.to_string() };
 
         self.tokens.write().await.insert(session_id.to_string(), record);
 
@@ -77,16 +68,14 @@ impl CsrfService {
     }
 
     /// 验证 CSRF 令牌
-    /// 
+    ///
     /// # Arguments
     /// * `session_id` - 会话 ID
     /// * `token` - CSRF 令牌
     pub async fn validate_token(&self, session_id: &str, token: &str) -> CsrfResult<bool> {
         let tokens = self.tokens.read().await;
 
-        let record = tokens
-            .get(session_id)
-            .ok_or(CsrfError::InvalidToken)?;
+        let record = tokens.get(session_id).ok_or(CsrfError::InvalidToken)?;
 
         if record.expires_at < Utc::now().timestamp() {
             return Err(CsrfError::TokenExpired);
@@ -102,7 +91,7 @@ impl CsrfService {
     }
 
     /// 撤销 CSRF 令牌
-    /// 
+    ///
     /// # Arguments
     /// * `session_id` - 会话 ID
     pub async fn revoke_token(&self, session_id: &str) {
@@ -111,7 +100,7 @@ impl CsrfService {
 
     /// 哈希令牌（用于存储）
     fn hash_token(token: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(token.as_bytes());
         let result = hasher.finalize();

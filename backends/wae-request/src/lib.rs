@@ -7,8 +7,7 @@
 use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
 use hyper::{Request, Uri};
-use hyper_util::client::legacy::Client;
-use hyper_util::rt::TokioExecutor;
+use hyper_util::{client::legacy::Client, rt::TokioExecutor};
 use serde::{Serialize, de::DeserializeOwned};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::time::timeout;
@@ -79,18 +78,21 @@ impl HttpResponse {
 }
 
 /// hyper 客户端 (全局共享)
-static HYPER_CLIENT: std::sync::OnceLock<Arc<Client<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, Full<Bytes>>>> = std::sync::OnceLock::new();
+static HYPER_CLIENT: std::sync::OnceLock<
+    Arc<Client<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, Full<Bytes>>>,
+> = std::sync::OnceLock::new();
 
-fn get_hyper_client() -> Arc<Client<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, Full<Bytes>>> {
+fn get_hyper_client() -> Arc<Client<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, Full<Bytes>>>
+{
     HYPER_CLIENT
         .get_or_init(|| {
             let mut http = hyper_util::client::legacy::connect::HttpConnector::new();
             http.enforce_http(false);
-            
+
             let https = hyper_tls::HttpsConnector::new_with_connector(http);
-            
+
             let client = Client::builder(TokioExecutor::new()).build(https);
-            
+
             Arc::new(client)
         })
         .clone()
@@ -218,10 +220,7 @@ impl HttpClient {
 
         let client = get_hyper_client();
 
-        let mut builder = Request::builder()
-            .method(method)
-            .uri(uri)
-            .header("User-Agent", &self.config.user_agent);
+        let mut builder = Request::builder().method(method).uri(uri).header("User-Agent", &self.config.user_agent);
 
         for (key, value) in &self.config.default_headers {
             builder = builder.header(key, value);
@@ -236,34 +235,23 @@ impl HttpClient {
         let request = match body {
             Some(b) => {
                 let len = b.len();
-                builder
-                    .header("Content-Length", len)
-                    .body(Full::new(Bytes::from(b)))
-                    .map_err(|e| WaeError::new(WaeErrorKind::RequestError {
-                        url: url_str.to_string(),
-                        reason: e.to_string(),
-                    }))?
+                builder.header("Content-Length", len).body(Full::new(Bytes::from(b))).map_err(|e| {
+                    WaeError::new(WaeErrorKind::RequestError { url: url_str.to_string(), reason: e.to_string() })
+                })?
             }
-            None => {
-                builder
-                    .body(Full::new(Bytes::new()))
-                    .map_err(|e| WaeError::new(WaeErrorKind::RequestError {
-                        url: url_str.to_string(),
-                        reason: e.to_string(),
-                    }))?
-            }
+            None => builder
+                .body(Full::new(Bytes::new()))
+                .map_err(|e| WaeError::new(WaeErrorKind::RequestError { url: url_str.to_string(), reason: e.to_string() }))?,
         };
 
         let response = timeout(self.config.timeout, client.request(request))
             .await
             .map_err(|_| WaeError::operation_timeout("request", self.config.timeout.as_millis() as u64))?
-            .map_err(|_e| WaeError::new(WaeErrorKind::ConnectionFailed {
-                target: url_str.to_string(),
-            }))?;
+            .map_err(|_e| WaeError::new(WaeErrorKind::ConnectionFailed { target: url_str.to_string() }))?;
 
         let status = response.status().as_u16();
         let status_text = response.status().canonical_reason().unwrap_or("").to_string();
-        
+
         let version = match response.version() {
             hyper::Version::HTTP_09 => "HTTP/0.9".to_string(),
             hyper::Version::HTTP_10 => "HTTP/1.0".to_string(),
@@ -284,19 +272,15 @@ impl HttpClient {
             .into_body()
             .collect()
             .await
-            .map_err(|e| WaeError::new(WaeErrorKind::ProtocolError {
-                protocol: "HTTP".to_string(),
-                reason: format!("Read body failed: {}", e),
-            }))?
+            .map_err(|e| {
+                WaeError::new(WaeErrorKind::ProtocolError {
+                    protocol: "HTTP".to_string(),
+                    reason: format!("Read body failed: {}", e),
+                })
+            })?
             .to_bytes();
 
-        Ok(HttpResponse {
-            version,
-            status,
-            status_text,
-            headers,
-            body: body_bytes.to_vec(),
-        })
+        Ok(HttpResponse { version, status, status_text, headers, body: body_bytes.to_vec() })
     }
 
     /// 判断状态码是否可重试

@@ -1,18 +1,21 @@
-# CORS 中间件
+# HTTP 中间件模块
 
-提供跨域资源共享 (Cross-Origin Resource Sharing) 配置。
+提供常用的 HTTP 中间件实现。
 
-## 示例
+## 中间件列表
 
-```ignore
-use wae_https::middleware::CorsConfig;
+- **CORS** - 跨域资源共享配置
+- **Compression** - 响应压缩
+- **Request ID** - 请求追踪 ID
+- **Tracing** - 请求追踪与日志
 
-let config = CorsConfig::new()
-    .allow_origin("https://example.com")
-    .allow_methods(["GET", "POST"])
-    .allow_headers(["Content-Type", "Authorization"])
-    .allow_credentials(true)
-    .max_age(3600);
+## 重新导出
 
-let cors_layer = config.into_layer();
-```
+本模块还重新导出 tower-http 的常用中间件：
+
+- CatchPanicLayer
+- NormalizePathLayer
+- MakeRequestUuid
+- SetRequestHeaderLayer
+- SetResponseHeaderLayer
+- TimeoutLayer

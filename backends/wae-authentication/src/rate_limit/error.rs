@@ -28,9 +28,7 @@ impl std::error::Error for RateLimitError {}
 impl From<RateLimitError> for WaeError {
     fn from(err: RateLimitError) -> Self {
         match err {
-            RateLimitError::RateLimitExceeded { retry_after } => {
-                WaeError::rate_limit_exceeded(retry_after)
-            }
+            RateLimitError::RateLimitExceeded { retry_after } => WaeError::rate_limit_exceeded(retry_after),
         }
     }
 }

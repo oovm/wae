@@ -233,7 +233,11 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 执行所有待执行的迁移 (带配置选项)
-        pub async fn migrate_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Vec<MigrationResult>> {
+        pub async fn migrate_with_options(
+            &self,
+            conn: &dyn DatabaseConnection,
+            options: MigrationOptions,
+        ) -> WaeResult<Vec<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -268,7 +272,8 @@ CREATE TABLE IF NOT EXISTS _migrations (
                         dry_run: true,
                         error: None,
                     }
-                } else {
+                }
+                else {
                     let mut success = true;
                     let mut error = None;
                     let duration_ms;
@@ -391,7 +396,8 @@ CREATE TABLE IF NOT EXISTS _migrations (
                         dry_run: true,
                         error: None,
                     }
-                } else {
+                }
+                else {
                     let mut success = true;
                     let mut error = None;
                     let duration_ms;
@@ -467,7 +473,11 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 回滚最后一次迁移 (带配置选项)
-        pub async fn rollback_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Option<MigrationResult>> {
+        pub async fn rollback_with_options(
+            &self,
+            conn: &dyn DatabaseConnection,
+            options: MigrationOptions,
+        ) -> WaeResult<Option<MigrationResult>> {
             Self::ensure_migration_table(conn).await?;
 
             let executed = Self::get_executed_migrations(conn).await?;
@@ -491,7 +501,11 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 重置数据库 (回滚所有迁移，带配置选项)
-        pub async fn reset_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Vec<MigrationResult>> {
+        pub async fn reset_with_options(
+            &self,
+            conn: &dyn DatabaseConnection,
+            options: MigrationOptions,
+        ) -> WaeResult<Vec<MigrationResult>> {
             self.rollback_to_with_options(conn, 0, options).await
         }
 
@@ -501,7 +515,11 @@ CREATE TABLE IF NOT EXISTS _migrations (
         }
 
         /// 刷新数据库 (重置后重新执行所有迁移，带配置选项)
-        pub async fn refresh_with_options(&self, conn: &dyn DatabaseConnection, options: MigrationOptions) -> WaeResult<Vec<MigrationResult>> {
+        pub async fn refresh_with_options(
+            &self,
+            conn: &dyn DatabaseConnection,
+            options: MigrationOptions,
+        ) -> WaeResult<Vec<MigrationResult>> {
             self.reset_with_options(conn, options.clone()).await?;
             self.migrate_with_options(conn, options).await
         }
@@ -538,13 +556,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
             let pending = total - executed;
             let reversible = status_list.iter().filter(|s| s.reversible).count();
 
-            Ok(MigrationStatusSummary {
-                total,
-                executed,
-                pending,
-                reversible,
-                latest_version: self.latest_version(),
-            })
+            Ok(MigrationStatusSummary { total, executed, pending, reversible, latest_version: self.latest_version() })
         }
     }
 

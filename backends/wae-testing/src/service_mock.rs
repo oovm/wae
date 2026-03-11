@@ -6,8 +6,7 @@ use crate::mock::{Mock, MockCall};
 use bytes::Bytes;
 use http::{HeaderMap, Method, StatusCode};
 use parking_lot::RwLock;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
 
 /// 外部服务请求记录
@@ -39,20 +38,12 @@ pub struct ServiceResponse {
 impl ServiceResponse {
     /// 创建成功响应
     pub fn ok(body: impl Into<Bytes>) -> Self {
-        Self {
-            status: StatusCode::OK,
-            headers: HeaderMap::new(),
-            body: body.into(),
-        }
+        Self { status: StatusCode::OK, headers: HeaderMap::new(), body: body.into() }
     }
 
     /// 创建错误响应
     pub fn error(status: StatusCode, body: impl Into<Bytes>) -> Self {
-        Self {
-            status,
-            headers: HeaderMap::new(),
-            body: body.into(),
-        }
+        Self { status, headers: HeaderMap::new(), body: body.into() }
     }
 
     /// 添加响应头
@@ -83,9 +74,7 @@ impl std::fmt::Debug for ServiceMatchRule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ServiceMatchRule::Path(path) => f.debug_tuple("Path").field(path).finish(),
-            ServiceMatchRule::PathAndMethod(path, method) => {
-                f.debug_tuple("PathAndMethod").field(path).field(method).finish()
-            }
+            ServiceMatchRule::PathAndMethod(path, method) => f.debug_tuple("PathAndMethod").field(path).field(method).finish(),
             ServiceMatchRule::Custom(_) => f.debug_tuple("Custom").field(&"<function>").finish(),
         }
     }
@@ -138,33 +127,19 @@ pub struct MockExternalServiceBuilder {
 impl MockExternalServiceBuilder {
     /// 创建新的 Mock 外部服务构建器
     pub fn new() -> Self {
-        Self {
-            responses: Vec::new(),
-            expectation: ServiceExpectation::default(),
-            requests: Arc::new(RwLock::new(Vec::new())),
-        }
+        Self { responses: Vec::new(), expectation: ServiceExpectation::default(), requests: Arc::new(RwLock::new(Vec::new())) }
     }
 
     /// 添加响应配置 (匹配路径)
     pub fn respond_to_path(mut self, path: impl Into<String>, response: ServiceResponse) -> Self {
-        self.responses.push(ServiceResponseConfig {
-            match_rule: ServiceMatchRule::Path(path.into()),
-            response,
-        });
+        self.responses.push(ServiceResponseConfig { match_rule: ServiceMatchRule::Path(path.into()), response });
         self
     }
 
     /// 添加响应配置 (匹配路径和方法)
-    pub fn respond_to_path_and_method(
-        mut self,
-        path: impl Into<String>,
-        method: Method,
-        response: ServiceResponse,
-    ) -> Self {
-        self.responses.push(ServiceResponseConfig {
-            match_rule: ServiceMatchRule::PathAndMethod(path.into(), method),
-            response,
-        });
+    pub fn respond_to_path_and_method(mut self, path: impl Into<String>, method: Method, response: ServiceResponse) -> Self {
+        self.responses
+            .push(ServiceResponseConfig { match_rule: ServiceMatchRule::PathAndMethod(path.into(), method), response });
         self
     }
 
@@ -173,10 +148,7 @@ impl MockExternalServiceBuilder {
     where
         F: Fn(&ServiceRequest) -> bool + Send + Sync + 'static,
     {
-        self.responses.push(ServiceResponseConfig {
-            match_rule: ServiceMatchRule::Custom(Arc::new(matcher)),
-            response,
-        });
+        self.responses.push(ServiceResponseConfig { match_rule: ServiceMatchRule::Custom(Arc::new(matcher)), response });
         self
     }
 
@@ -188,11 +160,7 @@ impl MockExternalServiceBuilder {
 
     /// 构建 Mock 外部服务
     pub fn build(self) -> MockExternalService {
-        MockExternalService {
-            responses: self.responses,
-            expectation: self.expectation,
-            requests: self.requests,
-        }
+        MockExternalService { responses: self.responses, expectation: self.expectation, requests: self.requests }
     }
 }
 
@@ -239,9 +207,7 @@ impl MockExternalService {
             }
         }
 
-        Err(WaeError::new(WaeErrorKind::MockError {
-            reason: format!("No mock response configured for {} {}", method, path),
-        }))
+        Err(WaeError::new(WaeErrorKind::MockError { reason: format!("No mock response configured for {} {}", method, path) }))
     }
 
     /// 异步处理外部服务请求
@@ -258,9 +224,7 @@ impl MockExternalService {
     fn matches(request: &ServiceRequest, rule: &ServiceMatchRule) -> bool {
         match rule {
             ServiceMatchRule::Path(path) => request.path == *path,
-            ServiceMatchRule::PathAndMethod(path, method) => {
-                request.path == *path && request.method == *method
-            }
+            ServiceMatchRule::PathAndMethod(path, method) => request.path == *path && request.method == *method,
             ServiceMatchRule::Custom(matcher) => matcher(request),
         }
     }
@@ -286,10 +250,7 @@ impl Mock for MockExternalService {
         self.requests
             .read()
             .iter()
-            .map(|r| MockCall {
-                args: vec![r.method.to_string(), r.path.clone()],
-                timestamp: r.timestamp,
-            })
+            .map(|r| MockCall { args: vec![r.method.to_string(), r.path.clone()], timestamp: r.timestamp })
             .collect()
     }
 

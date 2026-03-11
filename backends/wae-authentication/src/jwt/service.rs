@@ -1,10 +1,11 @@
 //! JWT 服务实现
 
-use crate::jwt::{AccessTokenClaims, JwtAlgorithm, JwtClaims, JwtConfig, RefreshTokenClaims};
+use crate::jwt::{
+    AccessTokenClaims, JwtAlgorithm, JwtClaims, JwtConfig, JwtHeader, RefreshTokenClaims, decode_jwt, encode_jwt,
+};
 use chrono::Utc;
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Serialize, de::DeserializeOwned};
-use wae_types::{WaeError, WaeErrorKind};
+use wae_types::WaeError;
 
 /// JWT 结果类型
 pub type JwtResult<T> = Result<T, WaeError>;
@@ -13,8 +14,6 @@ pub type JwtResult<T> = Result<T, WaeError>;
 #[derive(Debug, Clone)]
 pub struct JwtService {
     config: JwtConfig,
-    encoding_key: EncodingKey,
-    decoding_key: DecodingKey,
 }
 
 impl JwtService {
@@ -23,28 +22,16 @@ impl JwtService {
     /// # Arguments
     /// * `config` - JWT 配置
     pub fn new(config: JwtConfig) -> JwtResult<Self> {
-        let (encoding_key, decoding_key) = Self::create_keys(&config)?;
-        Ok(Self { config, encoding_key, decoding_key })
+        Ok(Self { config })
     }
 
-    fn create_keys(config: &JwtConfig) -> JwtResult<(EncodingKey, DecodingKey)> {
-        match config.algorithm {
-            JwtAlgorithm::HS256 | JwtAlgorithm::HS384 | JwtAlgorithm::HS512 => {
-                let encoding_key = EncodingKey::from_secret(config.secret.as_bytes());
-                let decoding_key = DecodingKey::from_secret(config.secret.as_bytes());
-                Ok((encoding_key, decoding_key))
-            }
-            JwtAlgorithm::RS256 | JwtAlgorithm::RS384 | JwtAlgorithm::RS512 | JwtAlgorithm::ES256 | JwtAlgorithm::ES384 => {
-                let encoding_key =
-                    EncodingKey::from_rsa_pem(config.secret.as_bytes()).map_err(|_e| WaeError::new(WaeErrorKind::KeyError))?;
-
-                let public_key = config.public_key.as_ref().ok_or_else(|| WaeError::new(WaeErrorKind::KeyError))?;
-
-                let decoding_key =
-                    DecodingKey::from_rsa_pem(public_key.as_bytes()).map_err(|_e| WaeError::new(WaeErrorKind::KeyError))?;
-
-                Ok((encoding_key, decoding_key))
-            }
+    /// 获取算法名称
+    fn algorithm_name(&self) -> &'static str {
+        match self.config.algorithm {
+            JwtAlgorithm::HS256 => "HS256",
+            JwtAlgorithm::HS384 => "HS384",
+            JwtAlgorithm::HS512 => "HS512",
+            _ => unimplemented!("Only HS256, HS384, HS512 are supported in custom implementation"),
         }
     }
 
@@ -53,61 +40,48 @@ impl JwtService {
     /// # Arguments
     /// * `claims` - JWT Claims
     pub fn generate_token<T: Serialize>(&self, claims: &T) -> JwtResult<String> {
-        let header = Header::new(self.config.algorithm.into());
-        encode(&header, claims, &self.encoding_key).map_err(|e| {
-            use jsonwebtoken::errors::ErrorKind;
-            match e.kind() {
-                ErrorKind::InvalidToken => WaeError::invalid_token("malformed token"),
-                ErrorKind::InvalidSignature => WaeError::invalid_signature(),
-                ErrorKind::ExpiredSignature => WaeError::token_expired(),
-                ErrorKind::ImmatureSignature => WaeError::token_not_valid_yet(),
-                ErrorKind::InvalidAlgorithm => WaeError::new(WaeErrorKind::InvalidAlgorithm),
-                ErrorKind::MissingRequiredClaim(claim) => WaeError::missing_claim(claim),
-                ErrorKind::InvalidIssuer => WaeError::invalid_claim("issuer"),
-                ErrorKind::InvalidAudience => WaeError::invalid_audience(),
-                ErrorKind::InvalidSubject => WaeError::invalid_claim("subject"),
-                _ => WaeError::invalid_token(e.to_string()),
-            }
-        })
+        let header = JwtHeader::new(self.algorithm_name());
+        let secret = self.config.secret.as_bytes();
+        encode_jwt(&header, claims, secret).map_err(|e| e.into())
     }
 
     /// 验证令牌
     ///
     /// # Arguments
     /// * `token` - JWT 令牌
-    pub fn verify_token<T: DeserializeOwned>(&self, token: &str) -> JwtResult<T> {
-        let mut validation = Validation::new(self.config.algorithm.into());
+    pub fn verify_token<T: DeserializeOwned + 'static>(&self, token: &str) -> JwtResult<T> {
+        let secret = self.config.secret.as_bytes();
+        let claims: T = decode_jwt(token, secret, true)?;
 
-        if self.config.validate_issuer {
-            if let Some(ref issuer) = self.config.issuer {
-                validation.set_issuer(&[issuer]);
+        let now = Utc::now().timestamp();
+        let leeway = self.config.leeway_seconds;
+
+        if let Some(validated_claims) = (&claims as &dyn std::any::Any).downcast_ref::<JwtClaims>() {
+            if validated_claims.exp + leeway < now {
+                return Err(WaeError::token_expired());
+            }
+            if let Some(nbf) = validated_claims.nbf {
+                if nbf - leeway > now {
+                    return Err(WaeError::token_not_valid_yet());
+                }
+            }
+            if self.config.validate_issuer {
+                if let Some(ref issuer) = self.config.issuer {
+                    if validated_claims.iss.as_ref() != Some(issuer) {
+                        return Err(WaeError::invalid_claim("issuer"));
+                    }
+                }
+            }
+            if self.config.validate_audience {
+                if let Some(ref audience) = self.config.audience {
+                    if validated_claims.aud.as_ref() != Some(audience) {
+                        return Err(WaeError::invalid_audience());
+                    }
+                }
             }
         }
 
-        if self.config.validate_audience {
-            if let Some(ref audience) = self.config.audience {
-                validation.set_audience(&[audience]);
-            }
-        }
-
-        validation.leeway = self.config.leeway_seconds as u64;
-
-        let token_data = decode::<T>(token, &self.decoding_key, &validation).map_err(|e| {
-            use jsonwebtoken::errors::ErrorKind;
-            match e.kind() {
-                ErrorKind::InvalidToken => WaeError::invalid_token("malformed token"),
-                ErrorKind::InvalidSignature => WaeError::invalid_signature(),
-                ErrorKind::ExpiredSignature => WaeError::token_expired(),
-                ErrorKind::ImmatureSignature => WaeError::token_not_valid_yet(),
-                ErrorKind::InvalidAlgorithm => WaeError::new(WaeErrorKind::InvalidAlgorithm),
-                ErrorKind::MissingRequiredClaim(claim) => WaeError::missing_claim(claim),
-                ErrorKind::InvalidIssuer => WaeError::invalid_claim("issuer"),
-                ErrorKind::InvalidAudience => WaeError::invalid_audience(),
-                ErrorKind::InvalidSubject => WaeError::invalid_claim("subject"),
-                _ => WaeError::invalid_token(e.to_string()),
-            }
-        })?;
-        Ok(token_data.claims)
+        Ok(claims)
     }
 
     /// 生成访问令牌
@@ -204,25 +178,8 @@ impl JwtService {
     /// # Arguments
     /// * `token` - JWT 令牌
     pub fn decode_unchecked<T: DeserializeOwned>(&self, token: &str) -> JwtResult<T> {
-        let mut validation = Validation::new(self.config.algorithm.into());
-        validation.insecure_disable_signature_validation();
-
-        let token_data = decode::<T>(token, &self.decoding_key, &validation).map_err(|e| {
-            use jsonwebtoken::errors::ErrorKind;
-            match e.kind() {
-                ErrorKind::InvalidToken => WaeError::invalid_token("malformed token"),
-                ErrorKind::InvalidSignature => WaeError::invalid_signature(),
-                ErrorKind::ExpiredSignature => WaeError::token_expired(),
-                ErrorKind::ImmatureSignature => WaeError::token_not_valid_yet(),
-                ErrorKind::InvalidAlgorithm => WaeError::new(WaeErrorKind::InvalidAlgorithm),
-                ErrorKind::MissingRequiredClaim(claim) => WaeError::missing_claim(claim),
-                ErrorKind::InvalidIssuer => WaeError::invalid_claim("issuer"),
-                ErrorKind::InvalidAudience => WaeError::invalid_audience(),
-                ErrorKind::InvalidSubject => WaeError::invalid_claim("subject"),
-                _ => WaeError::invalid_token(e.to_string()),
-            }
-        })?;
-        Ok(token_data.claims)
+        let secret = self.config.secret.as_bytes();
+        decode_jwt(token, secret, false).map_err(|e| e.into())
     }
 
     /// 获取令牌剩余有效期
@@ -303,25 +260,17 @@ impl JwtService {
     /// # Arguments
     /// * `refresh_token` - 旧的刷新令牌
     /// * `new_access_claims` - 新的访问令牌 Claims（可选）
-    pub fn rotate_token_pair(
-        &self,
-        refresh_token: &str,
-        new_access_claims: Option<AccessTokenClaims>,
-    ) -> JwtResult<TokenPair> {
+    pub fn rotate_token_pair(&self, refresh_token: &str, new_access_claims: Option<AccessTokenClaims>) -> JwtResult<TokenPair> {
         let refresh_claims = self.verify_refresh_token(refresh_token)?;
-        
+
         let new_version = refresh_claims.version + 1;
         let access_claims = new_access_claims.unwrap_or_else(|| {
-            AccessTokenClaims::new(refresh_claims.user_id.clone())
-                .with_session_id(refresh_claims.session_id.clone())
+            AccessTokenClaims::new(refresh_claims.user_id.clone()).with_session_id(refresh_claims.session_id.clone())
         });
-        
+
         let access_token = self.generate_access_token(&refresh_claims.user_id, access_claims)?;
-        let new_refresh_token = self.generate_refresh_token(
-            &refresh_claims.user_id,
-            &refresh_claims.session_id,
-            new_version
-        )?;
+        let new_refresh_token =
+            self.generate_refresh_token(&refresh_claims.user_id, &refresh_claims.session_id, new_version)?;
 
         Ok(TokenPair {
             access_token,

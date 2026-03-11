@@ -1,5 +1,5 @@
 #![warn(missing_docs)]
-#![doc = include_str!("../readme.md")]
+#![doc = include_str!("readme.md")]
 
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 mod connection;
@@ -11,8 +11,8 @@ mod types;
 
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 pub use connection::{
-    DatabaseBackend, DatabaseConfig, DatabaseConnection, DatabaseError, DatabaseResult, DatabaseRow, DatabaseRows, DatabaseStatement,
-    FromDatabaseValue,
+    DatabaseBackend, DatabaseConfig, DatabaseConnection, DatabaseError, DatabaseResult, DatabaseRow, DatabaseRows,
+    DatabaseStatement, FromDatabaseValue,
 };
 #[cfg(feature = "turso")]
 pub use connection::{DatabaseService, TursoConnection};
@@ -26,7 +26,8 @@ pub use orm::DbRepository;
 pub use orm::MySqlDbRepository;
 #[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
 pub use orm::{
-    BelongsTo, Condition, DeleteBuilder, Entity, FromRow, HasMany, InsertBuilder, Join, JoinType, ManyToMany, QueryBuilder, Repository, SelectBuilder, ToRow, UpdateBuilder,
+    BelongsTo, Condition, DeleteBuilder, Entity, FromRow, HasMany, InsertBuilder, Join, JoinType, ManyToMany, QueryBuilder,
+    Repository, SelectBuilder, ToRow, UpdateBuilder,
 };
 pub use schema::{ColumnDef, ColumnType, ForeignKeyDef, IndexDef, ReferentialAction, TableSchema, col};
 pub use wae_types::Value;

@@ -6,7 +6,7 @@ license.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-queue"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-queue"
 description = "WAE Queue - 消息队列抽象层，支持内存队列、Redis 和 RabbitMQ"
-keywords = ["queue", "message-queue", "async", "messaging", "redis", "rabbitmq"]
+keywords = ["queue", "message-queue", "async", "messaging", "redis"]
 categories = ["asynchronous", "concurrency"]
 documentation = "https://docs.rs/wae-queue"
 
@@ -14,6 +14,11 @@ documentation = "https://docs.rs/wae-queue"
 default = []
 redis-backend = ["dep:redis", "dep:base64"]
 rabbitmq-backend = ["dep:lapin"]
+kafka-backend = ["dep:rdkafka", "dep:base64"]
+pulsar-backend = ["dep:pulsar", "dep:base64"]
+
+[build-dependencies]
+protoc-bin-vendored = "3.2"
 
 [dependencies]
 wae-types = { workspace = true }
@@ -24,6 +29,8 @@ tracing = { workspace = true }
 futures = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }
-base64 = { version = "0.22", optional = true }
-redis = { version = "0.25", features = ["tokio-comp"], optional = true }
-lapin = { version = "2.4", optional = true }
+base64 = { workspace = true, optional = true }
+redis = { workspace = true, optional = true }
+lapin = { workspace = true, optional = true }
+rdkafka = { workspace = true, optional = true }
+pulsar = { workspace = true, optional = true }

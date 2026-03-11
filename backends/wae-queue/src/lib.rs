@@ -134,7 +134,7 @@ impl<T> Message<T> {
     where
         T: Serialize,
     {
-        let data = serde_json::to_vec(&self.payload).map_err(|e| WaeError::serialization_failed("Message"))?;
+        let data = serde_json::to_vec(&self.payload).map_err(|_e| WaeError::serialization_failed("Message"))?;
         Ok(RawMessage { data, metadata: self.metadata })
     }
 
@@ -143,7 +143,7 @@ impl<T> Message<T> {
     where
         T: Serialize,
     {
-        let data = serde_json::to_vec(&self.payload).map_err(|e| WaeError::serialization_failed("Message"))?;
+        let data = serde_json::to_vec(&self.payload).map_err(|_e| WaeError::serialization_failed("Message"))?;
         Ok(RawMessage { data, metadata: self.metadata.clone() })
     }
 }
@@ -151,7 +151,7 @@ impl<T> Message<T> {
 impl RawMessage {
     /// 反序列化为泛型消息
     pub fn into_typed<T: DeserializeOwned>(self) -> WaeResult<Message<T>> {
-        let payload = serde_json::from_slice(&self.data).map_err(|e| WaeError::deserialization_failed("Message"))?;
+        let payload = serde_json::from_slice(&self.data).map_err(|_e| WaeError::deserialization_failed("Message"))?;
         Ok(Message { payload, metadata: self.metadata })
     }
 }
@@ -484,11 +484,7 @@ pub mod memory {
 
     impl QueueStorage {
         fn new() -> Self {
-            Self {
-                messages: VecDeque::new(),
-                pending_messages: HashMap::new(),
-                next_delivery_tag: 1,
-            }
+            Self { messages: VecDeque::new(), pending_messages: HashMap::new(), next_delivery_tag: 1 }
         }
     }
 
@@ -645,19 +641,13 @@ pub mod memory {
                 if let Some((data, metadata)) = queue.messages.pop_front() {
                     let delivery_tag = queue.next_delivery_tag;
                     queue.next_delivery_tag += 1;
-                    
-                    let redelivery_count = metadata.headers.get("x-redelivery-count")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0);
-                    
-                    let pending_msg = PendingMessage {
-                        data: data.clone(),
-                        metadata: metadata.clone(),
-                        redelivery_count,
-                        delivery_tag,
-                    };
+
+                    let redelivery_count = metadata.headers.get("x-redelivery-count").and_then(|s| s.parse().ok()).unwrap_or(0);
+
+                    let pending_msg =
+                        PendingMessage { data: data.clone(), metadata: metadata.clone(), redelivery_count, delivery_tag };
                     queue.pending_messages.insert(delivery_tag, pending_msg);
-                    
+
                     let message = RawMessage { data, metadata };
                     return Ok(Some(ReceivedRawMessage { message, delivery_tag, redelivery_count }));
                 }
@@ -679,23 +669,24 @@ pub mod memory {
             drop(configs);
 
             let mut queues = self.queues.write().await;
-            
+
             if let Some(queue) = queues.get_mut(&self.config.queue) {
                 if let Some(mut pending_msg) = queue.pending_messages.remove(&delivery_tag) {
                     if requeue {
                         pending_msg.redelivery_count += 1;
-                        pending_msg.metadata.headers.insert(
-                            "x-redelivery-count".to_string(),
-                            pending_msg.redelivery_count.to_string(),
-                        );
-                        
+                        pending_msg
+                            .metadata
+                            .headers
+                            .insert("x-redelivery-count".to_string(), pending_msg.redelivery_count.to_string());
+
                         queue.messages.push_back((pending_msg.data, pending_msg.metadata));
-                    } else {
+                    }
+                    else {
                         if let Some(dlq_name) = queue_config.and_then(|c| c.dead_letter_queue) {
                             drop(queues);
-                            
+
                             self.manager.declare_queue(&QueueConfig::new(&dlq_name)).await?;
-                            
+
                             let mut queues = self.queues.write().await;
                             if let Some(dlq) = queues.get_mut(&dlq_name) {
                                 dlq.messages.push_back((pending_msg.data, pending_msg.metadata));
@@ -704,7 +695,7 @@ pub mod memory {
                     }
                 }
             }
-            
+
             Ok(())
         }
 
@@ -755,12 +746,9 @@ pub mod memory {
 #[cfg(feature = "redis-backend")]
 pub mod redis_backend {
     use super::*;
-    use base64::{engine::general_purpose, Engine as _};
-    use ::redis::{
-        streams::StreamReadOptions, AsyncCommands, Client, FromRedisValue, RedisResult,
-    };
-    use std::collections::HashMap;
-    use std::sync::Arc;
+    use ::redis::{AsyncCommands, Client, FromRedisValue, RedisResult, streams::StreamReadOptions};
+    use base64::{Engine as _, engine::general_purpose};
+    use std::{collections::HashMap, sync::Arc};
     use tokio::sync::Mutex;
 
     /// Redis 队列管理器
@@ -772,16 +760,12 @@ pub mod redis_backend {
     impl RedisQueueManager {
         /// 创建新的 Redis 队列管理器
         pub fn new(client: Client) -> Self {
-            Self {
-                client,
-                configs: Arc::new(Mutex::new(HashMap::new())),
-            }
+            Self { client, configs: Arc::new(Mutex::new(HashMap::new())) }
         }
 
         /// 从 URL 创建 Redis 队列管理器
         pub async fn from_url(url: &str) -> WaeResult<Self> {
-            let client = Client::open(url)
-                .map_err(|e| WaeError::internal(format!("Failed to create Redis client: {}", e)))?;
+            let client = Client::open(url).map_err(|e| WaeError::internal(format!("Failed to create Redis client: {}", e)))?;
             Ok(Self::new(client))
         }
 
@@ -797,7 +781,10 @@ pub mod redis_backend {
     #[async_trait::async_trait]
     impl QueueManager for RedisQueueManager {
         async fn declare_queue(&self, config: &QueueConfig) -> WaeResult<()> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = Self::stream_name(&config.name);
@@ -812,7 +799,10 @@ pub mod redis_backend {
         }
 
         async fn delete_queue(&self, name: &str) -> WaeResult<()> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = Self::stream_name(name);
@@ -826,34 +816,45 @@ pub mod redis_backend {
         }
 
         async fn queue_exists(&self, name: &str) -> WaeResult<bool> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = Self::stream_name(name);
-            let exists: bool = conn.exists(&stream_name).await
+            let exists: bool = conn
+                .exists(&stream_name)
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to check if stream exists: {}", e)))?;
 
             Ok(exists)
         }
 
         async fn queue_message_count(&self, name: &str) -> WaeResult<u64> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = Self::stream_name(name);
-            let len: u64 = conn.xlen(&stream_name).await
-                .map_err(|e| WaeError::internal(format!("Failed to get stream length: {}", e)))?;
+            let len: u64 =
+                conn.xlen(&stream_name).await.map_err(|e| WaeError::internal(format!("Failed to get stream length: {}", e)))?;
 
             Ok(len)
         }
 
         async fn purge_queue(&self, name: &str) -> WaeResult<u64> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = Self::stream_name(name);
-            let len: u64 = conn.xlen(&stream_name).await
-                .map_err(|e| WaeError::internal(format!("Failed to get stream length: {}", e)))?;
+            let len: u64 =
+                conn.xlen(&stream_name).await.map_err(|e| WaeError::internal(format!("Failed to get stream length: {}", e)))?;
 
             let _: RedisResult<()> = conn.del(&stream_name).await;
 
@@ -871,11 +872,7 @@ pub mod redis_backend {
     impl RedisProducerBackend {
         /// 创建新的 Redis 生产者后端
         pub fn new(config: ProducerConfig, manager: Arc<RedisQueueManager>) -> Self {
-            Self {
-                config,
-                client: manager.client.clone(),
-                manager,
-            }
+            Self { config, client: manager.client.clone(), manager }
         }
 
         fn encode_metadata(metadata: &MessageMetadata) -> HashMap<String, String> {
@@ -916,7 +913,10 @@ pub mod redis_backend {
         async fn send_raw(&self, queue: &str, message: &RawMessage) -> WaeResult<MessageId> {
             self.manager.declare_queue(&QueueConfig::new(queue)).await?;
 
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = RedisQueueManager::stream_name(queue);
@@ -929,7 +929,9 @@ pub mod redis_backend {
                 fields_vec.push((k, v));
             }
 
-            let id: String = conn.xadd(&stream_name, "*", &fields_vec).await
+            let id: String = conn
+                .xadd(&stream_name, "*", &fields_vec)
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to add message to stream: {}", e)))?;
 
             Ok(id)
@@ -943,8 +945,11 @@ pub mod redis_backend {
         async fn send_raw_delayed(&self, queue: &str, message: &RawMessage, delay: Duration) -> WaeResult<MessageId> {
             let delayed_queue = format!("{}:delayed", queue);
             let delayed_stream = RedisQueueManager::stream_name(&delayed_queue);
-            
-            let mut conn = self.client.get_async_connection().await
+
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let data_b64 = general_purpose::STANDARD.encode(&message.data);
@@ -957,7 +962,9 @@ pub mod redis_backend {
                 fields_vec.push((k, v));
             }
 
-            let id: String = conn.xadd(&delayed_stream, "*", &fields_vec).await
+            let id: String = conn
+                .xadd(&delayed_stream, "*", &fields_vec)
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to add delayed message: {}", e)))?;
 
             let message_clone = message.clone();
@@ -975,10 +982,7 @@ pub mod redis_backend {
                     if let Ok(mut conn) = client.get_async_connection().await {
                         let _: RedisResult<()> = conn.xdel(&delayed_stream, &[&id]).await;
 
-                        let mut producer = RedisProducerBackend::new(
-                            ProducerConfig::default(),
-                            manager.clone()
-                        );
+                        let mut producer = RedisProducerBackend::new(ProducerConfig::default(), manager.clone());
                         let _ = producer.send_raw(&queue, &message_clone).await;
                     }
                 }
@@ -1062,19 +1066,18 @@ pub mod redis_backend {
     #[async_trait::async_trait]
     impl ConsumerBackend for RedisConsumerBackend {
         async fn receive_raw(&self) -> WaeResult<Option<ReceivedRawMessage>> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = RedisQueueManager::stream_name(&self.config.queue);
             let group_name = RedisQueueManager::group_name();
 
-            let opts = StreamReadOptions::default()
-                .group(group_name, &self.consumer_name)
-                .count(1)
-                .block(1000);
+            let opts = StreamReadOptions::default().group(group_name, &self.consumer_name).count(1).block(1000);
 
-            let result: RedisResult<redis::streams::StreamReadReply> =
-                conn.xread_options(&[&stream_name], &[">"], &opts).await;
+            let result: RedisResult<redis::streams::StreamReadReply> = conn.xread_options(&[&stream_name], &[">"], &opts).await;
 
             match result {
                 Ok(streams) => {
@@ -1088,7 +1091,8 @@ pub mod redis_backend {
                             }
 
                             let data_b64 = fields.get("data").ok_or_else(|| WaeError::internal("Missing data field"))?;
-                            let data = general_purpose::STANDARD.decode(data_b64)
+                            let data = general_purpose::STANDARD
+                                .decode(data_b64)
                                 .map_err(|e| WaeError::internal(format!("Failed to decode data: {}", e)))?;
 
                             let metadata = Self::decode_metadata(&fields);
@@ -1101,9 +1105,8 @@ pub mod redis_backend {
                             let mut delivery_tags = self.delivery_tags.lock().await;
                             delivery_tags.insert(delivery_tag, entry.id.clone());
 
-                            let redelivery_count = metadata.headers.get("x-redelivery-count")
-                                .and_then(|s| s.parse().ok())
-                                .unwrap_or(0);
+                            let redelivery_count =
+                                metadata.headers.get("x-redelivery-count").and_then(|s| s.parse().ok()).unwrap_or(0);
 
                             let message = RawMessage { data, metadata };
                             return Ok(Some(ReceivedRawMessage { message, delivery_tag, redelivery_count }));
@@ -1115,7 +1118,8 @@ pub mod redis_backend {
                     if e.to_string().contains("NOGROUP") {
                         self.manager.declare_queue(&QueueConfig::new(&self.config.queue)).await?;
                         Ok(None)
-                    } else {
+                    }
+                    else {
                         Err(WaeError::internal(format!("Failed to read from stream: {}", e)))
                     }
                 }
@@ -1123,7 +1127,10 @@ pub mod redis_backend {
         }
 
         async fn ack(&self, delivery_tag: u64) -> WaeResult<()> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = RedisQueueManager::stream_name(&self.config.queue);
@@ -1139,7 +1146,10 @@ pub mod redis_backend {
         }
 
         async fn nack(&self, delivery_tag: u64, requeue: bool) -> WaeResult<()> {
-            let mut conn = self.client.get_async_connection().await
+            let mut conn = self
+                .client
+                .get_async_connection()
+                .await
                 .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
 
             let stream_name = RedisQueueManager::stream_name(&self.config.queue);
@@ -1148,14 +1158,10 @@ pub mod redis_backend {
             let mut delivery_tags = self.delivery_tags.lock().await;
             if let Some(message_id) = delivery_tags.remove(&delivery_tag) {
                 if requeue {
-                    let _: RedisResult<()> = conn.xclaim(
-                        &stream_name,
-                        group_name,
-                        &self.consumer_name,
-                        0,
-                        &[&message_id],
-                    ).await;
-                } else {
+                    let _: RedisResult<()> =
+                        conn.xclaim(&stream_name, group_name, &self.consumer_name, 0, &[&message_id]).await;
+                }
+                else {
                     let configs = self.manager.configs.lock().await;
                     let dlq_name = configs.get(&self.config.queue).and_then(|c| c.dead_letter_queue.clone());
                     drop(configs);
@@ -1163,7 +1169,8 @@ pub mod redis_backend {
                     if let Some(dlq_name) = dlq_name {
                         let _: RedisResult<()> = conn.xack(&stream_name, group_name, &[&message_id]).await;
                         let _: RedisResult<()> = conn.xdel(&stream_name, &[&message_id]).await;
-                    } else {
+                    }
+                    else {
                         let _: RedisResult<()> = conn.xack(&stream_name, group_name, &[&message_id]).await;
                         let _: RedisResult<()> = conn.xdel(&stream_name, &[&message_id]).await;
                     }
@@ -1221,13 +1228,437 @@ pub fn memory_queue_service() -> memory::MemoryQueueService {
     memory::MemoryQueueService::new()
 }
 
+/// Kafka 队列实现
+#[cfg(feature = "kafka-backend")]
+pub mod kafka_backend {
+    use super::*;
+    use base64::{Engine as _, engine::general_purpose};
+    use rdkafka::{
+        ClientConfig,
+        consumer::{Consumer, DefaultConsumerContext, StreamConsumer},
+        message::{Headers, OwnedMessage},
+        producer::{DeliveryFuture, FutureProducer, FutureRecord},
+        util::Timeout,
+    };
+    use std::{collections::HashMap, sync::Arc, time::Duration};
+    use tokio::sync::Mutex;
+    use uuid::Uuid;
+
+    /// Kafka 连接配置
+    #[derive(Debug, Clone)]
+    pub struct KafkaConfig {
+        /// Kafka Broker 地址 (例如: localhost:9092)
+        pub brokers: String,
+        /// 客户端 ID
+        pub client_id: Option<String>,
+        /// 生产者配置
+        pub producer_config: HashMap<String, String>,
+        /// 消费者配置
+        pub consumer_config: HashMap<String, String>,
+    }
+
+    impl Default for KafkaConfig {
+        fn default() -> Self {
+            Self {
+                brokers: "localhost:9092".to_string(),
+                client_id: Some("wae-kafka".to_string()),
+                producer_config: HashMap::new(),
+                consumer_config: HashMap::new(),
+            }
+        }
+    }
+
+    impl KafkaConfig {
+        /// 创建新的 Kafka 配置
+        pub fn new(brokers: impl Into<String>) -> Self {
+            Self { brokers: brokers.into(), ..Default::default() }
+        }
+    }
+
+    /// Kafka 队列管理器
+    pub struct KafkaQueueManager {
+        config: ClientConfig,
+    }
+
+    impl KafkaQueueManager {
+        /// 创建新的 Kafka 队列管理器
+        pub fn new(config: &KafkaConfig) -> Self {
+            let mut client_config = ClientConfig::new();
+            client_config.set("bootstrap.servers", &config.brokers);
+            if let Some(client_id) = &config.client_id {
+                client_config.set("client.id", client_id);
+            }
+            for (key, value) in &config.producer_config {
+                client_config.set(key, value);
+            }
+            for (key, value) in &config.consumer_config {
+                client_config.set(key, value);
+            }
+            Self { config: client_config }
+        }
+
+        /// 内部主题名称
+        fn topic_name(queue: &str) -> String {
+            queue.to_string()
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl QueueManager for KafkaQueueManager {
+        async fn declare_queue(&self, config: &QueueConfig) -> WaeResult<()> {
+            Ok(())
+        }
+
+        async fn delete_queue(&self, name: &str) -> WaeResult<()> {
+            Ok(())
+        }
+
+        async fn queue_exists(&self, name: &str) -> WaeResult<bool> {
+            Ok(true)
+        }
+
+        async fn queue_message_count(&self, name: &str) -> WaeResult<u64> {
+            Ok(0)
+        }
+
+        async fn purge_queue(&self, name: &str) -> WaeResult<u64> {
+            Ok(0)
+        }
+    }
+
+    /// Kafka 生产者后端
+    pub struct KafkaProducerBackend {
+        config: ProducerConfig,
+        producer: Arc<FutureProducer>,
+        manager: Arc<KafkaQueueManager>,
+    }
+
+    impl KafkaProducerBackend {
+        /// 创建新的 Kafka 生产者后端
+        pub fn new(config: ProducerConfig, manager: Arc<KafkaQueueManager>, producer: Arc<FutureProducer>) -> Self {
+            Self { config, producer, manager }
+        }
+
+        /// 编码元数据
+        fn encode_metadata(metadata: &MessageMetadata) -> HashMap<String, String> {
+            let mut fields = HashMap::new();
+
+            if let Some(id) = &metadata.id {
+                fields.insert("id".to_string(), id.clone());
+            }
+            if let Some(correlation_id) = &metadata.correlation_id {
+                fields.insert("correlation_id".to_string(), correlation_id.clone());
+            }
+            if let Some(reply_to) = &metadata.reply_to {
+                fields.insert("reply_to".to_string(), reply_to.clone());
+            }
+            if let Some(content_type) = &metadata.content_type {
+                fields.insert("content_type".to_string(), content_type.clone());
+            }
+            if let Some(timestamp) = metadata.timestamp {
+                fields.insert("timestamp".to_string(), timestamp.to_string());
+            }
+            if let Some(priority) = metadata.priority {
+                fields.insert("priority".to_string(), priority.to_string());
+            }
+            if let Some(expiration) = metadata.expiration {
+                fields.insert("expiration".to_string(), expiration.to_string());
+            }
+
+            for (key, value) in &metadata.headers {
+                fields.insert(format!("header:{}", key), value.clone());
+            }
+
+            fields
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ProducerBackend for KafkaProducerBackend {
+        async fn send_raw(&self, queue: &str, message: &RawMessage) -> WaeResult<MessageId> {
+            let id = Uuid::new_v4().to_string();
+            let mut metadata = message.metadata.clone();
+            metadata.id = Some(id.clone());
+            if metadata.timestamp.is_none() {
+                metadata.timestamp =
+                    Some(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64);
+            }
+
+            let topic = KafkaQueueManager::topic_name(queue);
+            let data_b64 = general_purpose::STANDARD.encode(&message.data);
+            let mut fields = Self::encode_metadata(&metadata);
+            fields.insert("data".to_string(), data_b64);
+
+            let payload = serde_json::to_vec(&fields)
+                .map_err(|e| WaeError::internal(format!("Failed to serialize Kafka message: {}", e)))?;
+
+            let record = FutureRecord::to(&topic).payload(&payload).key(&id);
+
+            let result = self.producer.send(record, Timeout::After(Duration::from_secs(5))).await;
+
+            match result {
+                Ok((_, _)) => Ok(id),
+                Err((e, _)) => Err(WaeError::internal(format!("Failed to send Kafka message: {}", e))),
+            }
+        }
+
+        async fn send_raw_default(&self, message: &RawMessage) -> WaeResult<MessageId> {
+            let queue = self.config.default_queue.as_ref().ok_or_else(|| WaeError::config_missing("default_queue"))?;
+            self.send_raw(queue, message).await
+        }
+
+        async fn send_raw_delayed(&self, queue: &str, message: &RawMessage, delay: Duration) -> WaeResult<MessageId> {
+            let id = Uuid::new_v4().to_string();
+            let message_clone = message.clone();
+            let producer = self.producer.clone();
+            let manager = self.manager.clone();
+            let queue = queue.to_string();
+
+            tokio::spawn(async move {
+                tokio::time::sleep(delay).await;
+                let mut producer_config = ProducerConfig::default();
+                producer_config.default_queue = Some(queue.clone());
+                let mut producer = KafkaProducerBackend::new(producer_config, manager.clone(), producer.clone());
+                let _ = producer.send_raw(&queue, &message_clone).await;
+            });
+
+            Ok(id)
+        }
+
+        async fn send_raw_batch(&self, queue: &str, messages: &[RawMessage]) -> WaeResult<Vec<MessageId>> {
+            let mut ids = Vec::with_capacity(messages.len());
+            for msg in messages {
+                ids.push(self.send_raw(queue, msg).await?);
+            }
+            Ok(ids)
+        }
+
+        fn config(&self) -> &ProducerConfig {
+            &self.config
+        }
+    }
+
+    /// Kafka 消费者后端
+    pub struct KafkaConsumerBackend {
+        config: ConsumerConfig,
+        consumer: Arc<StreamConsumer<DefaultConsumerContext>>,
+        manager: Arc<KafkaQueueManager>,
+        delivery_tags: Arc<Mutex<HashMap<u64, (i32, i64)>>>,
+        next_delivery_tag: Arc<Mutex<u64>>,
+    }
+
+    impl KafkaConsumerBackend {
+        /// 创建新的 Kafka 消费者后端
+        pub fn new(
+            config: ConsumerConfig,
+            manager: Arc<KafkaQueueManager>,
+            consumer: Arc<StreamConsumer<DefaultConsumerContext>>,
+        ) -> Self {
+            Self {
+                config,
+                consumer,
+                manager,
+                delivery_tags: Arc::new(Mutex::new(HashMap::new())),
+                next_delivery_tag: Arc::new(Mutex::new(1)),
+            }
+        }
+
+        /// 解码元数据
+        fn decode_metadata(fields: &HashMap<String, String>) -> MessageMetadata {
+            let mut metadata = MessageMetadata::default();
+
+            if let Some(id) = fields.get("id") {
+                metadata.id = Some(id.clone());
+            }
+            if let Some(correlation_id) = fields.get("correlation_id") {
+                metadata.correlation_id = Some(correlation_id.clone());
+            }
+            if let Some(reply_to) = fields.get("reply_to") {
+                metadata.reply_to = Some(reply_to.clone());
+            }
+            if let Some(content_type) = fields.get("content_type") {
+                metadata.content_type = Some(content_type.clone());
+            }
+            if let Some(timestamp) = fields.get("timestamp").and_then(|s| s.parse().ok()) {
+                metadata.timestamp = Some(timestamp);
+            }
+            if let Some(priority) = fields.get("priority").and_then(|s| s.parse().ok()) {
+                metadata.priority = Some(priority);
+            }
+            if let Some(expiration) = fields.get("expiration").and_then(|s| s.parse().ok()) {
+                metadata.expiration = Some(expiration);
+            }
+
+            for (key, value) in fields {
+                if let Some(header_key) = key.strip_prefix("header:") {
+                    metadata.headers.insert(header_key.to_string(), value.clone());
+                }
+            }
+
+            metadata
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ConsumerBackend for KafkaConsumerBackend {
+        async fn receive_raw(&self) -> WaeResult<Option<ReceivedRawMessage>> {
+            match tokio::time::timeout(Duration::from_secs(1), self.consumer.recv()).await {
+                Ok(Ok(message)) => {
+                    let payload = message.payload().ok_or_else(|| WaeError::internal("Kafka message missing payload"))?;
+                    let fields: HashMap<String, String> = serde_json::from_slice(payload)
+                        .map_err(|e| WaeError::internal(format!("Failed to deserialize Kafka message: {}", e)))?;
+                    let data_b64 = fields.get("data").ok_or_else(|| WaeError::internal("Missing data field"))?;
+                    let data = general_purpose::STANDARD
+                        .decode(data_b64)
+                        .map_err(|e| WaeError::internal(format!("Failed to decode data: {}", e)))?;
+                    let metadata = Self::decode_metadata(&fields);
+
+                    let mut next_tag = self.next_delivery_tag.lock().await;
+                    let delivery_tag = *next_tag;
+                    *next_tag += 1;
+                    drop(next_tag);
+
+                    let mut delivery_tags = self.delivery_tags.lock().await;
+                    delivery_tags.insert(delivery_tag, (message.partition(), message.offset()));
+
+                    let redelivery_count = metadata.headers.get("x-redelivery-count").and_then(|s| s.parse().ok()).unwrap_or(0);
+
+                    let raw_message = RawMessage { data, metadata };
+                    Ok(Some(ReceivedRawMessage { message: raw_message, delivery_tag, redelivery_count }))
+                }
+                Ok(Err(e)) => Err(WaeError::internal(format!("Failed to receive from Kafka: {}", e))),
+                Err(_) => Ok(None),
+            }
+        }
+
+        async fn ack(&self, delivery_tag: u64) -> WaeResult<()> {
+            let mut delivery_tags = self.delivery_tags.lock().await;
+            if let Some((partition, offset)) = delivery_tags.remove(&delivery_tag) {
+                self.consumer
+                    .commit_offset(
+                        &rdkafka::TopicPartitionList::new().with_partition_offset(
+                            &self.config.queue,
+                            partition,
+                            rdkafka::Offset::Offset(offset + 1),
+                        ),
+                        rdkafka::consumer::CommitMode::Async,
+                    )
+                    .map_err(|e| WaeError::internal(format!("Failed to commit Kafka offset: {}", e)))?;
+            }
+            Ok(())
+        }
+
+        async fn nack(&self, delivery_tag: u64, requeue: bool) -> WaeResult<()> {
+            let mut delivery_tags = self.delivery_tags.lock().await;
+            if let Some((partition, offset)) = delivery_tags.remove(&delivery_tag) {
+                if requeue {
+                    self.consumer
+                        .seek(
+                            &self.config.queue,
+                            partition,
+                            rdkafka::Offset::Offset(offset),
+                            Timeout::After(Duration::from_secs(5)),
+                        )
+                        .await
+                        .map_err(|e| WaeError::internal(format!("Failed to seek Kafka offset: {}", e)))?;
+                }
+                else {
+                    self.consumer
+                        .commit_offset(
+                            &rdkafka::TopicPartitionList::new().with_partition_offset(
+                                &self.config.queue,
+                                partition,
+                                rdkafka::Offset::Offset(offset + 1),
+                            ),
+                            rdkafka::consumer::CommitMode::Async,
+                        )
+                        .map_err(|e| WaeError::internal(format!("Failed to commit Kafka offset: {}", e)))?;
+                }
+            }
+            Ok(())
+        }
+
+        fn config(&self) -> &ConsumerConfig {
+            &self.config
+        }
+    }
+
+    /// Kafka 队列服务
+    pub struct KafkaQueueService {
+        manager: Arc<KafkaQueueManager>,
+        producer: Arc<FutureProducer>,
+        consumer_config: ClientConfig,
+    }
+
+    impl KafkaQueueService {
+        /// 创建新的 Kafka 队列服务
+        pub async fn new(config: KafkaConfig) -> WaeResult<Self> {
+            let manager = Arc::new(KafkaQueueManager::new(&config));
+
+            let mut producer_config = ClientConfig::new();
+            producer_config.set("bootstrap.servers", &config.brokers);
+            if let Some(client_id) = &config.client_id {
+                producer_config.set("client.id", client_id);
+            }
+            for (key, value) in &config.producer_config {
+                producer_config.set(key, value);
+            }
+            let producer: FutureProducer =
+                producer_config.create().map_err(|e| WaeError::internal(format!("Failed to create Kafka producer: {}", e)))?;
+
+            let mut consumer_config = ClientConfig::new();
+            consumer_config.set("bootstrap.servers", &config.brokers);
+            consumer_config.set("group.id", format!("wae-{}", Uuid::new_v4()));
+            consumer_config.set("enable.auto.commit", "false");
+            consumer_config.set("auto.offset.reset", "earliest");
+            if let Some(client_id) = &config.client_id {
+                consumer_config.set("client.id", client_id);
+            }
+            for (key, value) in &config.consumer_config {
+                consumer_config.set(key, value);
+            }
+
+            Ok(Self { manager, producer: Arc::new(producer), consumer_config })
+        }
+    }
+
+    impl QueueService for KafkaQueueService {
+        async fn create_producer(&self, config: ProducerConfig) -> WaeResult<MessageProducer> {
+            Ok(MessageProducer::new(Box::new(KafkaProducerBackend::new(config, self.manager.clone(), self.producer.clone()))))
+        }
+
+        async fn create_consumer(&self, config: ConsumerConfig) -> WaeResult<MessageConsumer> {
+            let consumer: StreamConsumer<DefaultConsumerContext> = self
+                .consumer_config
+                .create()
+                .map_err(|e| WaeError::internal(format!("Failed to create Kafka consumer: {}", e)))?;
+
+            consumer
+                .subscribe(&[&config.queue])
+                .map_err(|e| WaeError::internal(format!("Failed to subscribe to Kafka topic: {}", e)))?;
+
+            let backend = KafkaConsumerBackend::new(config, self.manager.clone(), Arc::new(consumer));
+
+            Ok(MessageConsumer::new(Box::new(backend)))
+        }
+
+        fn manager(&self) -> &dyn QueueManager {
+            self.manager.as_ref() as &dyn QueueManager
+        }
+
+        async fn close(&self) -> WaeResult<()> {
+            Ok(())
+        }
+    }
+}
+
 /// RabbitMQ (AMQP) 队列实现
 #[cfg(feature = "rabbitmq-backend")]
 pub mod rabbitmq {
     use super::*;
     use lapin::{
-        options::*, publisher_confirm::Confirmation, types::*, BasicProperties, Channel, Connection,
-        ConnectionProperties, message::Delivery,
+        BasicProperties, Channel, Connection, ConnectionProperties, message::Delivery, options::*,
+        publisher_confirm::Confirmation, types::*,
     };
     use std::sync::Arc;
     use tokio::sync::Semaphore;
@@ -1254,10 +1685,7 @@ pub mod rabbitmq {
     impl RabbitMQConfig {
         /// 创建新的 RabbitMQ 配置
         pub fn new(amqp_url: impl Into<String>) -> Self {
-            Self {
-                amqp_url: amqp_url.into(),
-                connection_properties: ConnectionProperties::default(),
-            }
+            Self { amqp_url: amqp_url.into(), connection_properties: ConnectionProperties::default() }
         }
     }
 
@@ -1417,12 +1845,8 @@ pub mod rabbitmq {
         async fn send_raw_internal(&self, queue: &str, message: &RawMessage, id: &str) -> WaeResult<()> {
             let mut metadata = message.metadata.clone();
             if metadata.timestamp.is_none() {
-                metadata.timestamp = Some(
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_millis() as u64,
-                );
+                metadata.timestamp =
+                    Some(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64);
             }
 
             let mut props = Self::metadata_to_properties(&metadata);
@@ -1430,13 +1854,7 @@ pub mod rabbitmq {
 
             let confirm = self
                 .channel
-                .basic_publish(
-                    "",
-                    queue,
-                    BasicPublishOptions::default(),
-                    &message.data,
-                    props,
-                )
+                .basic_publish("", queue, BasicPublishOptions::default(), &message.data, props)
                 .await
                 .map_err(|e| WaeError::internal(format!("RabbitMQ publish message: {}", e)))?
                 .await
@@ -1504,11 +1922,7 @@ pub mod rabbitmq {
 
     impl RabbitMQConsumerBackend {
         /// 创建新的 RabbitMQ 消费者后端
-        pub async fn new(
-            config: ConsumerConfig,
-            channel: Arc<Channel>,
-            manager: Arc<RabbitMQQueueManager>,
-        ) -> WaeResult<Self> {
+        pub async fn new(config: ConsumerConfig, channel: Arc<Channel>, manager: Arc<RabbitMQQueueManager>) -> WaeResult<Self> {
             channel
                 .basic_qos(config.prefetch_count, BasicQosOptions::default())
                 .await
@@ -1555,16 +1969,14 @@ pub mod rabbitmq {
                 for (key, value) in headers.inner().iter() {
                     if let AMQPValue::LongString(s) = value {
                         metadata.headers.insert(key.to_string(), s.to_string());
-                    } else if let AMQPValue::ShortString(s) = value {
+                    }
+                    else if let AMQPValue::ShortString(s) = value {
                         metadata.headers.insert(key.to_string(), s.to_string());
                     }
                 }
             }
 
-            RawMessage {
-                data: delivery.data.clone(),
-                metadata,
-            }
+            RawMessage { data: delivery.data.clone(), metadata }
         }
     }
 
@@ -1580,12 +1992,9 @@ pub mod rabbitmq {
                 let message = Self::delivery_to_raw_message(&delivery);
                 let redelivery_count = 0;
 
-                Ok(Some(ReceivedRawMessage {
-                    message,
-                    delivery_tag: delivery.delivery_tag,
-                    redelivery_count,
-                }))
-            } else {
+                Ok(Some(ReceivedRawMessage { message, delivery_tag: delivery.delivery_tag, redelivery_count }))
+            }
+            else {
                 Ok(None)
             }
         }
@@ -1600,13 +2009,7 @@ pub mod rabbitmq {
 
         async fn nack(&self, delivery_tag: u64, requeue: bool) -> WaeResult<()> {
             self.channel
-                .basic_nack(
-                    delivery_tag,
-                    BasicNackOptions {
-                        multiple: false,
-                        requeue,
-                    },
-                )
+                .basic_nack(delivery_tag, BasicNackOptions { multiple: false, requeue })
                 .await
                 .map_err(|e| WaeError::internal(format!("RabbitMQ nack message: {}", e)))?;
             Ok(())
@@ -1631,10 +2034,8 @@ pub mod rabbitmq {
                 .await
                 .map_err(|e| WaeError::internal(format!("RabbitMQ connect: {}", e)))?;
 
-            let channel = connection
-                .create_channel()
-                .await
-                .map_err(|e| WaeError::internal(format!("RabbitMQ create channel: {}", e)))?;
+            let channel =
+                connection.create_channel().await.map_err(|e| WaeError::internal(format!("RabbitMQ create channel: {}", e)))?;
 
             channel
                 .confirm_select(ConfirmSelectOptions::default())
@@ -1651,11 +2052,7 @@ pub mod rabbitmq {
 
     impl QueueService for RabbitMQQueueService {
         async fn create_producer(&self, config: ProducerConfig) -> WaeResult<MessageProducer> {
-            Ok(MessageProducer::new(Box::new(RabbitMQProducerBackend::new(
-                config,
-                self.channel.clone(),
-                self.manager.clone(),
-            ))))
+            Ok(MessageProducer::new(Box::new(RabbitMQProducerBackend::new(config, self.channel.clone(), self.manager.clone()))))
         }
 
         async fn create_consumer(&self, config: ConsumerConfig) -> WaeResult<MessageConsumer> {
@@ -1671,10 +2068,425 @@ pub mod rabbitmq {
         }
 
         async fn close(&self) -> WaeResult<()> {
-            self.connection
-                .close(0, "")
+            self.connection.close(0, "").await.map_err(|e| WaeError::internal(format!("RabbitMQ close connection: {}", e)))?;
+            Ok(())
+        }
+    }
+}
+
+/// Pulsar 队列实现
+#[cfg(feature = "pulsar-backend")]
+pub mod pulsar_backend {
+    use super::*;
+    use base64::{Engine as _, engine::general_purpose};
+    use pulsar::{Authentication, Pulsar, TokioExecutor, consumer, message::proto::MessageIdData, producer};
+    use std::{collections::HashMap, sync::Arc, time::Duration};
+    use tokio::sync::Mutex;
+    use uuid::Uuid;
+
+    /// Pulsar 连接配置
+    #[derive(Debug, Clone)]
+    pub struct PulsarConfig {
+        /// Pulsar Broker 地址 (例如: pulsar://localhost:6650)
+        pub brokers: String,
+        /// 认证配置
+        pub authentication: Option<Authentication>,
+        /// 生产者配置
+        pub producer_options: producer::ProducerOptions,
+        /// 消费者配置
+        pub consumer_options: consumer::ConsumerOptions,
+    }
+
+    impl Default for PulsarConfig {
+        fn default() -> Self {
+            Self {
+                brokers: "pulsar://localhost:6650".to_string(),
+                authentication: None,
+                producer_options: producer::ProducerOptions::default(),
+                consumer_options: consumer::ConsumerOptions::default(),
+            }
+        }
+    }
+
+    impl PulsarConfig {
+        /// 创建新的 Pulsar 配置
+        pub fn new(brokers: impl Into<String>) -> Self {
+            Self { brokers: brokers.into(), ..Default::default() }
+        }
+    }
+
+    /// Pulsar 队列管理器
+    pub struct PulsarQueueManager {
+        client: Arc<Pulsar<TokioExecutor>>,
+    }
+
+    impl PulsarQueueManager {
+        /// 创建新的 Pulsar 队列管理器
+        pub fn new(client: Arc<Pulsar<TokioExecutor>>) -> Self {
+            Self { client }
+        }
+
+        /// 从配置创建 Pulsar 队列管理器
+        pub async fn from_config(config: &PulsarConfig) -> WaeResult<Self> {
+            let mut builder = Pulsar::builder(&config.brokers, TokioExecutor);
+            if let Some(auth) = &config.authentication {
+                builder = builder.with_auth(auth.clone());
+            }
+            let client =
+                builder.build().await.map_err(|e| WaeError::internal(format!("Failed to create Pulsar client: {}", e)))?;
+            Ok(Self::new(Arc::new(client)))
+        }
+
+        /// 内部主题名称
+        fn topic_name(queue: &str) -> String {
+            format!("persistent://public/default/{}", queue)
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl QueueManager for PulsarQueueManager {
+        async fn declare_queue(&self, _config: &QueueConfig) -> WaeResult<()> {
+            Ok(())
+        }
+
+        async fn delete_queue(&self, _name: &str) -> WaeResult<()> {
+            Ok(())
+        }
+
+        async fn queue_exists(&self, _name: &str) -> WaeResult<bool> {
+            Ok(true)
+        }
+
+        async fn queue_message_count(&self, _name: &str) -> WaeResult<u64> {
+            Ok(0)
+        }
+
+        async fn purge_queue(&self, _name: &str) -> WaeResult<u64> {
+            Ok(0)
+        }
+    }
+
+    /// Pulsar 生产者后端
+    pub struct PulsarProducerBackend {
+        config: ProducerConfig,
+        producer: Arc<producer::Producer<TokioExecutor>>,
+        manager: Arc<PulsarQueueManager>,
+    }
+
+    impl PulsarProducerBackend {
+        /// 创建新的 Pulsar 生产者后端
+        pub fn new(
+            config: ProducerConfig,
+            manager: Arc<PulsarQueueManager>,
+            producer: Arc<producer::Producer<TokioExecutor>>,
+        ) -> Self {
+            Self { config, producer, manager }
+        }
+
+        /// 编码元数据
+        fn encode_metadata(metadata: &MessageMetadata) -> HashMap<String, String> {
+            let mut fields = HashMap::new();
+
+            if let Some(id) = &metadata.id {
+                fields.insert("id".to_string(), id.clone());
+            }
+            if let Some(correlation_id) = &metadata.correlation_id {
+                fields.insert("correlation_id".to_string(), correlation_id.clone());
+            }
+            if let Some(reply_to) = &metadata.reply_to {
+                fields.insert("reply_to".to_string(), reply_to.clone());
+            }
+            if let Some(content_type) = &metadata.content_type {
+                fields.insert("content_type".to_string(), content_type.clone());
+            }
+            if let Some(timestamp) = metadata.timestamp {
+                fields.insert("timestamp".to_string(), timestamp.to_string());
+            }
+            if let Some(priority) = metadata.priority {
+                fields.insert("priority".to_string(), priority.to_string());
+            }
+            if let Some(expiration) = metadata.expiration {
+                fields.insert("expiration".to_string(), expiration.to_string());
+            }
+
+            for (key, value) in &metadata.headers {
+                fields.insert(format!("header:{}", key), value.clone());
+            }
+
+            fields
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ProducerBackend for PulsarProducerBackend {
+        async fn send_raw(&self, queue: &str, message: &RawMessage) -> WaeResult<MessageId> {
+            let id = Uuid::new_v4().to_string();
+            let mut metadata = message.metadata.clone();
+            metadata.id = Some(id.clone());
+            if metadata.timestamp.is_none() {
+                metadata.timestamp =
+                    Some(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64);
+            }
+
+            let data_b64 = general_purpose::STANDARD.encode(&message.data);
+            let mut fields = Self::encode_metadata(&metadata);
+            fields.insert("data".to_string(), data_b64);
+
+            let payload = serde_json::to_vec(&fields)
+                .map_err(|e| WaeError::internal(format!("Failed to serialize Pulsar message: {}", e)))?;
+
+            let message_id = self
+                .producer
+                .send(payload)
                 .await
-                .map_err(|e| WaeError::internal(format!("RabbitMQ close connection: {}", e)))?;
+                .map_err(|e| WaeError::internal(format!("Failed to send Pulsar message: {}", e)))?
+                .await
+                .map_err(|e| WaeError::internal(format!("Failed to confirm Pulsar message: {}", e)))?;
+
+            Ok(id)
+        }
+
+        async fn send_raw_default(&self, message: &RawMessage) -> WaeResult<MessageId> {
+            let queue = self.config.default_queue.as_ref().ok_or_else(|| WaeError::config_missing("default_queue"))?;
+            self.send_raw(queue, message).await
+        }
+
+        async fn send_raw_delayed(&self, queue: &str, message: &RawMessage, delay: Duration) -> WaeResult<MessageId> {
+            let id = Uuid::new_v4().to_string();
+            let message_clone = message.clone();
+            let producer = self.producer.clone();
+            let manager = self.manager.clone();
+            let queue = queue.to_string();
+
+            tokio::spawn(async move {
+                tokio::time::sleep(delay).await;
+                let mut producer_config = ProducerConfig::default();
+                producer_config.default_queue = Some(queue.clone());
+                let mut producer_backend = PulsarProducerBackend::new(producer_config, manager.clone(), producer.clone());
+                let _ = producer_backend.send_raw(&queue, &message_clone).await;
+            });
+
+            Ok(id)
+        }
+
+        async fn send_raw_batch(&self, queue: &str, messages: &[RawMessage]) -> WaeResult<Vec<MessageId>> {
+            let mut ids = Vec::with_capacity(messages.len());
+            for msg in messages {
+                ids.push(self.send_raw(queue, msg).await?);
+            }
+            Ok(ids)
+        }
+
+        fn config(&self) -> &ProducerConfig {
+            &self.config
+        }
+    }
+
+    /// Pulsar 消费者后端
+    pub struct PulsarConsumerBackend {
+        config: ConsumerConfig,
+        consumer: Arc<Mutex<consumer::Consumer<TokioExecutor>>>,
+        manager: Arc<PulsarQueueManager>,
+        delivery_tags: Arc<Mutex<HashMap<u64, MessageIdData>>>,
+        next_delivery_tag: Arc<Mutex<u64>>,
+    }
+
+    impl PulsarConsumerBackend {
+        /// 创建新的 Pulsar 消费者后端
+        pub fn new(
+            config: ConsumerConfig,
+            manager: Arc<PulsarQueueManager>,
+            consumer: consumer::Consumer<TokioExecutor>,
+        ) -> Self {
+            Self {
+                config,
+                consumer: Arc::new(Mutex::new(consumer)),
+                manager,
+                delivery_tags: Arc::new(Mutex::new(HashMap::new())),
+                next_delivery_tag: Arc::new(Mutex::new(1)),
+            }
+        }
+
+        /// 解码元数据
+        fn decode_metadata(fields: &HashMap<String, String>) -> MessageMetadata {
+            let mut metadata = MessageMetadata::default();
+
+            if let Some(id) = fields.get("id") {
+                metadata.id = Some(id.clone());
+            }
+            if let Some(correlation_id) = fields.get("correlation_id") {
+                metadata.correlation_id = Some(correlation_id.clone());
+            }
+            if let Some(reply_to) = fields.get("reply_to") {
+                metadata.reply_to = Some(reply_to.clone());
+            }
+            if let Some(content_type) = fields.get("content_type") {
+                metadata.content_type = Some(content_type.clone());
+            }
+            if let Some(timestamp) = fields.get("timestamp").and_then(|s| s.parse().ok()) {
+                metadata.timestamp = Some(timestamp);
+            }
+            if let Some(priority) = fields.get("priority").and_then(|s| s.parse().ok()) {
+                metadata.priority = Some(priority);
+            }
+            if let Some(expiration) = fields.get("expiration").and_then(|s| s.parse().ok()) {
+                metadata.expiration = Some(expiration);
+            }
+
+            for (key, value) in fields {
+                if let Some(header_key) = key.strip_prefix("header:") {
+                    metadata.headers.insert(header_key.to_string(), value.clone());
+                }
+            }
+
+            metadata
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ConsumerBackend for PulsarConsumerBackend {
+        async fn receive_raw(&self) -> WaeResult<Option<ReceivedRawMessage>> {
+            match tokio::time::timeout(Duration::from_secs(1), async {
+                let mut consumer = self.consumer.lock().await;
+                consumer.next().await
+            })
+            .await
+            {
+                Ok(Some(msg_result)) => {
+                    let msg = msg_result.map_err(|e| WaeError::internal(format!("Failed to receive from Pulsar: {}", e)))?;
+                    let payload = msg.payload.data.clone();
+                    let fields: HashMap<String, String> = serde_json::from_slice(&payload)
+                        .map_err(|e| WaeError::internal(format!("Failed to deserialize Pulsar message: {}", e)))?;
+                    let data_b64 = fields.get("data").ok_or_else(|| WaeError::internal("Missing data field"))?;
+                    let data = general_purpose::STANDARD
+                        .decode(data_b64)
+                        .map_err(|e| WaeError::internal(format!("Failed to decode data: {}", e)))?;
+                    let metadata = Self::decode_metadata(&fields);
+
+                    let mut next_tag = self.next_delivery_tag.lock().await;
+                    let delivery_tag = *next_tag;
+                    *next_tag += 1;
+                    drop(next_tag);
+
+                    let mut delivery_tags = self.delivery_tags.lock().await;
+                    delivery_tags.insert(delivery_tag, msg.message_id.clone());
+
+                    let redelivery_count = metadata.headers.get("x-redelivery-count").and_then(|s| s.parse().ok()).unwrap_or(0);
+
+                    let raw_message = RawMessage { data, metadata };
+                    Ok(Some(ReceivedRawMessage { message: raw_message, delivery_tag, redelivery_count }))
+                }
+                Ok(None) => Ok(None),
+                Err(_) => Ok(None),
+            }
+        }
+
+        async fn ack(&self, delivery_tag: u64) -> WaeResult<()> {
+            let mut delivery_tags = self.delivery_tags.lock().await;
+            if let Some(message_id) = delivery_tags.remove(&delivery_tag) {
+                let mut consumer = self.consumer.lock().await;
+                consumer
+                    .ack(&message_id)
+                    .await
+                    .map_err(|e| WaeError::internal(format!("Failed to ack Pulsar message: {}", e)))?;
+            }
+            Ok(())
+        }
+
+        async fn nack(&self, delivery_tag: u64, requeue: bool) -> WaeResult<()> {
+            let mut delivery_tags = self.delivery_tags.lock().await;
+            if let Some(message_id) = delivery_tags.remove(&delivery_tag) {
+                let mut consumer = self.consumer.lock().await;
+                if requeue {
+                    consumer
+                        .nack_with_redelivery(&message_id)
+                        .await
+                        .map_err(|e| WaeError::internal(format!("Failed to nack Pulsar message with redelivery: {}", e)))?;
+                }
+                else {
+                    consumer
+                        .ack(&message_id)
+                        .await
+                        .map_err(|e| WaeError::internal(format!("Failed to ack Pulsar message in nack: {}", e)))?;
+                }
+            }
+            Ok(())
+        }
+
+        fn config(&self) -> &ConsumerConfig {
+            &self.config
+        }
+    }
+
+    /// Pulsar 队列服务
+    pub struct PulsarQueueService {
+        manager: Arc<PulsarQueueManager>,
+        client: Arc<Pulsar<TokioExecutor>>,
+        producer_options: producer::ProducerOptions,
+        consumer_options: consumer::ConsumerOptions,
+    }
+
+    impl PulsarQueueService {
+        /// 创建新的 Pulsar 队列服务
+        pub async fn new(config: PulsarConfig) -> WaeResult<Self> {
+            let manager = PulsarQueueManager::from_config(&config).await?;
+            let client = manager.client.clone();
+            Ok(Self {
+                manager: Arc::new(manager),
+                client,
+                producer_options: config.producer_options,
+                consumer_options: config.consumer_options,
+            })
+        }
+    }
+
+    impl QueueService for PulsarQueueService {
+        async fn create_producer(&self, config: ProducerConfig) -> WaeResult<MessageProducer> {
+            let topic = config
+                .default_queue
+                .as_ref()
+                .map(|q| PulsarQueueManager::topic_name(q))
+                .unwrap_or_else(|| PulsarQueueManager::topic_name("default"));
+
+            let producer: producer::Producer<TokioExecutor> = self
+                .client
+                .producer()
+                .with_options(self.producer_options.clone())
+                .with_topic(topic)
+                .build()
+                .await
+                .map_err(|e| WaeError::internal(format!("Failed to create Pulsar producer: {}", e)))?;
+
+            Ok(MessageProducer::new(Box::new(PulsarProducerBackend::new(config, self.manager.clone(), Arc::new(producer)))))
+        }
+
+        async fn create_consumer(&self, config: ConsumerConfig) -> WaeResult<MessageConsumer> {
+            let topic = PulsarQueueManager::topic_name(&config.queue);
+            let consumer_name = config.consumer_tag.clone().unwrap_or_else(|| format!("wae-consumer-{}", Uuid::new_v4()));
+            let subscription = format!("wae-subscription-{}", Uuid::new_v4());
+
+            let consumer: consumer::Consumer<TokioExecutor> = self
+                .client
+                .consumer()
+                .with_options(self.consumer_options.clone())
+                .with_topic(topic)
+                .with_consumer_name(consumer_name)
+                .with_subscription(subscription)
+                .with_subscription_type(consumer::SubscriptionType::Exclusive)
+                .build()
+                .await
+                .map_err(|e| WaeError::internal(format!("Failed to create Pulsar consumer: {}", e)))?;
+
+            let backend = PulsarConsumerBackend::new(config, self.manager.clone(), consumer);
+
+            Ok(MessageConsumer::new(Box::new(backend)))
+        }
+
+        fn manager(&self) -> &dyn QueueManager {
+            self.manager.as_ref() as &dyn QueueManager
+        }
+
+        async fn close(&self) -> WaeResult<()> {
             Ok(())
         }
     }

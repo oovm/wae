@@ -8,7 +8,7 @@ struct TestTask {
 
 #[async_trait::async_trait]
 impl ScheduledTask for TestTask {
-    async fn execute(&self) -> SchedulerResult<()> {
+    async fn execute(&self) -> WaeResult<()> {
         println!("Executing task: {}", self.name);
         Ok(())
     }

@@ -4,12 +4,12 @@ use crate::connection::{
     config::{DatabaseConfig, DatabaseResult},
     row::DatabaseRows,
     statement::DatabaseStatement,
-    trait_impl::{DatabaseConnection, DatabaseBackend},
+    trait_impl::{DatabaseBackend, DatabaseConnection},
 };
 use async_trait::async_trait;
 use std::path::PathBuf;
 use turso::{Builder, Connection, Database, Value as TursoValue};
-use wae_types::{WaeErrorKind, WaeError};
+use wae_types::{WaeError, WaeErrorKind};
 
 /// Turso 连接包装
 pub struct TursoConnection {
@@ -78,9 +78,7 @@ impl DatabaseConnection for TursoConnection {
 
     async fn begin_transaction(&self) -> DatabaseResult<()> {
         self.conn.execute("BEGIN TRANSACTION", ()).await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: format!("Failed to begin transaction: {}", e),
-            })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Failed to begin transaction: {}", e) })
         })?;
         Ok(())
     }

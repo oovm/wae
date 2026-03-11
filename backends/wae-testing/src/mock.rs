@@ -1,8 +1,14 @@
 //! Mock 工具模块
+//!
+//! 提供简洁易用的 Mock 功能，支持同步和异步操作。
+//! 当启用 `mockall` feature 时，还可以使用更强大的 trait-level mocking。
 
 use parking_lot::RwLock;
 use std::sync::Arc;
 use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
+
+#[cfg(feature = "mockall")]
+pub use mockall::{self, __mock_MockObject, __mock_MockStatic, automock, mock, predicate, sequence};
 
 /// Mock 调用记录
 #[derive(Debug, Clone)]
@@ -14,7 +20,7 @@ pub struct MockCall {
 }
 
 /// Mock 返回结果
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum MockResult<T> {
     /// 返回指定值
     Return(T),
@@ -38,6 +44,16 @@ impl<T: Clone> MockResult<T> {
     /// 创建序列返回
     pub fn sequence(values: Vec<T>) -> Self {
         MockResult::Sequence(values)
+    }
+}
+
+impl<T: Clone> Clone for MockResult<T> {
+    fn clone(&self) -> Self {
+        match self {
+            MockResult::Return(v) => MockResult::Return(v.clone()),
+            MockResult::Error(e) => MockResult::Error(e.clone()),
+            MockResult::Sequence(v) => MockResult::Sequence(v.clone()),
+        }
     }
 }
 
@@ -82,6 +98,12 @@ pub trait Mock: Send + Sync {
 
     /// 重置 Mock 状态
     fn reset(&self);
+}
+
+/// 异步 Mock 行为 trait
+pub trait AsyncMock: Mock {
+    /// 异步验证期望
+    async fn verify_async(&self) -> TestingResult<()>;
 }
 
 /// Mock 构建器
@@ -146,7 +168,7 @@ pub struct MockFn<T> {
     sequence_index: Arc<RwLock<usize>>,
 }
 
-impl<T: Clone> MockFn<T> {
+impl<T: Clone + Send + Sync + 'static> MockFn<T> {
     /// 执行 Mock 调用
     pub fn call(&self, args: Vec<String>) -> TestingResult<T> {
         {
@@ -209,7 +231,18 @@ impl<T: Clone + Send + Sync + 'static> Mock for MockFn<T> {
     }
 }
 
+impl<T: Clone + Send + Sync + 'static> AsyncMock for MockFn<T> {
+    async fn verify_async(&self) -> TestingResult<()> {
+        self.verify()
+    }
+}
+
 /// 验证 Mock 期望
 pub fn verify<M: Mock>(mock: &M) -> TestingResult<()> {
     mock.verify()
+}
+
+/// 异步验证 Mock 期望
+pub async fn verify_async<M: AsyncMock>(mock: &M) -> TestingResult<()> {
+    mock.verify_async().await
 }

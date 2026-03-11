@@ -8,12 +8,17 @@ use std::path::Path;
 
 use crate::{ApiResponse, Body, full_body};
 
-/// 重新导出 axum 的常用响应类型
-pub use axum::response::{
-    Redirect,
-    Html,
-    IntoResponse,
-};
+/// HTML 响应类型
+pub struct Html<T>(pub T);
+
+/// 重定向响应类型
+pub struct Redirect;
+
+/// 将类型转换为 HTTP 响应的 trait
+pub trait IntoResponse {
+    /// 将类型转换为 HTTP 响应
+    fn into_response(self) -> Response<Body>;
+}
 
 /// JSON 响应构建器
 pub struct JsonResponse;
@@ -68,11 +73,7 @@ pub struct Attachment {
 impl Attachment {
     /// 创建新的附件响应
     pub fn new(filename: impl Into<String>, content_type: impl Into<String>, data: Vec<u8>) -> Self {
-        Self {
-            filename: filename.into(),
-            content_type: content_type.into(),
-            data,
-        }
+        Self { filename: filename.into(), content_type: content_type.into(), data }
     }
 
     /// 从文件路径创建附件响应
@@ -81,15 +82,8 @@ impl Attachment {
         let data = tokio::fs::read(path).await?;
         let filename = filename
             .map(|f| f.into())
-            .unwrap_or_else(|| {
-                path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("download")
-                    .to_string()
-            });
-        let content_type = mime_guess::from_path(path)
-            .first_or_octet_stream()
-            .to_string();
+            .unwrap_or_else(|| path.file_name().and_then(|n| n.to_str()).unwrap_or("download").to_string());
+        let content_type = mime_guess::from_path(path).first_or_octet_stream().to_string();
         Ok(Self::new(filename, content_type, data))
     }
 }
@@ -117,19 +111,12 @@ pub struct StreamResponse {
 impl StreamResponse {
     /// 创建新的流式响应
     pub fn new(body: Body, content_type: impl Into<String>) -> Self {
-        Self {
-            body,
-            content_type: content_type.into(),
-        }
+        Self { body, content_type: content_type.into() }
     }
 }
 
 impl IntoResponse for StreamResponse {
     fn into_response(self) -> Response<Body> {
-        Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, self.content_type)
-            .body(self.body)
-            .unwrap()
+        Response::builder().status(StatusCode::OK).header(header::CONTENT_TYPE, self.content_type).body(self.body).unwrap()
     }
 }

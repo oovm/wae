@@ -19,10 +19,9 @@ tokio = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 async-trait = { workspace = true }
-clap = { version = "4.5.4", features = ["derive"] }
-notify = "6.1.1"
-notify-debouncer-mini = "0.4.1"
-anyhow = "1.0.86"
+clap = { workspace = true }
+notify = { workspace = true }
+notify-debouncer-mini = { workspace = true }
 figment = { workspace = true }
 
 [features]
@@ -33,4 +32,4 @@ database-mysql = ["wae-database/mysql"]
 
 [dev-dependencies]
 wae-database = { workspace = true, features = ["turso"] }
-wae-tools = { path = ".", features = ["database-turso"] }
+wae-tools = { workspace = true, features = ["database-turso"] }

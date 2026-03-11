@@ -10,49 +10,64 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{Data, DeriveInput, Expr, Fields, Ident, Lit, Meta, Type, parse_macro_input};
+use syn::{Data, DeriveInput, Expr, Fields, GenericArgument, Ident, Lit, Meta, PathArguments, Type, parse_macro_input};
 
+/// 获取类型的 Schema 定义
+///
+/// 正确处理基础类型、`Vec<T>`、`Option<T>` 等泛型类型。
 fn get_type_schema(ty: &Type) -> TokenStream2 {
-    let type_str = quote!(#ty).to_string();
+    match ty {
+        Type::Path(type_path) => {
+            let last_segment = type_path.path.segments.last();
+            if let Some(segment) = last_segment {
+                let ident = &segment.ident;
 
-    if type_str.contains("String") || type_str.contains("&str") {
-        quote! { wae_schema::Schema::string() }
-    }
-    else if type_str.contains("i8")
-        || type_str.contains("i16")
-        || type_str.contains("i32")
-        || type_str.contains("i64")
-        || type_str.contains("i128")
-        || type_str.contains("isize")
-        || type_str.contains("u8")
-        || type_str.contains("u16")
-        || type_str.contains("u32")
-        || type_str.contains("u64")
-        || type_str.contains("u128")
-        || type_str.contains("usize")
-    {
-        quote! { wae_schema::Schema::integer() }
-    }
-    else if type_str.contains("f32") || type_str.contains("f64") {
-        quote! { wae_schema::Schema::number() }
-    }
-    else if type_str.contains("bool") {
-        quote! { wae_schema::Schema::boolean() }
-    }
-    else if type_str.contains("Vec") || type_str.contains("[]") {
-        quote! { wae_schema::Schema::array(<wae_schema::Schema as Default>::default()) }
-    }
-    else if type_str.contains("Option") {
-        quote! { <wae_schema::Schema as Default>::default().nullable(true) }
-    }
-    else {
-        quote! {
-            <#ty as wae_schema::ToSchema>::schema()
+                match &segment.arguments {
+                    PathArguments::AngleBracketed(angle_bracketed) => {
+                        if let Some(GenericArgument::Type(inner_ty)) = angle_bracketed.args.first() {
+                            let inner_schema = get_type_schema(inner_ty);
+                            if ident == "Vec" {
+                                return quote! { wae_schema::Schema::array(#inner_schema) };
+                            }
+                            else if ident == "Option" {
+                                return quote! { #inner_schema.nullable(true) };
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+
+                let ident_str = ident.to_string();
+                if ident_str == "String" || ident_str == "&str" {
+                    return quote! { wae_schema::Schema::string() };
+                }
+                else if matches!(
+                    ident_str.as_str(),
+                    "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128" | "usize"
+                ) {
+                    return quote! { wae_schema::Schema::integer() };
+                }
+                else if ident_str == "f32" || ident_str == "f64" {
+                    return quote! { wae_schema::Schema::number() };
+                }
+                else if ident_str == "bool" {
+                    return quote! { wae_schema::Schema::boolean() };
+                }
+            }
         }
+        Type::Reference(type_ref) => {
+            return get_type_schema(&type_ref.elem);
+        }
+        _ => {}
     }
+    quote! { <#ty as wae_schema::ToSchema>::schema() }
 }
 
+/// 提取文档注释
+///
+/// 合并多行文档注释为单个字符串。
 fn extract_doc_comment(attrs: &[syn::Attribute]) -> Option<String> {
+    let mut docs = Vec::new();
     for attr in attrs {
         if attr.path().is_ident("doc") {
             if let Meta::NameValue(meta) = &attr.meta {
@@ -60,19 +75,31 @@ fn extract_doc_comment(attrs: &[syn::Attribute]) -> Option<String> {
                     if let Lit::Str(lit_str) = &expr_lit.lit {
                         let doc = lit_str.value().trim().to_string();
                         if !doc.is_empty() {
-                            return Some(doc);
+                            docs.push(doc);
                         }
                     }
                 }
             }
         }
     }
-    None
+    if docs.is_empty() { None } else { Some(docs.join("\n")) }
 }
 
-fn generate_struct_schema(name: &Ident, fields: &Fields) -> TokenStream2 {
+/// 检查类型是否为 Option 类型
+fn is_option_type(ty: &Type) -> bool {
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            return segment.ident == "Option";
+        }
+    }
+    false
+}
+
+/// 生成结构体的 Schema 实现
+fn generate_struct_schema(name: &Ident, fields: &Fields, attrs: &[syn::Attribute]) -> TokenStream2 {
     let mut properties = Vec::new();
     let mut required_fields = Vec::new();
+    let type_doc = extract_doc_comment(attrs);
 
     match fields {
         Fields::Named(fields_named) => {
@@ -94,8 +121,7 @@ fn generate_struct_schema(name: &Ident, fields: &Fields) -> TokenStream2 {
                 };
                 properties.push(property);
 
-                let is_option = quote!(#field.ty).to_string().contains("Option");
-                if !is_option {
+                if !is_option_type(&field.ty) {
                     required_fields.push(field_name_str);
                 }
             }
@@ -120,10 +146,18 @@ fn generate_struct_schema(name: &Ident, fields: &Fields) -> TokenStream2 {
         quote! { .required(vec![#(#required_fields.to_string()),*]) }
     };
 
+    let description = if let Some(doc) = type_doc {
+        quote! { .description(#doc) }
+    }
+    else {
+        quote! {}
+    };
+
     quote! {
         impl wae_schema::ToSchema for #name {
             fn schema() -> wae_schema::Schema {
                 wae_schema::Schema::object()
+                    #description
                     #(#properties)*
                     #required
             }
@@ -131,7 +165,8 @@ fn generate_struct_schema(name: &Ident, fields: &Fields) -> TokenStream2 {
     }
 }
 
-fn generate_enum_schema(name: &Ident, data: &Data) -> TokenStream2 {
+/// 生成枚举的 Schema 实现
+fn generate_enum_schema(name: &Ident, data: &Data, attrs: &[syn::Attribute]) -> TokenStream2 {
     let variants = match data {
         Data::Enum(data_enum) => &data_enum.variants,
         _ => return quote! {},
@@ -143,10 +178,19 @@ fn generate_enum_schema(name: &Ident, data: &Data) -> TokenStream2 {
         enum_values.push(quote! { serde_json::Value::String(#variant_name.to_string()) });
     }
 
+    let type_doc = extract_doc_comment(attrs);
+    let description = if let Some(doc) = type_doc {
+        quote! { .description(#doc) }
+    }
+    else {
+        quote! {}
+    };
+
     quote! {
         impl wae_schema::ToSchema for #name {
             fn schema() -> wae_schema::Schema {
                 wae_schema::Schema::string()
+                    #description
                     .enum_values(vec![#(#enum_values),*])
             }
         }
@@ -155,12 +199,15 @@ fn generate_enum_schema(name: &Ident, data: &Data) -> TokenStream2 {
 
 /// 自动生成 Schema 的派生宏
 ///
+/// 为结构体或枚举自动生成 `ToSchema` trait 实现。
+///
 /// # Example
 ///
 /// ```rust,ignore
 /// use serde::{Deserialize, Serialize};
 /// use wae_schema::{Schema, ToSchema};
 ///
+/// /// 用户信息
 /// #[derive(Debug, Serialize, Deserialize, ToSchema)]
 /// pub struct User {
 ///     /// 用户 ID
@@ -175,10 +222,11 @@ fn generate_enum_schema(name: &Ident, data: &Data) -> TokenStream2 {
 pub fn derive_schema(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
+    let attrs = &input.attrs;
 
     let expanded = match &input.data {
-        Data::Struct(data_struct) => generate_struct_schema(name, &data_struct.fields),
-        Data::Enum(_) => generate_enum_schema(name, &input.data),
+        Data::Struct(data_struct) => generate_struct_schema(name, &data_struct.fields, attrs),
+        Data::Enum(_) => generate_enum_schema(name, &input.data, attrs),
         Data::Union(_) => {
             return syn::Error::new_spanned(name, "Unions are not supported").to_compile_error().into();
         }

@@ -40,7 +40,8 @@ impl CodeGenerator {
         if let Some(pk) = pk_col {
             let pk_rust_type = self.column_to_rust_type_non_null(pk);
             writeln!(output, "    type Id = {};", pk_rust_type).unwrap();
-        } else {
+        }
+        else {
             writeln!(output, "    type Id = ();").unwrap();
         }
 
@@ -55,7 +56,8 @@ impl CodeGenerator {
         if let Some(pk) = pk_col {
             let pk_field = self.to_snake_case(&pk.name);
             writeln!(output, "        self.{}.clone()", pk_field).unwrap();
-        } else {
+        }
+        else {
             writeln!(output, "        ()").unwrap();
         }
         writeln!(output, "    }}").unwrap();
@@ -132,10 +134,12 @@ impl CodeGenerator {
         for c in s.chars() {
             if c == '_' {
                 capitalize_next = true;
-            } else if capitalize_next {
+            }
+            else if capitalize_next {
                 result.push(c.to_ascii_uppercase());
                 capitalize_next = false;
-            } else {
+            }
+            else {
                 result.push(c);
             }
         }
@@ -149,11 +153,7 @@ impl CodeGenerator {
 
     fn column_to_rust_type(&self, col: &ColumnDef) -> String {
         let base = self.column_to_rust_type_non_null(col);
-        if col.nullable {
-            format!("Option<{}>", base)
-        } else {
-            base
-        }
+        if col.nullable { format!("Option<{}>", base) } else { base }
     }
 
     fn column_to_rust_type_non_null(&self, col: &ColumnDef) -> String {

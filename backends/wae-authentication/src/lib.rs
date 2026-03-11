@@ -1,18 +1,18 @@
-#![doc = include_str!("../readme.md")]
+#![doc = include_str!("readme.md")]
 #![warn(missing_docs)]
 
+pub mod csrf;
 pub mod jwt;
 pub mod oauth2;
+pub mod password;
+pub mod rate_limit;
 pub mod saml;
 pub mod totp;
-pub mod password;
-pub mod csrf;
-pub mod rate_limit;
 
+use crate::password::{PasswordHashConfig, PasswordHasherService};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 use wae_types::WaeError;
-use crate::password::{PasswordHasherService, PasswordHashConfig};
 
 /// 认证操作结果类型
 pub type AuthResult<T> = Result<T, WaeError>;
@@ -515,13 +515,7 @@ pub mod memory {
                 updated_at: now,
             };
 
-            let record = UserRecord {
-                info: info.clone(),
-                password_hash,
-                roles: vec![],
-                login_attempts: 0,
-                locked_until: None,
-            };
+            let record = UserRecord { info: info.clone(), password_hash, roles: vec![], login_attempts: 0, locked_until: None };
 
             users.insert(user_id, record);
             Ok(info)

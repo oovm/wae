@@ -4,7 +4,7 @@ use crate::connection::{
     config::{DatabaseConfig, DatabaseResult},
     row::DatabaseRows,
     statement::DatabaseStatement,
-    trait_impl::{DatabaseConnection, DatabaseBackend},
+    trait_impl::{DatabaseBackend, DatabaseConnection},
 };
 use async_trait::async_trait;
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
@@ -12,7 +12,7 @@ use tokio_postgres::{
     Config, NoTls,
     types::{ToSql, private::BytesMut},
 };
-use wae_types::{WaeErrorKind, WaeError};
+use wae_types::{WaeError, WaeErrorKind};
 
 /// PostgreSQL 参数值
 ///
@@ -117,17 +117,23 @@ impl DatabaseConnection for PostgresConnection {
     }
 
     async fn begin_transaction(&self) -> DatabaseResult<()> {
-        self.client.execute("BEGIN TRANSACTION", &[]).await.map_err(|e| WaeError::database(WaeErrorKind::TransactionFailed { reason: format!("Failed to begin transaction: {}", e) }))?;
+        self.client.execute("BEGIN TRANSACTION", &[]).await.map_err(|e| {
+            WaeError::database(WaeErrorKind::TransactionFailed { reason: format!("Failed to begin transaction: {}", e) })
+        })?;
         Ok(())
     }
 
     async fn commit(&self) -> DatabaseResult<()> {
-        self.client.execute("COMMIT", &[]).await.map_err(|e| WaeError::database(WaeErrorKind::TransactionFailed { reason: format!("Failed to commit transaction: {}", e) }))?;
+        self.client.execute("COMMIT", &[]).await.map_err(|e| {
+            WaeError::database(WaeErrorKind::TransactionFailed { reason: format!("Failed to commit transaction: {}", e) })
+        })?;
         Ok(())
     }
 
     async fn rollback(&self) -> DatabaseResult<()> {
-        self.client.execute("ROLLBACK", &[]).await.map_err(|e| WaeError::database(WaeErrorKind::TransactionFailed { reason: format!("Failed to rollback transaction: {}", e) }))?;
+        self.client.execute("ROLLBACK", &[]).await.map_err(|e| {
+            WaeError::database(WaeErrorKind::TransactionFailed { reason: format!("Failed to rollback transaction: {}", e) })
+        })?;
         Ok(())
     }
 }
@@ -171,9 +177,7 @@ impl PostgresDatabaseService {
     /// 从连接池获取数据库连接
     pub async fn connect(&self) -> DatabaseResult<PostgresConnection> {
         let client = self.pool.get().await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: format!("Failed to get connection: {}", e),
-            })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Failed to get connection: {}", e) })
         })?;
         Ok(PostgresConnection::new(client))
     }

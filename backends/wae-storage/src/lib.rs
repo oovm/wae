@@ -1,6 +1,6 @@
 //! WAE Storage - 存储服务抽象层
 //!
-//! 提供统一的存储服务抽象，支持 COS、OSS 和本地存储。
+//! 提供统一的存储服务抽象，支持 COS、OSS、S3 和本地存储。
 //!
 //! 深度融合 tokio 运行时，支持：
 //! - 异步上传/下载
@@ -22,10 +22,16 @@ pub type StorageResult<T> = WaeResult<T>;
 pub enum StorageProviderType {
     /// 腾讯云 COS
     Cos,
+    /// Google Cloud Storage
+    Gcs,
     /// 阿里云 OSS
     Oss,
+    /// AWS S3
+    S3,
     /// 本地存储
     Local,
+    /// Azure Blob Storage
+    AzureBlob,
 }
 
 /// 存储服务配置
@@ -58,7 +64,10 @@ pub trait StorageProvider: Send + Sync {
     fn sign_url(&self, path: &str, config: &StorageConfig) -> StorageResult<Url>;
 }
 
-pub use providers::{cos::CosProvider, local::LocalStorageProvider, oss::OssProvider};
+pub use providers::{
+    azure_blob::AzureBlobProvider, cos::CosProvider, gcs::GcsProvider, local::LocalStorageProvider, oss::OssProvider,
+    s3::S3Provider,
+};
 
 /// 存储服务
 ///
@@ -70,8 +79,11 @@ impl StorageService {
     pub fn get_provider(provider_type: &StorageProviderType) -> Box<dyn StorageProvider> {
         match provider_type {
             StorageProviderType::Cos => Box::new(CosProvider),
+            StorageProviderType::Gcs => Box::new(GcsProvider),
             StorageProviderType::Oss => Box::new(OssProvider),
+            StorageProviderType::S3 => Box::new(S3Provider),
             StorageProviderType::Local => Box::new(LocalStorageProvider),
+            StorageProviderType::AzureBlob => Box::new(AzureBlobProvider),
         }
     }
 

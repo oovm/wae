@@ -11,15 +11,15 @@ pub enum JwtAlgorithm {
     HS384,
     /// HMAC SHA-512
     HS512,
-    /// RSASSA-PKCS1-v1_5 SHA-256
+    /// RSASSA-PKCS1-v1_5 SHA-256 (not implemented)
     RS256,
-    /// RSASSA-PKCS1-v1_5 SHA-384
+    /// RSASSA-PKCS1-v1_5 SHA-384 (not implemented)
     RS384,
-    /// RSASSA-PKCS1-v1_5 SHA-512
+    /// RSASSA-PKCS1-v1_5 SHA-512 (not implemented)
     RS512,
-    /// ECDSA SHA-256
+    /// ECDSA SHA-256 (not implemented)
     ES256,
-    /// ECDSA SHA-384
+    /// ECDSA SHA-384 (not implemented)
     ES384,
 }
 
@@ -29,29 +29,11 @@ impl Default for JwtAlgorithm {
     }
 }
 
-impl From<JwtAlgorithm> for jsonwebtoken::Algorithm {
-    fn from(alg: JwtAlgorithm) -> Self {
-        match alg {
-            JwtAlgorithm::HS256 => jsonwebtoken::Algorithm::HS256,
-            JwtAlgorithm::HS384 => jsonwebtoken::Algorithm::HS384,
-            JwtAlgorithm::HS512 => jsonwebtoken::Algorithm::HS512,
-            JwtAlgorithm::RS256 => jsonwebtoken::Algorithm::RS256,
-            JwtAlgorithm::RS384 => jsonwebtoken::Algorithm::RS384,
-            JwtAlgorithm::RS512 => jsonwebtoken::Algorithm::RS512,
-            JwtAlgorithm::ES256 => jsonwebtoken::Algorithm::ES256,
-            JwtAlgorithm::ES384 => jsonwebtoken::Algorithm::ES384,
-        }
-    }
-}
-
 /// JWT 配置
 #[derive(Debug, Clone)]
 pub struct JwtConfig {
-    /// 签名密钥（对称算法使用）或私钥（非对称算法）
+    /// 签名密钥
     pub secret: String,
-
-    /// 公钥（非对称算法使用）
-    pub public_key: Option<String>,
 
     /// 签名算法
     pub algorithm: JwtAlgorithm,
@@ -86,7 +68,6 @@ impl JwtConfig {
     pub fn new(secret: impl Into<String>) -> Self {
         Self {
             secret: secret.into(),
-            public_key: None,
             algorithm: JwtAlgorithm::HS256,
             issuer: None,
             audience: None,
@@ -127,12 +108,6 @@ impl JwtConfig {
     /// 设置刷新令牌有效期
     pub fn with_refresh_token_ttl(mut self, ttl: Duration) -> Self {
         self.refresh_token_ttl = ttl;
-        self
-    }
-
-    /// 设置公钥
-    pub fn with_public_key(mut self, public_key: impl Into<String>) -> Self {
-        self.public_key = Some(public_key.into());
         self
     }
 

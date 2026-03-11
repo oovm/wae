@@ -1,16 +1,16 @@
 //! OAuth2 提供者预设配置
 
+mod dingtalk;
+mod feishu;
 mod github;
 mod google;
 mod wechat;
-mod dingtalk;
-mod feishu;
 
+pub use dingtalk::*;
+pub use feishu::*;
 pub use github::*;
 pub use google::*;
 pub use wechat::*;
-pub use dingtalk::*;
-pub use feishu::*;
 
 use crate::oauth2::OAuth2ProviderConfig;
 

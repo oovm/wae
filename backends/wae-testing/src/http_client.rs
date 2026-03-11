@@ -21,11 +21,7 @@ pub struct TestClient {
 impl TestClient {
     /// 创建新的测试客户端
     pub fn new() -> Self {
-        Self {
-            base_url: None,
-            headers: HeaderMap::new(),
-            query_params: HashMap::new(),
-        }
+        Self { base_url: None, headers: HeaderMap::new(), query_params: HashMap::new() }
     }
 
     /// 设置基础 URL
@@ -147,25 +143,12 @@ enum RequestBody {
 
 impl RequestBuilder {
     /// 创建新的请求构建器
-    fn new<M, U>(
-        method: M,
-        url: U,
-        base_url: Option<String>,
-        headers: HeaderMap,
-        query_params: HashMap<String, String>,
-    ) -> Self
+    fn new<M, U>(method: M, url: U, base_url: Option<String>, headers: HeaderMap, query_params: HashMap<String, String>) -> Self
     where
         M: Into<http::Method>,
         U: Into<String>,
     {
-        Self {
-            method: method.into(),
-            url: url.into(),
-            base_url,
-            headers,
-            query_params,
-            body: None,
-        }
+        Self { method: method.into(), url: url.into(), base_url, headers, query_params, body: None }
     }
 
     /// 添加请求头
@@ -206,8 +189,7 @@ impl RequestBuilder {
 
     /// 设置 JSON 请求体
     pub fn json<T: Serialize>(mut self, data: &T) -> TestingResult<Self> {
-        let bytes = serde_json::to_vec(data)
-            .map_err(|e| WaeError::new(WaeErrorKind::JsonError { reason: e.to_string() }))?;
+        let bytes = serde_json::to_vec(data).map_err(|e| WaeError::new(WaeErrorKind::JsonError { reason: e.to_string() }))?;
         self.body = Some(RequestBody::Json(Bytes::from(bytes)));
         Ok(self)
     }
@@ -229,20 +211,18 @@ impl RequestBuilder {
         let mut url_str = if let Some(ref base_url) = self.base_url {
             if self.url.starts_with("http://") || self.url.starts_with("https://") {
                 self.url.clone()
-            } else {
+            }
+            else {
                 format!("{}{}", base_url, self.url)
             }
-        } else {
+        }
+        else {
             self.url.clone()
         };
 
         if !self.query_params.is_empty() {
             let separator = if url_str.contains('?') { "&" } else { "?" };
-            let params: Vec<String> = self
-                .query_params
-                .iter()
-                .map(|(k, v)| format!("{}={}", k, v))
-                .collect();
+            let params: Vec<String> = self.query_params.iter().map(|(k, v)| format!("{}={}", k, v)).collect();
             url_str.push_str(separator);
             url_str.push_str(&params.join("&"));
         }
@@ -276,19 +256,8 @@ impl RequestBuilder {
     }
 
     /// 创建测试响应（用于单元测试）
-    pub fn create_response(
-        &self,
-        status: StatusCode,
-        headers: HeaderMap,
-        body: Bytes,
-    ) -> TestResponse {
-        TestResponse {
-            status,
-            headers,
-            body,
-            request_method: self.method.clone(),
-            request_url: self.build_url(),
-        }
+    pub fn create_response(&self, status: StatusCode, headers: HeaderMap, body: Bytes) -> TestResponse {
+        TestResponse { status, headers, body, request_method: self.method.clone(), request_url: self.build_url() }
     }
 }
 
@@ -312,13 +281,7 @@ pub struct TestResponse {
 impl TestResponse {
     /// 创建新的测试响应
     pub fn new(status: StatusCode, headers: HeaderMap, body: Bytes) -> Self {
-        Self {
-            status,
-            headers,
-            body,
-            request_method: http::Method::GET,
-            request_url: String::new(),
-        }
+        Self { status, headers, body, request_method: http::Method::GET, request_url: String::new() }
     }
 
     /// 获取响应状态码
@@ -338,11 +301,7 @@ impl TestResponse {
 
     /// 获取指定响应头
     pub fn header<K: TryInto<HeaderName>>(&self, key: K) -> Option<&HeaderValue> {
-        if let Ok(key) = key.try_into() {
-            self.headers.get(key)
-        } else {
-            None
-        }
+        if let Ok(key) = key.try_into() { self.headers.get(key) } else { None }
     }
 
     /// 获取响应体字节
@@ -353,16 +312,12 @@ impl TestResponse {
     /// 将响应体解析为字符串
     pub fn text(&self) -> TestingResult<String> {
         String::from_utf8(self.body.to_vec())
-            .map_err(|e| WaeError::new(WaeErrorKind::ParseError {
-                type_name: "String".to_string(),
-                reason: e.to_string(),
-            }))
+            .map_err(|e| WaeError::new(WaeErrorKind::ParseError { type_name: "String".to_string(), reason: e.to_string() }))
     }
 
     /// 将响应体解析为 JSON
     pub fn json<T: serde::de::DeserializeOwned>(&self) -> TestingResult<T> {
-        serde_json::from_slice(&self.body)
-            .map_err(|e| WaeError::new(WaeErrorKind::JsonError { reason: e.to_string() }))
+        serde_json::from_slice(&self.body).map_err(|e| WaeError::new(WaeErrorKind::JsonError { reason: e.to_string() }))
     }
 
     /// 断言响应状态码
@@ -392,9 +347,7 @@ impl TestResponse {
         {
             return Ok(self);
         }
-        Err(WaeError::new(WaeErrorKind::AssertionFailed {
-            message: "Expected header not found".to_string(),
-        }))
+        Err(WaeError::new(WaeErrorKind::AssertionFailed { message: "Expected header not found".to_string() }))
     }
 
     /// 断言响应头值
@@ -410,9 +363,7 @@ impl TestResponse {
         {
             return Ok(self);
         }
-        Err(WaeError::new(WaeErrorKind::AssertionFailed {
-            message: format!("Expected header value {}", value.as_ref()),
-        }))
+        Err(WaeError::new(WaeErrorKind::AssertionFailed { message: format!("Expected header value {}", value.as_ref()) }))
     }
 
     /// 断言响应体包含指定文本

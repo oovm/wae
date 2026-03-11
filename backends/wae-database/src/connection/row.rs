@@ -7,7 +7,7 @@ use mysql_async::Row as MySqlRow;
 use tokio_postgres::Row as PostgresRow;
 #[cfg(feature = "turso")]
 use turso::Row;
-use wae_types::{WaeErrorKind, WaeError};
+use wae_types::{WaeError, WaeErrorKind};
 
 /// 查询结果行
 pub enum DatabaseRow {
@@ -108,10 +108,7 @@ impl DatabaseRows {
                 .next()
                 .await
                 .map_err(|e| {
-                    WaeError::database(WaeErrorKind::QueryFailed {
-                        query: None,
-                        reason: format!("Failed to fetch row: {}", e),
-                    })
+                    WaeError::database(WaeErrorKind::QueryFailed { query: None, reason: format!("Failed to fetch row: {}", e) })
                 })
                 .map(|opt| opt.map(DatabaseRow::new_turso)),
             #[cfg(feature = "postgres")]

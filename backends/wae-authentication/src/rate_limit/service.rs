@@ -1,11 +1,10 @@
 //! 速率限制服务实现
 
 use chrono::Utc;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
-use crate::rate_limit::{RateLimitConfig, RateLimitKey, RateLimitResult, RateLimitError};
+use crate::rate_limit::{RateLimitConfig, RateLimitError, RateLimitKey, RateLimitResult};
 
 /// 请求记录
 #[derive(Debug, Clone)]
@@ -23,14 +22,11 @@ pub struct RateLimitService {
 
 impl RateLimitService {
     /// 创建新的速率限制服务
-    /// 
+    ///
     /// # Arguments
     /// * `config` - 速率限制配置
     pub fn new(config: RateLimitConfig) -> Self {
-        Self {
-            config,
-            requests: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self { config, requests: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// 使用默认配置创建速率限制服务
@@ -39,7 +35,7 @@ impl RateLimitService {
     }
 
     /// 检查并记录请求
-    /// 
+    ///
     /// # Arguments
     /// * `key` - 速率限制键
     pub async fn check_and_record(&self, key: RateLimitKey) -> RateLimitResult<()> {
@@ -48,9 +44,7 @@ impl RateLimitService {
 
         let mut requests = self.requests.write().await;
 
-        let record = requests.entry(key).or_insert_with(|| RequestRecord {
-            timestamps: Vec::new(),
-        });
+        let record = requests.entry(key).or_insert_with(|| RequestRecord { timestamps: Vec::new() });
 
         record.timestamps.retain(|&ts| ts > window_start);
 
@@ -68,7 +62,7 @@ impl RateLimitService {
     }
 
     /// 重置指定键的速率限制
-    /// 
+    ///
     /// # Arguments
     /// * `key` - 速率限制键
     pub async fn reset(&self, key: &RateLimitKey) {
@@ -76,7 +70,7 @@ impl RateLimitService {
     }
 
     /// 获取当前请求计数
-    /// 
+    ///
     /// # Arguments
     /// * `key` - 速率限制键
     pub async fn get_count(&self, key: &RateLimitKey) -> u32 {
@@ -85,16 +79,7 @@ impl RateLimitService {
 
         let requests = self.requests.read().await;
 
-        requests
-            .get(key)
-            .map(|record| {
-                record
-                    .timestamps
-                    .iter()
-                    .filter(|&&ts| ts > window_start)
-                    .count() as u32
-            })
-            .unwrap_or(0)
+        requests.get(key).map(|record| record.timestamps.iter().filter(|&&ts| ts > window_start).count() as u32).unwrap_or(0)
     }
 
     /// 清理过期记录

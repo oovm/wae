@@ -4,12 +4,12 @@ use crate::connection::{
     config::{DatabaseConfig, DatabaseResult},
     row::DatabaseRows,
     statement::DatabaseStatement,
-    trait_impl::{DatabaseConnection, DatabaseBackend},
+    trait_impl::{DatabaseBackend, DatabaseConnection},
 };
 use async_trait::async_trait;
 use mysql_async::prelude::*;
 use tokio::sync::Mutex;
-use wae_types::{WaeErrorKind, WaeError};
+use wae_types::{WaeError, WaeErrorKind};
 
 /// MySQL 连接包装
 pub struct MySqlConnection {
@@ -110,9 +110,7 @@ impl DatabaseConnection for MySqlConnection {
             WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
         })?;
         conn.query_drop("START TRANSACTION").await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: format!("Failed to begin transaction: {}", e),
-            })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Failed to begin transaction: {}", e) })
         })?;
         Ok(())
     }
@@ -183,9 +181,7 @@ impl MySqlDatabaseService {
     /// 获取连接
     pub async fn connect(&self) -> DatabaseResult<MySqlConnection> {
         let conn = self.pool.get_conn().await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: format!("Failed to get connection: {}", e),
-            })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Failed to get connection: {}", e) })
         })?;
         Ok(MySqlConnection::new(conn))
     }

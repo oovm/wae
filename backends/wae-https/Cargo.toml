@@ -32,5 +32,4 @@ futures-util = { workspace = true }
 askama = { workspace = true }
 bytes = { workspace = true }
 matchit = { workspace = true }
-axum = { workspace = true, features = ["multipart", "ws"] }
 mime_guess = { workspace = true }

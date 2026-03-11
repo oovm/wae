@@ -55,10 +55,7 @@ where
             .unwrap_or_else(|| Uuid::new_v4().to_string());
 
         let future = self.inner.call(req);
-        RequestIdFuture {
-            inner: future,
-            request_id,
-        }
+        RequestIdFuture { inner: future, request_id }
     }
 }
 
@@ -80,9 +77,7 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
         match this.inner.poll(cx) {
-            Poll::Ready(result) => {
-                Poll::Ready(result)
-            }
+            Poll::Ready(result) => Poll::Ready(result),
             Poll::Pending => Poll::Pending,
         }
     }

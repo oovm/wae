@@ -370,7 +370,8 @@ fn replace_placeholders(sql: &str, start_index: usize) -> String {
                 if next_c.is_ascii_digit() {
                     num_str.push(next_c);
                     chars.next();
-                } else {
+                }
+                else {
                     break;
                 }
             }
@@ -378,10 +379,12 @@ fn replace_placeholders(sql: &str, start_index: usize) -> String {
                 if let Ok(num) = num_str.parse::<usize>() {
                     result.push_str(&format!("${}", num + start_index - 1));
                 }
-            } else {
+            }
+            else {
                 result.push(c);
             }
-        } else {
+        }
+        else {
             result.push(c);
         }
     }

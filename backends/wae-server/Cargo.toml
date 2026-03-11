@@ -30,6 +30,7 @@ wae-event = { workspace = true }
 wae-distributed = { workspace = true }
 wae-testing = { workspace = true }
 wae-tools = { workspace = true, optional = true }
+wae-observability = { workspace = true, optional = true }
 
 [features]
 default = []
@@ -37,3 +38,5 @@ database-turso = ["wae-database/turso"]
 database-postgres = ["wae-database/postgres"]
 database-mysql = ["wae-database/mysql"]
 tools = ["wae-tools"]
+observability = ["wae-observability"]
+observability-full = ["wae-observability/full"]

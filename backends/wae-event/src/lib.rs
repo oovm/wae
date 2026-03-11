@@ -62,7 +62,7 @@ pub struct EventData {
 impl EventData {
     /// 创建新的事件数据
     pub fn new<E: Event + Serialize>(event: &E) -> WaeResult<Self> {
-        let payload = serde_json::to_value(event).map_err(|e| WaeError::serialization_failed("Event"))?;
+        let payload = serde_json::to_value(event).map_err(|_e| WaeError::serialization_failed("Event"))?;
         Ok(Self {
             id: event.event_id().clone(),
             event_type: event.event_type(),
@@ -80,7 +80,7 @@ impl EventData {
 
     /// 反序列化为具体事件类型
     pub fn into_event<E: DeserializeOwned>(self) -> WaeResult<E> {
-        serde_json::from_value(self.payload).map_err(|e| WaeError::deserialization_failed("Event"))
+        serde_json::from_value(self.payload).map_err(|_e| WaeError::deserialization_failed("Event"))
     }
 
     /// 获取事件 ID

@@ -1,5 +1,5 @@
 #![warn(missing_docs)]
-#![doc = include_str!("../readme.md")]
+#![doc = include_str!("readme.md")]
 
 pub use wae_ai as ai;
 pub use wae_config as config;
@@ -10,6 +10,8 @@ pub use wae_effect as effect;
 pub use wae_email as email;
 pub use wae_event as event;
 pub use wae_https as https;
+#[cfg(feature = "observability")]
+pub use wae_observability as observability;
 pub use wae_resilience as resilience;
 pub use wae_scheduler as scheduler;
 pub use wae_service as service;

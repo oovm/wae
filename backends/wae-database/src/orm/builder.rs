@@ -19,8 +19,6 @@ use crate::types::from_wae_to_mysql;
 #[cfg(feature = "mysql")]
 use mysql_async::Value as MySqlValue;
 
-
-
 /// JOIN 类型
 #[derive(Debug, Clone, Copy)]
 pub enum JoinType {
@@ -190,7 +188,8 @@ impl<E: Entity> SelectBuilder<E> {
                 let (cond_sql, cond_params) = where_conditions[0].build_turso();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
-            } else {
+            }
+            else {
                 let (cond_sql, cond_params) = Condition::and(where_conditions).build_turso();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
@@ -207,7 +206,8 @@ impl<E: Entity> SelectBuilder<E> {
                 let (cond_sql, cond_params) = having_conditions[0].build_turso();
                 sql.push_str(&format!(" HAVING {}", cond_sql));
                 params.extend(cond_params);
-            } else {
+            }
+            else {
                 let (cond_sql, cond_params) = Condition::and(having_conditions).build_turso();
                 sql.push_str(&format!(" HAVING {}", cond_sql));
                 params.extend(cond_params);
@@ -270,7 +270,8 @@ impl<E: Entity> SelectBuilder<E> {
                 let (cond_sql, cond_params) = where_conditions[0].build_mysql();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
-            } else {
+            }
+            else {
                 let (cond_sql, cond_params) = Condition::and(where_conditions).build_mysql();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
@@ -287,7 +288,8 @@ impl<E: Entity> SelectBuilder<E> {
                 let (cond_sql, cond_params) = having_conditions[0].build_mysql();
                 sql.push_str(&format!(" HAVING {}", cond_sql));
                 params.extend(cond_params);
-            } else {
+            }
+            else {
                 let (cond_sql, cond_params) = Condition::and(having_conditions).build_mysql();
                 sql.push_str(&format!(" HAVING {}", cond_sql));
                 params.extend(cond_params);
@@ -351,7 +353,8 @@ impl<E: Entity> SelectBuilder<E> {
             let where_conditions = self.conditions.to_vec();
             let (cond_sql, cond_params) = if where_conditions.len() == 1 {
                 where_conditions[0].build_postgres()
-            } else {
+            }
+            else {
                 Condition::and(where_conditions).build_postgres()
             };
             let cond_sql = replace_placeholders_for_query(&cond_sql, param_offset + 1);
@@ -369,7 +372,8 @@ impl<E: Entity> SelectBuilder<E> {
             let having_conditions = self.having.to_vec();
             let (cond_sql, cond_params) = if having_conditions.len() == 1 {
                 having_conditions[0].build_postgres()
-            } else {
+            }
+            else {
                 Condition::and(having_conditions).build_postgres()
             };
             let cond_sql = replace_placeholders_for_query(&cond_sql, param_offset + 1);
@@ -418,7 +422,8 @@ fn replace_placeholders_for_query(sql: &str, start_index: usize) -> String {
                 if next_c.is_ascii_digit() {
                     num_str.push(next_c);
                     chars.next();
-                } else {
+                }
+                else {
                     break;
                 }
             }
@@ -426,10 +431,12 @@ fn replace_placeholders_for_query(sql: &str, start_index: usize) -> String {
                 if let Ok(num) = num_str.parse::<usize>() {
                     result.push_str(&format!("${}", num + start_index - 1));
                 }
-            } else {
+            }
+            else {
                 result.push(c);
             }
-        } else {
+        }
+        else {
             result.push(c);
         }
     }

@@ -4,8 +4,7 @@
 
 use crate::mock::{Mock, MockCall};
 use parking_lot::RwLock;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
 
 /// 数据库查询记录
@@ -85,11 +84,7 @@ pub struct MockDatabaseBuilder<T> {
 impl<T: Clone + Send + Sync + 'static> MockDatabaseBuilder<T> {
     /// 创建新的 Mock 数据库构建器
     pub fn new() -> Self {
-        Self {
-            result: None,
-            expectation: DatabaseExpectation::default(),
-            queries: Arc::new(RwLock::new(Vec::new())),
-        }
+        Self { result: None, expectation: DatabaseExpectation::default(), queries: Arc::new(RwLock::new(Vec::new())) }
     }
 
     /// 设置返回值
@@ -118,11 +113,7 @@ impl<T: Clone + Send + Sync + 'static> MockDatabaseBuilder<T> {
 
     /// 构建 Mock 数据库
     pub fn build(self) -> MockDatabase<T> {
-        MockDatabase {
-            result: self.result,
-            expectation: self.expectation,
-            queries: self.queries,
-        }
+        MockDatabase { result: self.result, expectation: self.expectation, queries: self.queries }
     }
 }
 
@@ -147,11 +138,7 @@ impl<T: Clone> MockDatabase<T> {
         let query_name = query_name.into();
         {
             let mut queries = self.queries.write();
-            queries.push(DatabaseQuery {
-                query_name: query_name.clone(),
-                params,
-                timestamp: std::time::Instant::now(),
-            });
+            queries.push(DatabaseQuery { query_name: query_name.clone(), params, timestamp: std::time::Instant::now() });
         }
 
         match &self.result {
@@ -160,7 +147,8 @@ impl<T: Clone> MockDatabase<T> {
             Some(DatabaseResult::NamedReturns(map)) => {
                 if let Some(value) = map.get(&query_name) {
                     Ok(value.clone())
-                } else {
+                }
+                else {
                     Err(WaeError::new(WaeErrorKind::MockError { reason: format!("No mock result for query: {}", query_name) }))
                 }
             }
@@ -195,10 +183,7 @@ impl<T: Clone + Send + Sync + 'static> Mock for MockDatabase<T> {
             .read()
             .iter()
             .map(|q| MockCall {
-                args: vec![q.query_name.clone()]
-                    .into_iter()
-                    .chain(q.params.clone())
-                    .collect(),
+                args: vec![q.query_name.clone()].into_iter().chain(q.params.clone()).collect(),
                 timestamp: q.timestamp,
             })
             .collect()

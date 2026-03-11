@@ -18,7 +18,7 @@ mod mysql;
 pub use config::{DatabaseConfig, DatabaseError, DatabaseResult};
 pub use row::{DatabaseRow, DatabaseRows};
 pub use statement::DatabaseStatement;
-pub use trait_impl::{DatabaseConnection, DatabaseBackend};
+pub use trait_impl::{DatabaseBackend, DatabaseConnection};
 pub use value_impl::FromDatabaseValue;
 
 #[cfg(feature = "turso")]

@@ -106,22 +106,44 @@ pub type HttpVersion = Version;
 /// 获取所有请求头的键值对映射。
 pub type Headers = HeaderMap;
 
-/// 重新导出 axum 的常用提取器
-pub use axum::extract::{
-    OriginalUri,
-    Path,
-    Query,
-    Json,
-    Form,
-    State,
-    Extension,
-    WebSocketUpgrade,
-    Multipart,
-};
+/// 扩展数据提取器
+#[derive(Debug, Clone)]
+pub struct Extension<T>(pub T);
+
+/// 表单数据提取器
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Form<T>(pub T);
+
+/// JSON 提取器
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Json<T>(pub T);
+
+/// 多部分表单数据提取器
+#[derive(Debug, Clone)]
+pub struct Multipart;
+
+/// 原始 URI 提取器
+pub type OriginalUri = http::Uri;
+
+/// 路径参数提取器
+#[derive(Debug, Clone)]
+pub struct Path<T>(pub T);
+
+/// 查询参数提取器
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Query<T>(pub T);
+
+/// 状态提取器
+#[derive(Debug, Clone)]
+pub struct State<T>(pub T);
+
+/// WebSocket 升级提取器
+#[derive(Debug, Clone)]
+pub struct WebSocketUpgrade;
 
 pub use bytes::Bytes;
 
 /// 流式请求体提取器
 ///
 /// 用于从请求中提取流式数据。
-pub type Stream = axum::body::Body;
+pub type Stream = crate::Body;

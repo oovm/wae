@@ -1,6 +1,4 @@
-//! HTTP 中间件模块
-//!
-//! 提供常用的 HTTP 中间件实现。
+#![doc = include_str!("readme.md")]
 
 mod compression;
 mod cors;
@@ -16,12 +14,8 @@ pub use tower_http::cors::CorsLayer;
 
 /// 重新导出 tower-http 的常用中间件
 pub use tower_http::{
-    timeout::TimeoutLayer,
-    catch_panic::CatchPanicLayer,
-    normalize_path::NormalizePathLayer,
-    request_id::MakeRequestUuid,
-    set_header::SetRequestHeaderLayer,
-    set_header::SetResponseHeaderLayer,
+    catch_panic::CatchPanicLayer, normalize_path::NormalizePathLayer, request_id::MakeRequestUuid,
+    set_header::SetRequestHeaderLayer, set_header::SetResponseHeaderLayer, timeout::TimeoutLayer,
 };
 
 use std::time::Duration;
@@ -34,9 +28,7 @@ pub struct TimeoutBuilder {
 impl TimeoutBuilder {
     /// 创建新的超时构建器
     pub fn new() -> Self {
-        Self {
-            timeout: Duration::from_secs(30),
-        }
+        Self { timeout: Duration::from_secs(30) }
     }
 
     /// 设置超时时间
@@ -47,7 +39,7 @@ impl TimeoutBuilder {
 
     /// 构建超时中间件
     pub fn build(self) -> TimeoutLayer {
-        TimeoutLayer::new(self.timeout)
+        TimeoutLayer::with_status_code(http::StatusCode::REQUEST_TIMEOUT, self.timeout)
     }
 }
 
@@ -56,8 +48,6 @@ impl Default for TimeoutBuilder {
         Self::new()
     }
 }
-
-
 
 /// 路径归一化配置
 pub struct NormalizePathConfig;

@@ -9,7 +9,11 @@
             "!**/target",
             "!**/dist",
             "!**/documentation/dist",
-            "!**/documentation/.vitepress"
+            "!**/documentation/.vitepress",
+            "!**/*.d.ts",
+            "!**/*.js.map",
+            "!**/vite.config.js",
+            "!**/vite-plugin-docs.js"
         ]
     },
     "formatter": {

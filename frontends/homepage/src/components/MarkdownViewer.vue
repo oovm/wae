@@ -1,12 +1,13 @@
 <template>
   <div class="markdown-viewer prose prose-slate max-w-none">
-    <div v-html="renderedContent"></div>
+    <div ref="contentRef" v-html="renderedContent"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, watch, onMounted, nextTick } from 'vue'
 import { marked } from 'marked'
+import { codeToHtml, createHighlighter } from 'shiki'
 
 interface Props {
   content: string
@@ -14,9 +15,68 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const renderedContent = computed(() => {
+const renderedContent = ref('')
+const contentRef = ref<HTMLElement | null>(null)
+let highlighter: any = null
+
+async function initHighlighter() {
+  try {
+    highlighter = await createHighlighter({
+      themes: ['one-dark-pro', 'vitesse-light'],
+      langs: ['rust', 'javascript', 'typescript', 'html', 'css', 'toml', 'json', 'bash', 'yaml', 'shell', 'text']
+    })
+    await renderMarkdown()
+  } catch (error) {
+    console.error('Failed to initialize highlighter:', error)
+    await renderMarkdown()
+  }
+}
+
+async function highlightCodeElement(codeElement: HTMLElement, preElement: HTMLElement) {
+  if (!highlighter) return
+
+  const lang = codeElement.className.replace('language-', '') || 'text'
+  const code = codeElement.textContent || ''
+
+  try {
+    const highlighted = await codeToHtml(code, {
+      lang,
+      theme: 'one-dark-pro'
+    })
+    preElement.outerHTML = highlighted
+  } catch (error) {
+    console.error('Failed to highlight code:', error)
+  }
+}
+
+async function applyCodeHighlighting() {
+  await nextTick()
+  
+  if (!contentRef.value || !highlighter) return
+
+  const codeBlocks = contentRef.value.querySelectorAll('pre code')
+  const promises: Promise<void>[] = []
+
+  codeBlocks.forEach((codeElement) => {
+    const preElement = codeElement.parentElement
+    if (preElement && preElement.tagName === 'PRE') {
+      promises.push(highlightCodeElement(codeElement as HTMLElement, preElement as HTMLElement))
+    }
+  })
+
+  await Promise.all(promises)
+}
+
+async function renderMarkdown() {
   const content = props.content.replace(/^---\n[\s\S]*?\n---/, '')
-  return marked.parse(content) as string
+  renderedContent.value = marked.parse(content) as string
+  await applyCodeHighlighting()
+}
+
+watch(() => props.content, renderMarkdown)
+
+onMounted(() => {
+  initHighlighter()
 })
 </script>
 
@@ -55,7 +115,7 @@ const renderedContent = computed(() => {
 }
 
 .markdown-viewer :deep(pre) {
-  @apply bg-gray-900 text-gray-100 p-4 rounded-lg mb-4 overflow-x-auto;
+  @apply bg-gray-900 text-gray-100 p-4 rounded-xl mb-4 overflow-x-auto;
 }
 
 .markdown-viewer :deep(pre code) {

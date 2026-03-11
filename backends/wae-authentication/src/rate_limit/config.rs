@@ -22,28 +22,22 @@ pub struct RateLimitConfig {
 
 impl Default for RateLimitConfig {
     fn default() -> Self {
-        Self {
-            max_requests: 5,
-            window_seconds: 60,
-        }
+        Self { max_requests: 5, window_seconds: 60 }
     }
 }
 
 impl RateLimitConfig {
     /// 创建新的速率限制配置
-    /// 
+    ///
     /// # Arguments
     /// * `max_requests` - 最大请求数
     /// * `window_seconds` - 时间窗口（秒）
     pub fn new(max_requests: u32, window_seconds: u64) -> Self {
-        Self {
-            max_requests,
-            window_seconds,
-        }
+        Self { max_requests, window_seconds }
     }
 
     /// 设置最大请求数
-    /// 
+    ///
     /// # Arguments
     /// * `max` - 最大请求数
     pub fn with_max_requests(mut self, max: u32) -> Self {
@@ -52,7 +46,7 @@ impl RateLimitConfig {
     }
 
     /// 设置时间窗口
-    /// 
+    ///
     /// # Arguments
     /// * `seconds` - 时间窗口（秒）
     pub fn with_window_seconds(mut self, seconds: u64) -> Self {

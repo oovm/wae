@@ -3,12 +3,11 @@
 //! 提供 Session 中间件实现，用于在请求处理过程中管理 Session。
 
 use crate::{Session, SessionConfig, SessionStore};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use http::{Request, Response};
 use http_body::Body;
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::Rng;
-use std::sync::Arc;
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 use tower::{Layer, Service};
 
 /// Session 中间件层
@@ -57,12 +56,7 @@ where
     type Service = SessionService<T, S, ReqBody, ResBody>;
 
     fn layer(&self, inner: T) -> Self::Service {
-        SessionService {
-            inner,
-            store: self.store.clone(),
-            config: self.config.clone(),
-            _phantom: PhantomData,
-        }
+        SessionService { inner, store: self.store.clone(), config: self.config.clone(), _phantom: PhantomData }
     }
 }
 
@@ -140,13 +134,16 @@ where
                 if let Some(data) = store.get(&id).await {
                     if let Ok(data_map) = serde_json::from_str(&data) {
                         Session::from_data(id.to_string(), data_map).await
-                    } else {
+                    }
+                    else {
                         Session::new(generate_session_id())
                     }
-                } else {
+                }
+                else {
                     Session::new(generate_session_id())
                 }
-            } else {
+            }
+            else {
                 Session::new(generate_session_id())
             };
 

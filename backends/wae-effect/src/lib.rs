@@ -6,11 +6,7 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use http::{
-    StatusCode,
-    request::Parts,
-    Response,
-};
+use http::{Response, StatusCode, request::Parts};
 use wae_types::{WaeError, WaeResult};
 
 /// 依赖容器

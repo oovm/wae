@@ -1,13 +1,13 @@
-
 use clap::Parser;
 use notify::RecursiveMode;
 use notify_debouncer_mini::new_debouncer;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
-use std::time::Duration;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Stdio,
+    time::Duration,
+};
 use tokio::process::Command;
-use anyhow::{Context, Result};
 
 /// WAE Tools CLI - 项目脚手架、代码生成、数据库迁移命令行工具
 #[derive(Parser)]
@@ -121,22 +121,22 @@ async fn main() {
 }
 
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-async fn handle_migrate_command(cmd: &MigrateCommands) {
+async fn handle_migrate_command(_cmd: &MigrateCommands) {
     println!("Handling migrate command... (integration with migration module coming soon)");
 }
 
-fn handle_new_project(name: &str, path: &Option<String>) -> Result<()> {
+fn handle_new_project(name: &str, path: &Option<String>) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let project_path = match path {
         Some(p) => PathBuf::from(p).join(name),
         None => PathBuf::from(name),
     };
 
     if project_path.exists() {
-        anyhow::bail!("Project directory already exists: {}", project_path.display());
+        return Err(format!("Project directory already exists: {}", project_path.display()).into());
     }
 
-    fs::create_dir_all(&project_path).context("Failed to create project directory")?;
-    fs::create_dir_all(project_path.join("src")).context("Failed to create src directory")?;
+    fs::create_dir_all(&project_path)?;
+    fs::create_dir_all(project_path.join("src"))?;
 
     let cargo_toml_content = format!(
         r#"[package]
@@ -166,15 +166,13 @@ async fn main() {
     Ok(())
 }
 
-async fn handle_dev(watch: &Option<String>, cmd: &Option<String>) -> Result<()> {
+async fn handle_dev(watch: &Option<String>, cmd: &Option<String>) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let watch_path = watch.as_deref().unwrap_or(".");
     let command = cmd.as_deref().unwrap_or("cargo run");
 
     let (tx, rx) = std::sync::mpsc::channel();
     let mut debouncer = new_debouncer(Duration::from_millis(500), tx)?;
-    debouncer
-        .watcher()
-        .watch(Path::new(watch_path), RecursiveMode::Recursive)?;
+    debouncer.watcher().watch(Path::new(watch_path), RecursiveMode::Recursive)?;
 
     println!("Watching for changes in: {}", watch_path);
     println!("Running command: {}", command);
@@ -201,26 +199,21 @@ async fn handle_dev(watch: &Option<String>, cmd: &Option<String>) -> Result<()> 
     Ok(())
 }
 
-async fn run_command(cmd: &str) -> Result<Option<tokio::process::Child>> {
+async fn run_command(cmd: &str) -> std::result::Result<Option<tokio::process::Child>, Box<dyn std::error::Error>> {
     let parts: Vec<&str> = cmd.split_whitespace().collect();
     if parts.is_empty() {
         return Ok(None);
     }
 
-    let child = Command::new(parts[0])
-        .args(&parts[1..])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()?;
+    let child = Command::new(parts[0]).args(&parts[1..]).stdout(Stdio::inherit()).stderr(Stdio::inherit()).spawn()?;
 
     Ok(Some(child))
 }
 
-fn handle_generate(spec: &str, out: &Option<String>) -> Result<()> {
+fn handle_generate(spec: &str, out: &Option<String>) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let out_path = out.as_deref().unwrap_or("src/generated");
     println!("Generating code from spec: {}", spec);
     println!("Output directory: {}", out_path);
     println!("(OpenAPI/Swagger code generation coming soon)");
     Ok(())
 }
-
