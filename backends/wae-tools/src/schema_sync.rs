@@ -2,7 +2,7 @@
 //!
 //! 提供从 schemas.yaml 到数据库的同步功能。
 
-use wae_database::{DatabaseType, DatabaseLinkConfig, SchemaConfig, TableSchema, load_schema_config_from_yaml_file};
+use wae_database::{DatabaseType, DatabaseSchema, SchemaConfig, TableSchema, load_schema_config_from_yaml_file};
 use wae_types::{WaeError, WaeResult};
 use std::collections::HashMap;
 
@@ -25,44 +25,21 @@ pub enum MigrationOperation {
     DropIndex { table_name: String, index_name: String },
 }
 
-/// 迁移操作描述辅助函数
-pub fn operation_description(op: &MigrationOperation) -> String {
-    match op {
-        MigrationOperation::CreateTable { schema } => {
-            format!("Create table '{}'", schema.name)
-        }
-        MigrationOperation::DropTable { table_name } => {
-            format!("Drop table '{}'", table_name)
-        }
-        MigrationOperation::AddColumn { table_name, column } => {
-            format!("Add column '{}' to table '{}'", column.name, table_name)
-        }
-        MigrationOperation::DropColumn { table_name, column_name } => {
-            format!("Drop column '{}' from table '{}'", column_name, table_name)
-        }
-        MigrationOperation::AlterColumn { table_name, column } => {
-            format!("Alter column '{}' in table '{}'", column.name, table_name)
-        }
-        MigrationOperation::CreateIndex { table_name, index } => {
-            format!("Create index '{}' on table '{}'", index.name, table_name)
-        }
-        MigrationOperation::DropIndex { table_name, index_name } => {
-            format!("Drop index '{}' from table '{}'", index_name, table_name)
-        }
-    }
-}
-
-/// 迁移计划
+/// 单个数据库的迁移计划
 #[derive(Debug, Clone)]
-pub struct MigrationPlan {
+pub struct DatabaseMigrationPlan {
+    /// 数据库名称
+    pub database_name: String,
+    /// 数据库类型
+    pub db_type: DatabaseType,
     /// 待执行的操作
     pub operations: Vec<MigrationOperation>,
 }
 
-impl MigrationPlan {
+impl DatabaseMigrationPlan {
     /// 创建空计划
-    pub fn empty() -> Self {
-        Self { operations: Vec::new() }
+    pub fn new(database_name: String, db_type: DatabaseType) -> Self {
+        Self { database_name, db_type, operations: Vec::new() }
     }
 
     /// 计划是否为空
@@ -99,12 +76,12 @@ impl MigrationPlan {
     }
 
     /// 生成 SQL 语句列表
-    pub fn to_sql(&self, db_type: DatabaseType) -> Vec<String> {
+    pub fn to_sql(&self) -> Vec<String> {
         let mut sqls = Vec::new();
         for op in &self.operations {
             match op {
                 MigrationOperation::CreateTable { schema } => {
-                    sqls.extend(schema.to_full_create_sql_for(db_type));
+                    sqls.extend(schema.to_full_create_sql_for(self.db_type));
                 }
                 MigrationOperation::DropTable { table_name } => {
                     sqls.push(format!("DROP TABLE IF EXISTS {}", table_name));
@@ -113,7 +90,7 @@ impl MigrationPlan {
                     sqls.push(format!(
                         "ALTER TABLE {} ADD COLUMN {}",
                         table_name,
-                        column.to_sql_for(db_type)
+                        column.to_sql_for(self.db_type)
                     ));
                 }
                 MigrationOperation::DropColumn { table_name, column_name } => {
@@ -123,11 +100,11 @@ impl MigrationPlan {
                     sqls.push(format!(
                         "ALTER TABLE {} ALTER COLUMN {}",
                         table_name,
-                        column.to_sql_for(db_type)
+                        column.to_sql_for(self.db_type)
                     ));
                 }
                 MigrationOperation::CreateIndex { table_name: _, index } => {
-                    sqls.push(index.to_create_sql_for(db_type));
+                    sqls.push(index.to_create_sql_for(self.db_type));
                 }
                 MigrationOperation::DropIndex { table_name: _, index_name } => {
                     sqls.push(format!("DROP INDEX IF EXISTS {}", index_name));
@@ -138,35 +115,120 @@ impl MigrationPlan {
     }
 
     /// 打印迁移计划
-    pub fn print(&self, db_type: DatabaseType) {
+    pub fn print(&self) {
+        println!("\nDatabase: {}", self.database_name);
+        println!("{}", "-".repeat(60));
+        
         if self.is_empty() {
             println!("No migration needed. Database is already up to date.");
             return;
         }
 
         println!("Migration Plan ({} operations):", self.operations.len());
-        println!("{}", "=".repeat(60));
 
         for (i, op) in self.operations.iter().enumerate() {
-            println!("\n{}. {}", i + 1, operation_description(op));
+            println!("  {}. {}", i + 1, operation_description(op));
+        }
+
+        println!("\nSQL Statements:");
+        for sql in self.to_sql() {
+            println!("    {sql};");
+        }
+    }
+}
+
+/// 完整的迁移计划（包含所有数据库）
+#[derive(Debug, Clone)]
+pub struct MigrationPlan {
+    /// 各个数据库的迁移计划
+    pub database_plans: Vec<DatabaseMigrationPlan>,
+}
+
+impl MigrationPlan {
+    /// 创建空计划
+    pub fn empty() -> Self {
+        Self { database_plans: Vec::new() }
+    }
+
+    /// 计划是否为空
+    pub fn is_empty(&self) -> bool {
+        self.database_plans.iter().all(|p| p.is_empty())
+    }
+
+    /// 添加数据库迁移计划
+    pub fn add_database_plan(&mut self, plan: DatabaseMigrationPlan) {
+        self.database_plans.push(plan);
+    }
+
+    /// 检测是否包含破坏性操作
+    pub fn has_destructive_operations(&self) -> bool {
+        self.database_plans.iter().any(|p| p.has_destructive_operations())
+    }
+
+    /// 获取所有破坏性操作
+    pub fn destructive_operations(&self) -> Vec<(&str, &MigrationOperation)> {
+        let mut result = Vec::new();
+        for plan in &self.database_plans {
+            for op in plan.destructive_operations() {
+                result.push((plan.database_name.as_str(), op));
+            }
+        }
+        result
+    }
+
+    /// 打印完整的迁移计划
+    pub fn print(&self) {
+        if self.is_empty() {
+            println!("No migration needed. All databases are already up to date.");
+            return;
+        }
+
+        println!("Complete Migration Plan");
+        println!("{}", "=".repeat(60));
+
+        for plan in &self.database_plans {
+            plan.print();
         }
 
         println!("\n{}", "=".repeat(60));
-        println!("\nSQL Statements:");
-        for sql in self.to_sql(db_type) {
-            println!("  {sql};");
+    }
+}
+
+/// 迁移操作描述辅助函数
+pub fn operation_description(op: &MigrationOperation) -> String {
+    match op {
+        MigrationOperation::CreateTable { schema } => {
+            format!("Create table '{}'", schema.name)
+        }
+        MigrationOperation::DropTable { table_name } => {
+            format!("Drop table '{}'", table_name)
+        }
+        MigrationOperation::AddColumn { table_name, column } => {
+            format!("Add column '{}' to table '{}'", column.name, table_name)
+        }
+        MigrationOperation::DropColumn { table_name, column_name } => {
+            format!("Drop column '{}' from table '{}'", column_name, table_name)
+        }
+        MigrationOperation::AlterColumn { table_name, column } => {
+            format!("Alter column '{}' in table '{}'", column.name, table_name)
+        }
+        MigrationOperation::CreateIndex { table_name, index } => {
+            format!("Create index '{}' on table '{}'", index.name, table_name)
+        }
+        MigrationOperation::DropIndex { table_name, index_name } => {
+            format!("Drop index '{}' from table '{}'", index_name, table_name)
         }
     }
 }
 
 /// Schema 同步器
 pub struct SchemaSynchronizer {
-    /// 完整的 schema 配置（包含数据库配置）
+    /// 完整的 schema 配置（包含多个数据库）
     config: SchemaConfig,
 }
 
 impl SchemaSynchronizer {
-    /// 从 YAML 文件创建同步器（新格式）
+    /// 从 YAML 文件创建同步器
     pub fn from_yaml_file(path: impl AsRef<std::path::Path>) -> WaeResult<Self> {
         let config = load_schema_config_from_yaml_file(path)?;
         Ok(Self { config })
@@ -182,59 +244,62 @@ impl SchemaSynchronizer {
         &self.config
     }
 
-    /// 获取数据库配置
-    pub fn database_config(&self) -> &DatabaseLinkConfig {
-        &self.config.database
+    /// 获取所有数据库
+    pub fn databases(&self) -> &[DatabaseSchema] {
+        &self.config.databases
     }
 
-    /// 获取数据库类型
-    pub fn db_type(&self) -> DatabaseType {
-        self.config.database.r#type
+    /// 获取默认数据库
+    pub fn default_database(&self) -> Option<&DatabaseSchema> {
+        self.config.get_default_database()
     }
 
-    /// 获取期望的 schemas
-    pub fn expected_schemas(&self) -> &[TableSchema] {
-        &self.config.schemas
-    }
-
-    /// 获取数据库连接字符串
-    pub fn database_url(&self) -> Result<String, Box<dyn std::error::Error>> {
-        self.config.database.get_url()
-    }
-
-    /// 生成迁移 SQL（预览模式）
-    pub fn generate_preview_sql(&self) -> Vec<String> {
-        let mut sqls = Vec::new();
-        for schema in &self.config.schemas {
-            sqls.extend(schema.to_full_create_sql_for(self.db_type()));
+    /// 生成预览 SQL
+    pub fn generate_preview_sql(&self) -> Vec<(String, Vec<String>)> {
+        let mut result = Vec::new();
+        for db in &self.config.databases {
+            let mut sqls = Vec::new();
+            for schema in &db.schemas {
+                sqls.extend(schema.to_full_create_sql_for(db.r#type));
+            }
+            result.push((db.name.clone(), sqls));
         }
-        sqls
+        result
     }
 
-    /// 打印预览 SQL
+    /// 打印预览
     pub fn print_preview(&self) {
-        println!("Schema Preview:");
+        println!("Schema Preview");
         println!("{}", "=".repeat(60));
-        println!("Database type: {:?}", self.db_type());
+        println!("Total databases: {}", self.config.databases.len());
         
-        if let Ok(url) = self.database_url() {
-            println!("Database URL: {}", mask_database_url(&url));
+        if let Some(default_name) = &self.config.default_database {
+            println!("Default database: {}", default_name);
         }
         
-        println!("Tables: {}", self.config.schemas.len());
-        println!();
-
-        for schema in &self.config.schemas {
-            println!("  Table: {}", schema.name);
-            println!("  Columns: {}", schema.columns.len());
-            println!("  Indexes: {}", schema.indexes.len());
-            println!();
+        for db in &self.config.databases {
+            println!("\nDatabase: {} ({:?})", db.name, db.r#type);
+            
+            if let Ok(url) = db.get_url() {
+                println!("  URL: {}", mask_database_url(&url));
+            }
+            
+            println!("  Tables: {}", db.schemas.len());
+            
+            for schema in &db.schemas {
+                println!("    - {} ({} columns, {} indexes)", 
+                    schema.name, schema.columns.len(), schema.indexes.len());
+            }
         }
 
         println!("\n{}", "=".repeat(60));
         println!("\nGenerated SQL:");
-        for sql in self.generate_preview_sql() {
-            println!("  {sql};");
+        
+        for (db_name, sqls) in self.generate_preview_sql() {
+            println!("\n-- Database: {}", db_name);
+            for sql in sqls {
+                println!("  {sql};");
+            }
         }
     }
 }

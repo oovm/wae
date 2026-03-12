@@ -261,6 +261,65 @@ impl IndexDef {
     }
 }
 
+/// 数据库 schema 定义
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseSchema {
+    /// 数据库名称
+    pub name: String,
+    /// 数据库类型
+    pub r#type: DatabaseType,
+    /// 数据库连接字符串（可以直接包含密码）
+    pub url: Option<String>,
+    /// 环境变量名称（用于从环境变量获取连接字符串）
+    pub env: Option<String>,
+    /// 该数据库下的表结构列表
+    pub schemas: Vec<TableSchema>,
+}
+
+impl DatabaseSchema {
+    /// 创建新的数据库 schema
+    pub fn new(name: impl Into<String>, db_type: DatabaseType) -> Self {
+        Self {
+            name: name.into(),
+            r#type: db_type,
+            url: None,
+            env: None,
+            schemas: Vec::new(),
+        }
+    }
+    
+    /// 设置数据库连接 URL
+    pub fn url(mut self, url: impl Into<String>) -> Self {
+        self.url = Some(url.into());
+        self
+    }
+    
+    /// 设置环境变量名称
+    pub fn env(mut self, env: impl Into<String>) -> Self {
+        self.env = Some(env.into());
+        self
+    }
+    
+    /// 添加表结构
+    pub fn schema(mut self, schema: TableSchema) -> Self {
+        self.schemas.push(schema);
+        self
+    }
+    
+    /// 获取数据库连接字符串
+    pub fn get_url(&self) -> Result<String, Box<dyn std::error::Error>> {
+        if let Some(url) = &self.url {
+            Ok(url.clone())
+        } else if let Some(env_name) = &self.env {
+            std::env::var(env_name).map_err(|e| {
+                format!("Failed to read environment variable {}: {}", env_name, e).into()
+            })
+        } else {
+            Err("No database URL or environment variable specified".into())
+        }
+    }
+}
+
 /// 表结构定义
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TableSchema {
@@ -408,16 +467,52 @@ impl ReferentialAction {
     }
 }
 
-/// 完整的 schema 配置（包含数据库配置）
+/// 完整的 schema 配置（包含多个数据库）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchemaConfig {
-    /// 数据库配置
-    pub database: DatabaseLinkConfig,
-    /// 表结构列表
-    pub schemas: Vec<TableSchema>,
+    /// 数据库列表
+    pub databases: Vec<DatabaseSchema>,
+    /// 默认数据库名称（可选，不指定则使用第一个数据库）
+    pub default_database: Option<String>,
 }
 
-/// 数据库链接配置
+impl SchemaConfig {
+    /// 创建新的 schema 配置
+    pub fn new() -> Self {
+        Self {
+            databases: Vec::new(),
+            default_database: None,
+        }
+    }
+    
+    /// 添加数据库
+    pub fn database(mut self, database: DatabaseSchema) -> Self {
+        self.databases.push(database);
+        self
+    }
+    
+    /// 设置默认数据库
+    pub fn default_database(mut self, name: impl Into<String>) -> Self {
+        self.default_database = Some(name.into());
+        self
+    }
+    
+    /// 获取默认数据库
+    pub fn get_default_database(&self) -> Option<&DatabaseSchema> {
+        if let Some(default_name) = &self.default_database {
+            self.databases.iter().find(|db| db.name == *default_name)
+        } else {
+            self.databases.first()
+        }
+    }
+    
+    /// 根据名称获取数据库
+    pub fn get_database(&self, name: &str) -> Option<&DatabaseSchema> {
+        self.databases.iter().find(|db| db.name == name)
+    }
+}
+
+/// 数据库链接配置（保留向后兼容）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseLinkConfig {
     /// 数据库类型
@@ -664,12 +759,14 @@ pub fn export_schema_config_to_yaml_file(config: &SchemaConfig, path: impl AsRef
     Ok(())
 }
 
-/// 从已注册的 schemas 创建 SchemaConfig
-pub fn create_schema_config_from_registered(db_config: DatabaseLinkConfig) -> SchemaConfig {
+/// 从已注册的 schemas 创建 SchemaConfig（将所有表放在默认数据库中）
+pub fn create_schema_config_from_registered(default_db: DatabaseSchema, default_database: Option<String>) -> SchemaConfig {
     let schemas = get_registered_schemas();
+    let mut default_db = default_db;
+    default_db.schemas = schemas;
     SchemaConfig {
-        database: db_config,
-        schemas,
+        databases: vec![default_db],
+        default_database,
     }
 }
 

@@ -51,6 +51,6 @@ pub use schema::{
     generate_full_sql_for_registered_schemas, generate_full_sql_for_registered_schemas_for, get_registered_schemas,
     get_schema, load_and_register_schemas_from_yaml_file, load_schema_config_from_yaml, load_schema_config_from_yaml_file,
     load_schemas_from_yaml, load_schemas_from_yaml_file, register_schema, register_schemas, ColumnDef, ColumnType,
-    DatabaseLinkConfig, DatabaseType, ForeignKeyDef, IndexDef, ReferentialAction, SchemaConfig, TableSchema, col,
+    DatabaseLinkConfig, DatabaseSchema, DatabaseType, ForeignKeyDef, IndexDef, ReferentialAction, SchemaConfig, TableSchema, col,
 };
 pub use wae_types::Value;
