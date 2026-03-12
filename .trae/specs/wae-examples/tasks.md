@@ -42,7 +42,7 @@
   - `human-judgement` TR-3.3: 有清晰的 README.md 文档
 - **Notes**: 展示登录、注册、Token 验证流程
 
-## [ ] Task 4: 缓存示例 (cache-basic)
+## [x] Task 4: 缓存示例 (cache-basic)
 - **Priority**: P1
 - **Depends On**: None
 - **Description**: 
@@ -70,7 +70,7 @@
   - `human-judgement` TR-5.3: 有清晰的 README.md 文档
 - **Notes**: 展示 cron 任务、间隔任务、延迟任务
 
-## [ ] Task 6: 可观测性示例 (observability-basic)
+## [x] Task 6: 可观测性示例 (observability-basic)
 - **Priority**: P1
 - **Depends On**: None
 - **Description**: 
@@ -112,7 +112,7 @@
   - `human-judgement` TR-8.3: 有清晰的 README.md 文档
 - **Notes**: 展示动态数据渲染、模板继承
 
-## [ ] Task 9: 错误处理示例 (error-handling)
+## [x] Task 9: 错误处理示例 (error-handling)
 - **Priority**: P1
 - **Depends On**: Task 1
 - **Description**: 
@@ -210,7 +210,7 @@
   - `human-judgement` TR-15.3: 有清晰的 README.md 文档
 - **Notes**: 展示简单的用户服务和订单服务
 
-## [ ] Task 16: 更新 Cargo Workspace
+## [x] Task 16: 更新 Cargo Workspace
 - **Priority**: P0
 - **Depends On**: Task 1-15
 - **Description**: 

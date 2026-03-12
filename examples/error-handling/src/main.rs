@@ -3,7 +3,7 @@ use wae_https::{
     error::{ErrorExt, ErrorResponse, HttpError, HttpResult},
     router::RouterBuilder,
     response::JsonResponse,
-    ApiResponse, HttpsServerBuilder, Router,
+    HttpsServerBuilder,
 };
 use wae_types::{WaeError, WaeResult};
 
@@ -44,20 +44,6 @@ fn find_user(id: u64) -> WaeResult<User> {
     } else {
         Err(WaeError::not_found("user", id.to_string()))
     }
-}
-
-async fn create_user_endpoint(user: User) -> HttpResult<JsonResponse<User>> {
-    validate_user(&user)?;
-    Ok(JsonResponse::success(User {
-        id: Some(3),
-        name: user.name,
-        email: user.email,
-    }))
-}
-
-async fn get_user_endpoint(id: u64) -> HttpResult<JsonResponse<User>> {
-    let user = find_user(id)?;
-    Ok(JsonResponse::success(user))
 }
 
 async fn demonstrate_errors() {
@@ -123,32 +109,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
     });
 
-    router = router.get("/users/:id", || async {
-        match get_user_endpoint(1).await {
-            Ok(resp) => resp,
-            Err(err) => JsonResponse::error(err.to_string()),
-        }
-    });
-
-    router = router.post("/users", || async {
-        let user = User {
-            id: None,
-            name: "新用户".to_string(),
-            email: "newuser@example.com".to_string(),
-        };
-        match create_user_endpoint(user).await {
-            Ok(resp) => resp,
-            Err(err) => JsonResponse::error(err.to_string()),
-        }
-    });
-
     let router = router.build();
 
     println!("已配置以下路由:");
     println!("  GET    /                    - 服务信息");
     println!("  GET    /health              - 健康检查");
-    println!("  GET    /users/:id           - 获取用户详情");
-    println!("  POST   /users               - 创建用户");
     println!();
 
     println!("服务器将在 http://127.0.0.1:3000 启动");

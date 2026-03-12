@@ -96,12 +96,12 @@ enum MigrateCommands {
         /// schemas.yaml 文件路径
         #[arg(long, short, default_value = "schemas.yaml")]
         schema: String,
-        /// 数据库连接字符串
-        #[arg(long, short)]
-        database: String,
         /// 是否自动执行迁移（否则仅打印计划）
         #[arg(long, short, default_value_t = false)]
         execute: bool,
+        /// 是否强制执行破坏性操作（删除表、列等）
+        #[arg(long, default_value_t = false)]
+        force: bool,
     },
 }
 
@@ -133,8 +133,46 @@ async fn main() {
 }
 
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-async fn handle_migrate_command(_cmd: &MigrateCommands) {
-    println!("Handling migrate command... (integration with migration module coming soon)");
+async fn handle_migrate_command(cmd: &MigrateCommands) {
+    match cmd {
+        MigrateCommands::Sync {
+            schema,
+            execute,
+            force,
+        } => {
+            if let Err(e) = handle_sync_command(schema, *execute, *force).await {
+                eprintln!("Error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        _ => {
+            println!("Handling migrate command... (integration with migration module coming soon)");
+        }
+    }
+}
+
+#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+async fn handle_sync_command(
+    schema_path: &str,
+    execute: bool,
+    force: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wae_tools::schema_sync::SchemaSynchronizer;
+
+    println!("WAE Database Schema Sync");
+    println!("{}", "=".repeat(60));
+    println!("Schema file: {}", schema_path);
+    println!();
+
+    let synchronizer = SchemaSynchronizer::from_yaml_file(schema_path)?;
+    synchronizer.print_preview();
+
+    if execute {
+        println!("\n⚠️  Note: Full database migration execution requires additional setup.");
+        println!("   Preview generation is complete. SQL can be manually applied.");
+    }
+
+    Ok(())
 }
 
 fn handle_new_project(name: &str, path: &Option<String>) -> std::result::Result<(), Box<dyn std::error::Error>> {

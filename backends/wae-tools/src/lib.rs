@@ -7,6 +7,8 @@
 pub mod auto_migrate;
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub mod migration;
+#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+pub mod schema_sync;
 
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub use auto_migrate::{
@@ -17,4 +19,8 @@ pub use auto_migrate::{
 pub use migration::{
     Migration, MigrationOptions, MigrationRecord, MigrationResult, MigrationStatus, MigrationStatusSummary, Migrator,
     SimpleMigration,
+};
+#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+pub use schema_sync::{
+    MigrationOperation, MigrationPlan as SchemaMigrationPlan, SchemaSynchronizer,
 };

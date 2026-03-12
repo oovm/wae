@@ -52,7 +52,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::GET, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::GET, path.to_string(), Box::new(handler));
         self
     }
 
@@ -62,7 +62,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::POST, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::POST, path.to_string(), Box::new(handler));
         self
     }
 
@@ -72,7 +72,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::PUT, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::PUT, path.to_string(), Box::new(handler));
         self
     }
 
@@ -82,7 +82,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::DELETE, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::DELETE, path.to_string(), Box::new(handler));
         self
     }
 
@@ -92,7 +92,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::PATCH, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::PATCH, path.to_string(), Box::new(handler));
         self
     }
 
@@ -102,7 +102,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::OPTIONS, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::OPTIONS, path.to_string(), Box::new(handler));
         self
     }
 
@@ -112,7 +112,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::HEAD, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::HEAD, path.to_string(), Box::new(handler));
         self
     }
 
@@ -122,7 +122,7 @@ where
         H: Handler<T, S> + Clone,
         T: 'static,
     {
-        self.router.add_route_inner(http::Method::TRACE, path.to_string(), handler);
+        self.router.add_route_inner(http::Method::TRACE, path.to_string(), Box::new(handler));
         self
     }
 
@@ -190,7 +190,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::GET, path.to_string(), handler);
+        router.add_route_inner(http::Method::GET, path.to_string(), Box::new(handler));
     }
 }
 
@@ -202,7 +202,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::POST, path.to_string(), handler);
+        router.add_route_inner(http::Method::POST, path.to_string(), Box::new(handler));
     }
 }
 
@@ -214,7 +214,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::PUT, path.to_string(), handler);
+        router.add_route_inner(http::Method::PUT, path.to_string(), Box::new(handler));
     }
 }
 
@@ -226,7 +226,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::DELETE, path.to_string(), handler);
+        router.add_route_inner(http::Method::DELETE, path.to_string(), Box::new(handler));
     }
 }
 
@@ -238,7 +238,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::PATCH, path.to_string(), handler);
+        router.add_route_inner(http::Method::PATCH, path.to_string(), Box::new(handler));
     }
 }
 
@@ -250,7 +250,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::OPTIONS, path.to_string(), handler);
+        router.add_route_inner(http::Method::OPTIONS, path.to_string(), Box::new(handler));
     }
 }
 
@@ -262,7 +262,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::HEAD, path.to_string(), handler);
+        router.add_route_inner(http::Method::HEAD, path.to_string(), Box::new(handler));
     }
 }
 
@@ -274,7 +274,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
-        router.add_route_inner(http::Method::TRACE, path.to_string(), handler);
+        router.add_route_inner(http::Method::TRACE, path.to_string(), Box::new(handler));
     }
 }
 

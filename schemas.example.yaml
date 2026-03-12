@@ -1,0 +1,79 @@
+# schemas.yaml - 数据库 schema 配置文件
+# 此文件应添加到 .gitignore 中，因为它包含数据库连接信息
+
+database:
+  # 数据库类型: Turso | Postgres | MySql
+  type: Turso
+  
+  # 方式1: 直接指定连接 URL（可以包含密码）
+  url: "file:./data.db"
+  
+  # 方式2: 通过环境变量指定（更安全）
+  # env: DATABASE_URL
+
+schemas:
+  - name: users
+    columns:
+      - name: id
+        col_type: Integer
+        nullable: false
+        primary_key: true
+        auto_increment: true
+        unique: true
+      - name: name
+        col_type: Text
+        nullable: false
+        primary_key: false
+        auto_increment: false
+        unique: false
+      - name: email
+        col_type: Text
+        nullable: false
+        primary_key: false
+        auto_increment: false
+        unique: true
+      - name: created_at
+        col_type: Text
+        nullable: true
+        primary_key: false
+        auto_increment: false
+        unique: false
+    indexes:
+      - name: idx_users_email
+        table_name: users
+        columns:
+          - email
+        unique: true
+
+  - name: posts
+    columns:
+      - name: id
+        col_type: Integer
+        nullable: false
+        primary_key: true
+        auto_increment: true
+        unique: true
+      - name: user_id
+        col_type: Integer
+        nullable: false
+        primary_key: false
+        auto_increment: false
+        unique: false
+      - name: title
+        col_type: Text
+        nullable: false
+        primary_key: false
+        auto_increment: false
+        unique: false
+      - name: content
+        col_type: Text
+        nullable: true
+        primary_key: false
+        auto_increment: false
+        unique: false
+    indexes:
+      - name: idx_posts_user_id
+        table_name: posts
+        columns:
+          - user_id
+        unique: false

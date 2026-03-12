@@ -408,6 +408,41 @@ impl ReferentialAction {
     }
 }
 
+/// 完整的 schema 配置（包含数据库配置）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SchemaConfig {
+    /// 数据库配置
+    pub database: DatabaseLinkConfig,
+    /// 表结构列表
+    pub schemas: Vec<TableSchema>,
+}
+
+/// 数据库链接配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseLinkConfig {
+    /// 数据库类型
+    pub r#type: DatabaseType,
+    /// 数据库连接字符串（可以直接包含密码）
+    pub url: Option<String>,
+    /// 环境变量名称（用于从环境变量获取连接字符串）
+    pub env: Option<String>,
+}
+
+impl DatabaseLinkConfig {
+    /// 获取数据库连接字符串
+    pub fn get_url(&self) -> Result<String, Box<dyn std::error::Error>> {
+        if let Some(url) = &self.url {
+            Ok(url.clone())
+        } else if let Some(env_name) = &self.env {
+            std::env::var(env_name).map_err(|e| {
+                format!("Failed to read environment variable {}: {}", env_name, e).into()
+            })
+        } else {
+            Err("No database URL or environment variable specified".into())
+        }
+    }
+}
+
 /// 列类型快捷构造函数
 pub mod col {
     use super::{ColumnDef, ColumnType};
@@ -582,23 +617,60 @@ impl TableSchema {
     }
 }
 
-/// 从 YAML 字符串解析 TableSchema 列表
+/// 从 YAML 字符串解析 SchemaConfig
+pub fn load_schema_config_from_yaml(yaml_str: &str) -> Result<SchemaConfig, serde_yaml::Error> {
+    serde_yaml::from_str(yaml_str)
+}
+
+/// 从 YAML 文件加载 SchemaConfig
+pub fn load_schema_config_from_yaml_file(path: impl AsRef<Path>) -> Result<SchemaConfig, Box<dyn std::error::Error>> {
+    let content = fs::read_to_string(path)?;
+    let config = load_schema_config_from_yaml(&content)?;
+    Ok(config)
+}
+
+/// 从 YAML 字符串解析 TableSchema 列表（兼容旧格式）
 pub fn load_schemas_from_yaml(yaml_str: &str) -> Result<Vec<TableSchema>, serde_yaml::Error> {
     serde_yaml::from_str(yaml_str)
 }
 
-/// 从 YAML 文件加载 TableSchema 列表
+/// 从 YAML 文件加载 TableSchema 列表（兼容旧格式）
 pub fn load_schemas_from_yaml_file(path: impl AsRef<Path>) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
     let content = fs::read_to_string(path)?;
     let schemas = load_schemas_from_yaml(&content)?;
     Ok(schemas)
 }
 
-/// 从 YAML 文件加载并注册所有 TableSchema
+/// 从 YAML 文件加载并注册所有 TableSchema（兼容旧格式）
 pub fn load_and_register_schemas_from_yaml_file(path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
     let schemas = load_schemas_from_yaml_file(path)?;
     register_schemas(schemas);
     Ok(())
+}
+
+/// 将 SchemaConfig 导出为 YAML 字符串
+pub fn export_schema_config_to_yaml(config: &SchemaConfig) -> String {
+    serde_yaml::to_string(config).unwrap_or_else(|e| format!("# Error: {}", e))
+}
+
+/// 将 SchemaConfig 导出到 YAML 文件
+pub fn export_schema_config_to_yaml_file(config: &SchemaConfig, path: impl AsRef<Path>) -> std::io::Result<()> {
+    use std::fs::File;
+    use std::io::Write;
+
+    let yaml = export_schema_config_to_yaml(config);
+    let mut file = File::create(path)?;
+    file.write_all(yaml.as_bytes())?;
+    Ok(())
+}
+
+/// 从已注册的 schemas 创建 SchemaConfig
+pub fn create_schema_config_from_registered(db_config: DatabaseLinkConfig) -> SchemaConfig {
+    let schemas = get_registered_schemas();
+    SchemaConfig {
+        database: db_config,
+        schemas,
+    }
 }
 
 /// 为所有已注册的 schema 生成完整的 SQL（使用当前数据库类型）
