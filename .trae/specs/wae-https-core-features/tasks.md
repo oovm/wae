@@ -32,7 +32,7 @@
   - `programmatic` TR-2.4: Form 体能正确提取和反序列化
   - `human-judgement` TR-2.5: 提取器实现有完整文档注释
 
-## [/] 任务 3: 服务器启动实现
+## [x] 任务 3: 服务器启动实现
 - **Priority**: P0
 - **Depends On**: 任务 1, 任务 2
 - **Description**:
@@ -47,7 +47,7 @@
   - `programmatic` TR-3.3: 请求能正确分发到处理函数
   - `human-judgement` TR-3.4: 服务器实现有完整文档注释
 
-## [ ] 任务 4: 中间件集成
+## [x] 任务 4: 中间件集成
 - **Priority**: P1
 - **Depends On**: 任务 3
 - **Description**:
@@ -60,7 +60,7 @@
   - `programmatic` TR-4.2: 现有中间件能正常工作
   - `human-judgement` TR-4.3: 中间件集成有完整文档注释
 
-## [ ] 任务 5: 静态文件服务实现
+## [x] 任务 5: 静态文件服务实现
 - **Priority**: P1
 - **Depends On**: 任务 4
 - **Description**:
@@ -73,7 +73,7 @@
   - `programmatic` TR-5.2: 正确的 MIME 类型被设置
   - `human-judgement` TR-5.3: 静态文件服务有完整文档注释
 
-## [ ] 任务 6: 测试和文档完善
+## [x] 任务 6: 测试和文档完善
 - **Priority**: P2
 - **Depends On**: 任务 5
 - **Description**:

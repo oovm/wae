@@ -53,7 +53,7 @@ impl Default for SchemaType {
 }
 
 /// Schema 定义
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Schema {
     /// Schema 标题
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -230,6 +230,12 @@ impl Schema {
     /// 设置格式
     pub fn format(mut self, format: impl Into<String>) -> Self {
         self.format = Some(format.into());
+        self
+    }
+
+    /// 设置正则模式
+    pub fn pattern(mut self, pattern: impl Into<String>) -> Self {
+        self.pattern = Some(pattern.into());
         self
     }
 

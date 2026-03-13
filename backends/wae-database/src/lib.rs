@@ -46,11 +46,14 @@ pub use middleware::{
     TransactionConfig, TransactionLayer, TransactionMiddlewareBuilder, TransactionService,
 };
 pub use schema::{
-    auto_export_schemas, clear_schemas, create_schema_config_from_registered, export_schema_config_to_yaml,
-    export_schema_config_to_yaml_file, export_schemas_to_yaml, export_schemas_to_yaml_file, export_sql_for_all_databases,
-    generate_full_sql_for_registered_schemas, generate_full_sql_for_registered_schemas_for, get_registered_schemas,
-    get_schema, load_and_register_schemas_from_yaml_file, load_schema_config_from_yaml, load_schema_config_from_yaml_file,
+    clear_schemas, create_schema_config_from_registered, export_schema_config_to_yaml,
+    export_schema_config_to_yaml_file, export_schemas_to_yaml, generate_full_sql_for_registered_schemas,
+    generate_full_sql_for_registered_schemas_for, get_registered_schemas, get_schema,
+    load_and_register_schemas_from_yaml_file, load_schema_config_from_yaml, load_schema_config_from_yaml_file,
     load_schemas_from_yaml, load_schemas_from_yaml_file, register_schema, register_schemas, ColumnDef, ColumnType,
     DatabaseLinkConfig, DatabaseSchema, DatabaseType, ForeignKeyDef, IndexDef, ReferentialAction, SchemaConfig, TableSchema, col,
 };
+
+#[cfg(debug_assertions)]
+pub use schema::{auto_export_schemas, export_schemas_to_yaml_file, export_sql_for_all_databases};
 pub use wae_types::Value;

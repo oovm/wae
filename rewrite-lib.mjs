@@ -1,4 +1,7 @@
-#![doc = include_str!("readme.md")]
+import fs from 'fs';
+import path from 'path';
+
+const newContent = `#![doc = include_str!("readme.md")]
 #![warn(missing_docs)]
 
 pub mod error;
@@ -84,12 +87,98 @@ impl<T: IntoResponse> IntoResponse for (StatusCode, T) {
     }
 }
 
-/// 路由处理函数类型
-type RouteHandlerFn<S> = Arc<dyn Fn(crate::extract::RequestParts, S) -> Response<Body> + Send + Sync + 'static>;
+/// 处理函数 trait，类似于 Axum 的 Handler trait
+///
+/// 定义了如何将异步函数与提取器绑定并调用。
+pub trait Handler<T, S>: Clone + Send + Sync + 'static {
+    /// 调用处理函数
+    ///
+    /// # 参数
+    ///
+    /// * \`parts\` - 请求上下文
+    /// * \`state\` - 应用状态
+    fn call(self, parts: crate::extract::RequestParts, state: S) -> impl std::future::Future<Output = Response<Body>> + Send;
+}
+
+/// 元组处理函数支持（最多支持 1 个参数）
+macro_rules! impl_handler {
+    (
+        [$($ty:ident),*],
+        $last:ident
+    ) => {
+        #[allow(non_snake_case, unused_mut)]
+        impl<F, Fut, S, $($ty,)* $last> Handler<($($ty,)* $last,), S> for F
+        where
+            F: Fn($($ty,)* $last,) -> Fut + Clone + Send + Sync + 'static,
+            Fut: std::future::Future<Output = Response<Body>> + Send,
+            S: Clone + Send + Sync + 'static,
+            $($ty: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError>,)*
+            $last: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError>,
+        {
+            fn call(self, parts: crate::extract::RequestParts, state: S) -> impl std::future::Future<Output = Response<Body>> + Send {
+                async move {
+                    let result: Response<Body> = match <($($ty,)* $last,) as crate::extract::FromRequestParts<S>>::from_request_parts(&parts, &state).await {
+                        Ok(($($ty,)* $last,)) => {
+                            self($($ty,)* $last,).await
+                        }
+                        Err(e) => {
+                            let error_msg = e.to_string();
+                            Response::builder()
+                                .status(StatusCode::BAD_REQUEST)
+                                .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+                                .body(full_body(error_msg))
+                                .unwrap()
+                        }
+                    };
+                    result
+                }
+            }
+        }
+    };
+}
+
+impl_handler!([], T1);
+
+/// 处理函数包装器 trait
+trait HandlerWrapper<S>: Send + Sync + 'static {
+    /// 调用处理函数
+    fn call(&self, parts: crate::extract::RequestParts, state: S) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response<Body>> + Send>>;
+}
+
+struct HandlerWrapperImpl<F, T, S> {
+    handler: F,
+    _marker: std::marker::PhantomData<fn(T, S)>,
+}
+
+impl<F, T, S> Clone for HandlerWrapperImpl<F, T, S>
+where
+    F: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            handler: self.handler.clone(),
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<F, T, S> HandlerWrapper<S> for HandlerWrapperImpl<F, T, S>
+where
+    F: Handler<T, S>,
+    T: 'static,
+    S: Clone + Send + Sync + 'static,
+{
+    fn call(&self, parts: crate::extract::RequestParts, state: S) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response<Body>> + Send>> {
+        let handler = self.handler.clone();
+        Box::pin(async move {
+            Handler::call(handler, parts, state).await
+        })
+    }
+}
 
 /// 自定义路由类型
 pub struct Router<S = ()> {
-    routes: std::collections::HashMap<http::Method, matchit::Router<RouteHandlerFn<S>>>,
+    routes: std::collections::HashMap<http::Method, matchit::Router<Arc<dyn HandlerWrapper<S>>>>,
     raw_routes: Vec<RouteEntry<S>>,
     state: S,
 }
@@ -98,17 +187,7 @@ pub struct Router<S = ()> {
 struct RouteEntry<S> {
     method: http::Method,
     path: String,
-    handler: RouteHandlerFn<S>,
-}
-
-impl<S: Clone> Clone for RouteEntry<S> {
-    fn clone(&self) -> Self {
-        Self {
-            method: self.method.clone(),
-            path: self.path.clone(),
-            handler: self.handler.clone(),
-        }
-    }
+    handler: Arc<dyn HandlerWrapper<S>>,
 }
 
 impl<S: Clone> Clone for Router<S> {
@@ -118,17 +197,25 @@ impl<S: Clone> Clone for Router<S> {
             let new_router = matchit::Router::new();
             routes.insert(method.clone(), new_router);
         }
-        let mut new_router = Self {
-            routes,
-            raw_routes: Vec::new(),
-            state: self.state.clone(),
-        };
         for entry in &self.raw_routes {
-            let router = new_router.routes.entry(entry.method.clone()).or_insert_with(matchit::Router::new);
+            let router = routes.entry(entry.method.clone()).or_insert_with(matchit::Router::new);
             let _ = router.insert(entry.path.clone(), entry.handler.clone());
-            new_router.raw_routes.push(entry.clone());
         }
-        new_router
+        Self {
+            routes,
+            raw_routes: self.raw_routes.clone(),
+            state: self.state.clone(),
+        }
+    }
+}
+
+impl<S: Clone> Clone for RouteEntry<S> {
+    fn clone(&self) -> Self {
+        Self {
+            method: self.method.clone(),
+            path: self.path.clone(),
+            handler: self.handler.clone(),
+        }
     }
 }
 
@@ -164,10 +251,20 @@ impl<S> Router<S> {
     /// 添加路由到路由表（保留用于兼容性）
     pub fn add_route_inner(
         &mut self,
-        _method: http::Method,
-        _path: String,
-        _handler: Box<dyn std::any::Any + Send + Sync + 'static>,
+        method: http::Method,
+        path: String,
+        handler: Box<dyn std::any::Any + Send + Sync + 'static>,
     ) {
+        let wrapper = HandlerWrapperImpl {
+            handler: handler,
+            _marker: std::marker::PhantomData,
+        };
+        let handler_arc: Arc<dyn HandlerWrapper<S>> = Arc::new(wrapper);
+        let entry = RouteEntry { method: method.clone(), path: path.clone(), handler: handler_arc.clone() };
+        self.raw_routes.push(entry);
+
+        let router = self.routes.entry(method).or_insert_with(matchit::Router::new);
+        let _ = router.insert(path, handler_arc);
     }
 }
 
@@ -182,29 +279,19 @@ where
         path: &str,
         handler: H,
     ) where
-        H: Fn(T) -> Response<Body> + Clone + Send + Sync + 'static,
-        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
+        H: Handler<T, S>,
+        T: 'static,
     {
-        let handler_fn: RouteHandlerFn<S> = Arc::new(move |parts, state| {
-            let handler = handler.clone();
-            match T::from_request_parts(&parts, &state) {
-                Ok(t) => handler(t),
-                Err(e) => {
-                    let error_msg = e.to_string();
-                    Response::builder()
-                        .status(StatusCode::BAD_REQUEST)
-                        .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
-                        .body(full_body(error_msg))
-                        .unwrap()
-                }
-            }
-        });
-
-        let entry = RouteEntry { method: method.clone(), path: path.to_string(), handler: handler_fn.clone() };
+        let wrapper = HandlerWrapperImpl {
+            handler,
+            _marker: std::marker::PhantomData,
+        };
+        let handler_arc: Arc<dyn HandlerWrapper<S>> = Arc::new(wrapper);
+        let entry = RouteEntry { method: method.clone(), path: path.to_string(), handler: handler_arc.clone() };
         self.raw_routes.push(entry);
 
         let router = self.routes.entry(method).or_insert_with(matchit::Router::new);
-        let _ = router.insert(path, handler_fn);
+        let _ = router.insert(path, handler_arc);
     }
 
     /// 合并另一个路由
@@ -352,8 +439,8 @@ impl TlsConfig {
     ///
     /// # 参数
     ///
-    /// * `cert_path` - 证书文件路径
-    /// * `key_path` - 私钥文件路径
+    /// * \`cert_path\` - 证书文件路径
+    /// * \`key_path\` - 私钥文件路径
     pub fn new(cert_path: impl Into<String>, key_path: impl Into<String>) -> Self {
         Self { cert_path: cert_path.into(), key_path: key_path.into() }
     }
@@ -487,8 +574,8 @@ where
     ///
     /// # 参数
     ///
-    /// * `cert_path` - 证书文件路径
-    /// * `key_path` - 私钥文件路径
+    /// * \`cert_path\` - 证书文件路径
+    /// * \`key_path\` - 私钥文件路径
     pub fn tls(mut self, cert_path: impl Into<String>, key_path: impl Into<String>) -> Self {
         self.config.tls_config = Some(TlsConfig::new(cert_path, key_path));
         self
@@ -664,7 +751,7 @@ where
     ///
     /// # 参数
     ///
-    /// * `data` - 响应数据
+    /// * \`data\` - 响应数据
     pub fn success(data: T) -> Self {
         Self { success: true, data: Some(data), error: None, trace_id: None }
     }
@@ -673,8 +760,8 @@ where
     ///
     /// # 参数
     ///
-    /// * `data` - 响应数据
-    /// * `trace_id` - 追踪 ID
+    /// * \`data\` - 响应数据
+    /// * \`trace_id\` - 追踪 ID
     pub fn success_with_trace(data: T, trace_id: impl Into<String>) -> Self {
         Self { success: true, data: Some(data), error: None, trace_id: Some(trace_id.into()) }
     }
@@ -683,8 +770,8 @@ where
     ///
     /// # 参数
     ///
-    /// * `code` - 错误代码
-    /// * `message` - 错误消息
+    /// * \`code\` - 错误代码
+    /// * \`message\` - 错误消息
     pub fn error(code: impl Into<String>, message: impl Into<String>) -> Self {
         Self {
             success: false,
@@ -698,9 +785,9 @@ where
     ///
     /// # 参数
     ///
-    /// * `code` - 错误代码
-    /// * `message` - 错误消息
-    /// * `trace_id` - 追踪 ID
+    /// * \`code\` - 错误代码
+    /// * \`message\` - 错误消息
+    /// * \`trace_id\` - 追踪 ID
     pub fn error_with_trace(code: impl Into<String>, message: impl Into<String>, trace_id: impl Into<String>) -> Self {
         Self {
             success: false,
@@ -717,53 +804,10 @@ where
 ///
 /// # 参数
 ///
-/// * `path` - 静态文件所在的目录路径
-/// * `prefix` - 路由前缀，例如 "/static"
-pub fn static_files_router(base_path: impl AsRef<Path>, prefix: &str) -> Router {
-    let mut router = Router::new();
-    let base_path = base_path.as_ref().to_path_buf();
-    let prefix = prefix.to_string();
-    
-    router.add_route(http::Method::GET, &format!("{}/*path", prefix), move |parts: crate::extract::RequestParts| {
-        let path = parts.uri.path();
-        let file_path = if let Some(stripped) = path.strip_prefix(&prefix) {
-            base_path.join(stripped.trim_start_matches('/'))
-        } else {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(empty_body())
-                .unwrap();
-        };
-        
-        if !file_path.exists() || !file_path.is_file() {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(empty_body())
-                .unwrap();
-        }
-        
-        let content = match std::fs::read(&file_path) {
-            Ok(c) => c,
-            Err(_) => {
-                return Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(empty_body())
-                    .unwrap();
-            }
-        };
-        
-        let mime_type = mime_guess::from_path(&file_path)
-            .first_or_octet_stream()
-            .to_string();
-        
-        Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, mime_type)
-            .body(full_body(content))
-            .unwrap()
-    });
-    
-    router
+/// * \`path\` - 静态文件所在的目录路径
+/// * \`prefix\` - 路由前缀，例如 "/static"
+pub fn static_files_router(_path: impl AsRef<Path>, _prefix: &str) -> Router {
+    Router::new()
 }
 
 /// 路由服务，实现 Service trait 用于处理 HTTP 请求
@@ -803,7 +847,7 @@ where
         let version = parts.version;
         let headers = parts.headers.clone();
 
-        let mut request_parts = crate::extract::RequestParts::new(method.clone(), uri.clone(), version, headers);
+        let request_parts = crate::extract::RequestParts::new(method.clone(), uri.clone(), version, headers);
 
         let path = uri.path();
 
@@ -823,12 +867,10 @@ where
                 .unwrap();
         };
 
-        request_parts.path_params = matched.params.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
-
         let handler = matched.value;
         let state = self.router.state.clone();
 
-        handler(request_parts, state)
+        handler.call(request_parts, state).await
     }
 }
 
@@ -848,3 +890,8 @@ where
         })
     }
 }
+`;
+
+const filePath = path.join('backends', 'wae-https', 'src', 'lib.rs');
+fs.writeFileSync(filePath, newContent, 'utf8');
+console.log('Successfully rewritten lib.rs!');

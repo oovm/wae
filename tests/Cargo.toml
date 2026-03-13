@@ -1,0 +1,17 @@
+[package]
+name = "wae-integration-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "WAE 集成测试包"
+
+[dependencies]
+wae-config = { workspace = true }
+wae-types = { workspace = true }
+wae-testing = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

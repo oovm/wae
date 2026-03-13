@@ -2,7 +2,6 @@
 
 use http::{Method, Uri, Version, header::HeaderMap};
 use std::fmt;
-use bytes::Bytes;
 use serde::de::DeserializeOwned;
 
 /// 请求上下文
@@ -20,8 +19,6 @@ pub struct RequestParts {
     pub headers: HeaderMap,
     /// 路径参数
     pub path_params: Vec<(String, String)>,
-    /// 原始请求体（可选，用于已读取的请求体）
-    pub body: Option<Bytes>,
 }
 
 impl RequestParts {
@@ -33,15 +30,14 @@ impl RequestParts {
             version,
             headers,
             path_params: Vec::new(),
-            body: None,
         }
     }
 }
 
 /// 从请求中提取数据的 trait
 ///
-/// 类似于 Axum 的 FromRequest trait，用于从 HTTP 请求中提取数据。
-pub trait FromRequest<S>: Sized {
+/// 类似于 Axum 的 FromRequestParts trait，用于从 HTTP 请求中提取数据。
+pub trait FromRequestParts<S>: Sized {
     /// 提取过程中可能发生的错误
     type Error;
 
@@ -51,23 +47,7 @@ pub trait FromRequest<S>: Sized {
     ///
     /// * `parts` - 请求上下文
     /// * `state` - 应用状态
-    fn from_request(parts: &RequestParts, state: &S) -> Result<Self, Self::Error>;
-}
-
-/// 异步从请求中提取数据的 trait
-///
-/// 用于需要异步操作的提取器，如请求体提取。
-pub trait FromRequestParts<S>: Sized {
-    /// 提取过程中可能发生的错误
-    type Error;
-
-    /// 从请求中异步提取数据
-    ///
-    /// # 参数
-    ///
-    /// * `parts` - 请求上下文
-    /// * `state` - 应用状态
-    async fn from_request_parts(parts: &RequestParts, state: &S) -> Result<Self, Self::Error>;
+    fn from_request_parts(parts: &RequestParts, state: &S) -> Result<Self, Self::Error>;
 }
 
 /// Extractor 错误类型
@@ -160,7 +140,7 @@ where
 {
     type Error = ExtractorError;
 
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
+    fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
         if let Some((_, value)) = parts.path_params.first() {
             T::from_str(value)
                 .map(Path)
@@ -200,7 +180,7 @@ where
 {
     type Error = ExtractorError;
 
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
+    fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
         let query = parts.uri.query().unwrap_or_default();
         serde_urlencoded::from_str(query)
             .map(Query)
@@ -231,23 +211,6 @@ where
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Json<T>(pub T);
 
-impl<T, S> FromRequestParts<S> for Json<T>
-where
-    T: DeserializeOwned,
-{
-    type Error = ExtractorError;
-
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
-        let body = parts.body.as_ref().ok_or_else(|| {
-            ExtractorError::JsonRejection("Request body is missing".to_string())
-        })?;
-        
-        serde_json::from_slice(body)
-            .map(Json)
-            .map_err(|e| ExtractorError::JsonRejection(format!("Failed to parse JSON body: {}", e)))
-    }
-}
-
 /// 表单数据提取器
 ///
 /// 用于从表单格式的请求体中提取数据。
@@ -270,23 +233,6 @@ where
 /// ```
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Form<T>(pub T);
-
-impl<T, S> FromRequestParts<S> for Form<T>
-where
-    T: DeserializeOwned,
-{
-    type Error = ExtractorError;
-
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
-        let body = parts.body.as_ref().ok_or_else(|| {
-            ExtractorError::FormRejection("Request body is missing".to_string())
-        })?;
-        
-        serde_urlencoded::from_bytes(body)
-            .map(Form)
-            .map_err(|e| ExtractorError::FormRejection(format!("Failed to parse form data: {}", e)))
-    }
-}
 
 /// 请求头提取器
 ///
@@ -312,7 +258,7 @@ pub type HttpMethod = Method;
 impl<S> FromRequestParts<S> for HttpMethod {
     type Error = ExtractorError;
 
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
+    fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
         Ok(parts.method.clone())
     }
 }
@@ -325,8 +271,28 @@ pub type RequestUri = Uri;
 impl<S> FromRequestParts<S> for RequestUri {
     type Error = ExtractorError;
 
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
+    fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
         Ok(parts.uri.clone())
+    }
+}
+
+impl<S> FromRequestParts<S> for RequestParts {
+    type Error = ExtractorError;
+
+    fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
+        Ok(parts.clone())
+    }
+}
+
+impl Clone for RequestParts {
+    fn clone(&self) -> Self {
+        Self {
+            method: self.method.clone(),
+            uri: self.uri.clone(),
+            version: self.version,
+            headers: self.headers.clone(),
+            path_params: self.path_params.clone(),
+        }
     }
 }
 
@@ -338,7 +304,7 @@ pub type HttpVersion = Version;
 impl<S> FromRequestParts<S> for HttpVersion {
     type Error = ExtractorError;
 
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
+    fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
         Ok(parts.version)
     }
 }
@@ -351,7 +317,7 @@ pub type Headers = HeaderMap;
 impl<S> FromRequestParts<S> for Headers {
     type Error = ExtractorError;
 
-    async fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
+    fn from_request_parts(parts: &RequestParts, _state: &S) -> Result<Self, Self::Error> {
         Ok(parts.headers.clone())
     }
 }
@@ -390,7 +356,7 @@ where
 {
     type Error = ExtractorError;
 
-    async fn from_request_parts(_parts: &RequestParts, state: &S) -> Result<Self, Self::Error> {
+    fn from_request_parts(_parts: &RequestParts, state: &S) -> Result<Self, Self::Error> {
         Ok(State(state.deref().clone()))
     }
 }
@@ -414,9 +380,9 @@ macro_rules! impl_from_request_parts_tuple {
         {
             type Error = ExtractorError;
 
-            async fn from_request_parts(parts: &RequestParts, state: &S) -> Result<Self, Self::Error> {
+            fn from_request_parts(parts: &RequestParts, state: &S) -> Result<Self, Self::Error> {
                 Ok(($(
-                    $ty::from_request_parts(parts, state).await?,
+                    $ty::from_request_parts(parts, state)?,
                 )*))
             }
         }

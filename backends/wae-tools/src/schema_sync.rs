@@ -4,7 +4,6 @@
 
 use wae_database::{DatabaseType, DatabaseSchema, SchemaConfig, TableSchema, load_schema_config_from_yaml_file};
 use wae_types::{WaeError, WaeResult};
-use std::collections::HashMap;
 
 /// 迁移操作类型
 #[derive(Debug, Clone)]
@@ -230,7 +229,8 @@ pub struct SchemaSynchronizer {
 impl SchemaSynchronizer {
     /// 从 YAML 文件创建同步器
     pub fn from_yaml_file(path: impl AsRef<std::path::Path>) -> WaeResult<Self> {
-        let config = load_schema_config_from_yaml_file(path)?;
+        let config = load_schema_config_from_yaml_file(path)
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to load schema config: {}", e)))?;
         Ok(Self { config })
     }
 

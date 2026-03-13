@@ -13,7 +13,7 @@
   - `programmatic` TR-1.3: 所有测试通过
 - **Notes**: 参考 wae-email 的测试结构
 
-## [ ] Task 2: 为 wae-config 添加完整单元测试
+## [x] Task 2: 为 wae-config 添加完整单元测试
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -24,7 +24,7 @@
   - `programmatic` TR-2.2: 测试配置验证逻辑
   - `programmatic` TR-2.3: 所有测试通过
 
-## [ ] Task 3: 为 wae-crypto 添加完整单元测试
+## [x] Task 3: 为 wae-crypto 添加完整单元测试
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -38,7 +38,7 @@
   - `programmatic` TR-3.5: 测试 TOTP 功能 (totp.rs)
   - `programmatic` TR-3.6: 所有测试通过
 
-## [ ] Task 4: 为 wae-resilience 添加完整单元测试
+## [x] Task 4: 为 wae-resilience 添加完整单元测试
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -52,7 +52,7 @@
   - `programmatic` TR-4.5: 测试舱壁模式 (bulkhead.rs)
   - `programmatic` TR-4.6: 所有测试通过
 
-## [ ] Task 5: 为 wae-scheduler 添加完整单元测试
+## [x] Task 5: 为 wae-scheduler 添加完整单元测试
 - **Priority**: P1
 - **Depends On**: None
 - **Description**: 
@@ -64,7 +64,7 @@
   - `programmatic` TR-5.3: 测试延迟任务 (delayed.rs)
   - `programmatic` TR-5.4: 所有测试通过
 
-## [ ] Task 6: 为 wae-schema 添加完整单元测试
+## [x] Task 6: 为 wae-schema 添加完整单元测试
 - **Priority**: P1
 - **Depends On**: None
 - **Description**: 
@@ -75,7 +75,7 @@
   - `programmatic` TR-6.2: 测试 Swagger UI 集成
   - `programmatic` TR-6.3: 所有测试通过
 
-## [ ] Task 7: 为其他模块补充单元测试
+## [x] Task 7: 为其他模块补充单元测试
 - **Priority**: P1
 - **Depends On**: Task 1, Task 2, Task 3, Task 4, Task 5, Task 6
 - **Description**: 
@@ -86,7 +86,7 @@
   - `programmatic` TR-7.2: 覆盖主要公共 API
   - `programmatic` TR-7.3: 所有测试通过
 
-## [ ] Task 8: 建立集成测试框架
+## [x] Task 8: 建立集成测试框架
 - **Priority**: P1
 - **Depends On**: None
 - **Description**: 
@@ -98,7 +98,7 @@
   - `human-judgement` TR-8.2: 有集成测试示例
   - `programmatic` TR-8.3: 集成测试能成功运行
 
-## [ ] Task 9: 配置基准测试支持
+## [x] Task 9: 配置基准测试支持
 - **Priority**: P2
 - **Depends On**: None
 - **Description**: 
@@ -109,7 +109,7 @@
   - `programmatic` TR-9.1: 能成功运行 `cargo bench` 命令
   - `programmatic` TR-9.2: 基准测试输出正确的性能指标
 
-## [ ] Task 10: 配置测试覆盖率报告
+## [x] Task 10: 配置测试覆盖率报告
 - **Priority**: P2
 - **Depends On**: Task 1-7
 - **Description**: 

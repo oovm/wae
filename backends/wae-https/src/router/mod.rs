@@ -3,7 +3,6 @@
 //! 提供路由构建和管理工具。
 
 use crate::Router;
-use crate::Handler;
 use std::marker::PhantomData;
 
 /// 路由构建器
@@ -46,81 +45,81 @@ where
         self
     }
 
-    /// 添加 GET 方法路由（使用新的 Handler trait）
+    /// 添加 GET 方法路由
     pub fn get<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::GET, path, handler);
         self
     }
 
-    /// 添加 POST 方法路由（使用新的 Handler trait）
+    /// 添加 POST 方法路由
     pub fn post<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::POST, path, handler);
         self
     }
 
-    /// 添加 PUT 方法路由（使用新的 Handler trait）
+    /// 添加 PUT 方法路由
     pub fn put<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::PUT, path, handler);
         self
     }
 
-    /// 添加 DELETE 方法路由（使用新的 Handler trait）
+    /// 添加 DELETE 方法路由
     pub fn delete<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::DELETE, path, handler);
         self
     }
 
-    /// 添加 PATCH 方法路由（使用新的 Handler trait）
+    /// 添加 PATCH 方法路由
     pub fn patch<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::PATCH, path, handler);
         self
     }
 
-    /// 添加 OPTIONS 方法路由（使用新的 Handler trait）
+    /// 添加 OPTIONS 方法路由
     pub fn options<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::OPTIONS, path, handler);
         self
     }
 
-    /// 添加 HEAD 方法路由（使用新的 Handler trait）
+    /// 添加 HEAD 方法路由
     pub fn head<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::HEAD, path, handler);
         self
     }
 
-    /// 添加 TRACE 方法路由（使用新的 Handler trait）
+    /// 添加 TRACE 方法路由
     pub fn trace<H, T>(mut self, path: &str, handler: H) -> Self
     where
-        H: Handler<T, S> + Clone,
-        T: 'static,
+        H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+        T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
         self.router.add_route(http::Method::TRACE, path, handler);
         self
@@ -182,11 +181,11 @@ impl<S> Default for MethodRouter<S> {
     }
 }
 
-/// GET 方法路由（使用新的 Handler trait）
+/// GET 方法路由
 pub fn get<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
@@ -194,11 +193,11 @@ where
     }
 }
 
-/// POST 方法路由（使用新的 Handler trait）
+/// POST 方法路由
 pub fn post<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
@@ -206,11 +205,11 @@ where
     }
 }
 
-/// PUT 方法路由（使用新的 Handler trait）
+/// PUT 方法路由
 pub fn put<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
@@ -218,11 +217,11 @@ where
     }
 }
 
-/// DELETE 方法路由（使用新的 Handler trait）
+/// DELETE 方法路由
 pub fn delete<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
@@ -230,11 +229,11 @@ where
     }
 }
 
-/// PATCH 方法路由（使用新的 Handler trait）
+/// PATCH 方法路由
 pub fn patch<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
@@ -242,11 +241,11 @@ where
     }
 }
 
-/// OPTIONS 方法路由（使用新的 Handler trait）
+/// OPTIONS 方法路由
 pub fn options<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
@@ -254,11 +253,11 @@ where
     }
 }
 
-/// HEAD 方法路由（使用新的 Handler trait）
+/// HEAD 方法路由
 pub fn head<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {
@@ -266,11 +265,11 @@ where
     }
 }
 
-/// TRACE 方法路由（使用新的 Handler trait）
+/// TRACE 方法路由
 pub fn trace<H, T, S>(handler: H) -> impl FnOnce(&mut Router<S>, &str)
 where
-    H: Handler<T, S> + Clone,
-    T: 'static,
+    H: Fn(T) -> crate::Response<crate::Body> + Clone + Send + Sync + 'static,
+    T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     S: Clone + Send + Sync + 'static,
 {
     move |router, path| {

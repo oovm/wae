@@ -7127,6 +7127,7 @@ dependencies = [
  "argon2",
  "base64 0.22.1",
  "bcrypt",
+ "criterion",
  "hex",
  "hmac",
  "rand 0.10.0",
@@ -7237,6 +7238,19 @@ dependencies = [
  "tracing",
  "uuid",
  "wae-session",
+ "wae-types",
+]
+
+[[package]]
+name = "wae-integration-tests"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "wae-config",
+ "wae-testing",
  "wae-types",
 ]
 
@@ -7507,6 +7521,7 @@ dependencies = [
 name = "wae-types"
 version = "0.0.1"
 dependencies = [
+ "criterion",
  "rust_decimal",
  "rust_decimal_macros",
  "serde",
