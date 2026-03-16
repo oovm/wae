@@ -3,6 +3,7 @@
 use super::types::*;
 use super::producers::MessageProducer;
 use super::consumers::MessageConsumer;
+use super::WaeResult;
 
 /// 队列管理 trait
 #[async_trait::async_trait]

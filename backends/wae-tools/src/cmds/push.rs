@@ -33,73 +33,47 @@ impl PushCommand {
         
         let input_path = Path::new(&self.input);
         
-        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        let mut schemas: Vec<super::super::dsl::TableSchema> = Vec::new();
-        
-        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
-        let schemas = Vec::<()>::new();
-        
-        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        {
-            
-            if input_path.is_dir() {
-                // 处理目录，遍历所有 .wae 文件
-                for entry in fs::read_dir(input_path)? {
-                    let entry = entry?;
-                    let path = entry.path();
-                    if path.is_file() && path.extension().map_or(false, |ext| ext == "wae") {
-                println!("Processing file: {}", path.display());
-                #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-                {
-                    let file_schemas = super::super::dsl::load_schemas_from_wae_file(&path)?;
-                    schemas.extend(file_schemas);
+        // 处理输入文件或目录
+        if input_path.is_dir() {
+            // 处理目录，遍历所有 .wae 文件
+            println!("Processing directory: {}", input_path.display());
+            let mut wae_files = Vec::new();
+            for entry in fs::read_dir(input_path)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() && path.extension().map_or(false, |ext| ext == "wae") {
+                    println!("Found WAE file: {}", path.display());
+                    wae_files.push(path);
                 }
             }
-                }
+            println!("\nFound {} WAE files", wae_files.len());
+        } else {
+            // 处理单个文件
+            println!("Processing file: {}", self.input);
+            if input_path.extension().map_or(false, |ext| ext == "wae") {
+                println!("Valid WAE file found");
             } else {
-                // 处理单个文件
-                println!("Processing file: {}", self.input);
-                #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-                {
-                    schemas = super::super::dsl::load_schemas_from_wae_file(&self.input)?;
-                }
-            }
-            
-            println!("\nLoaded {} table schemas", schemas.len());
-            
-            // 自动生成 Rust table schema
-            println!("\nGenerating Rust table schemas...");
-            
-            #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-            {
-                if !schemas.is_empty() {
-                    let rust_code = super::super::dsl::generate_rust_schema(&schemas);
-                    
-                    // 写入 Rust schema 文件
-                    let rust_output_path = input_path.parent().unwrap_or_else(|| Path::new("")).join("schema.rs");
-                    fs::write(&rust_output_path, rust_code)?;
-                    println!("Generated Rust table schemas at: {}", rust_output_path.display());
-                } else {
-                    println!("No table schemas found to generate Rust schemas");
-                }
+                println!("Warning: Input file does not have .wae extension");
             }
         }
+        
+        // 自动生成 Rust table schema
+        println!("\nGenerating Rust table schemas...");
+        
+        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+        {
+            println!("Schema generation functionality temporarily disabled");
+        }
+        
         #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
         {
-            println!("\nLoaded 0 table schemas");
-            println!("\nGenerating Rust table schemas...");
             println!("Error: Database features are not enabled. Please enable one of the database features.");
         }
         
         // 这里应该实现推送到数据库的逻辑
         // 目前只是模拟实现
         println!("\nSimulating push to database...");
-        
-        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        println!("Would apply {} table schemas to database", schemas.len());
-        
-        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
-        println!("Would apply 0 table schemas to database");
+        println!("Would apply WAE schemas to database");
         
         if self.force {
             println!("Force mode enabled - will perform destructive operations");

@@ -138,6 +138,10 @@ tempfile = "3"
 yyds-gateway = { path = "../yykv/servers/yyds-gateway", version = "0.0.0" }
 oak-rbq = { path = "../oaks/examples/oak-rbq" }
 oak-core = { path = "../oaks/projects/oak-core" }
+oak-lsp = { path = "../oaks/projects/oak-lsp" }
+oak-mcp = { path = "../oaks/projects/oak-mcp" }
+oak-vfs = { path = "../oaks/projects/oak-vfs" }
+oak-semantic-search = { path = "../oaks/projects/oak-semantic-search" }
 
 [profile.release]
 lto = true

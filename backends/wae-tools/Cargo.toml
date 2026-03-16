@@ -25,11 +25,11 @@ notify = { workspace = true }
 notify-debouncer-mini = { workspace = true }
 figment = { workspace = true }
 # LSP 依赖
-oak-lsp = { path = "../../../oaks/projects/oak-lsp" }
-oak-mcp = { path = "../../../oaks/projects/oak-mcp" }
-oak-core = { path = "../../../oaks/projects/oak-core" }
-oak-vfs = { path = "../../../oaks/projects/oak-vfs" }
-oak-semantic-search = { path = "../../../oaks/projects/oak-semantic-search" }
+oak-lsp = { workspace = true }
+oak-mcp = { workspace = true }
+oak-core = { workspace = true }
+oak-vfs = { workspace = true }
+oak-semantic-search = { workspace = true }
 # YYKV we-trust gateway 依赖
 yyds-gateway = { workspace = true }
 # Oak RBQ parser 依赖

@@ -7,8 +7,6 @@ pub mod cmds;
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub mod auto_migrate;
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-pub mod dsl;
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub mod migration;
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
 pub mod schema_sync;
@@ -28,9 +26,6 @@ pub use schema_sync::{
     MigrationOperation, MigrationPlan as SchemaMigrationPlan, SchemaSynchronizer,
 };
 
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-pub use dsl::{
-    load_schemas_from_wae, load_schemas_from_wae_file, generate_rust_schema,
-};
+
 
 pub use cmds::*;

@@ -347,4 +347,133 @@ impl ConsumerBackend for RedisConsumerBackend {
                         }
 
                         let data_b64 = fields.get("data").ok_or_else(|| WaeError::internal("Missing data field"))?;
-                        let data
+                        let data = general_purpose::STANDARD
+                            .decode(data_b64)
+                            .map_err(|e| WaeError::internal(format!("Failed to decode data: {}", e)))?;
+
+                        let metadata = Self::decode_metadata(&fields);
+
+                        let mut next_tag = self.next_delivery_tag.lock().await;
+                        let delivery_tag = *next_tag;
+                        *next_tag += 1;
+                        drop(next_tag);
+
+                        let mut delivery_tags = self.delivery_tags.lock().await;
+                        delivery_tags.insert(delivery_tag, entry.id.clone());
+
+                        let redelivery_count =
+                            metadata.headers.get("x-redelivery-count").and_then(|s| s.parse().ok()).unwrap_or(0);
+
+                        let message = RawMessage { data, metadata };
+                        return Ok(Some(ReceivedRawMessage { message, delivery_tag, redelivery_count }));
+                    }
+                }
+                Ok(None)
+            }
+            Err(e) => {
+                if e.to_string().contains("NOGROUP") {
+                    self.manager.declare_queue(&QueueConfig::new(&self.config.queue)).await?;
+                    Ok(None)
+                }
+                else {
+                    Err(WaeError::internal(format!("Failed to read from stream: {}", e)))
+                }
+            }
+        }
+    }
+
+    async fn ack(&self, delivery_tag: u64) -> WaeResult<()> {
+        let mut conn = self
+            .client
+            .get_async_connection()
+            .await
+            .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
+
+        let stream_name = RedisQueueManager::stream_name(&self.config.queue);
+        let group_name = RedisQueueManager::group_name();
+
+        let mut delivery_tags = self.delivery_tags.lock().await;
+        if let Some(message_id) = delivery_tags.remove(&delivery_tag) {
+            let _: RedisResult<()> = conn.xack(&stream_name, group_name, &[&message_id]).await;
+            let _: RedisResult<()> = conn.xdel(&stream_name, &[&message_id]).await;
+        }
+
+        Ok(())
+    }
+
+    async fn nack(&self, delivery_tag: u64, requeue: bool) -> WaeResult<()> {
+        let mut conn = self
+            .client
+            .get_async_connection()
+            .await
+            .map_err(|e| WaeError::internal(format!("Failed to get Redis connection: {}", e)))?;
+
+        let stream_name = RedisQueueManager::stream_name(&self.config.queue);
+        let group_name = RedisQueueManager::group_name();
+
+        let mut delivery_tags = self.delivery_tags.lock().await;
+        if let Some(message_id) = delivery_tags.remove(&delivery_tag) {
+            if requeue {
+                let _: RedisResult<()> =
+                    conn.xclaim(&stream_name, group_name, &self.consumer_name, 0, &[&message_id]).await;
+            }
+            else {
+                let configs = self.manager.configs.lock().await;
+                let dlq_name = configs.get(&self.config.queue).and_then(|c| c.dead_letter_queue.clone());
+                drop(configs);
+
+                if let Some(dlq_name) = dlq_name {
+                    let _: RedisResult<()> = conn.xack(&stream_name, group_name, &[&message_id]).await;
+                    let _: RedisResult<()> = conn.xdel(&stream_name, &[&message_id]).await;
+                }
+                else {
+                    let _: RedisResult<()> = conn.xack(&stream_name, group_name, &[&message_id]).await;
+                    let _: RedisResult<()> = conn.xdel(&stream_name, &[&message_id]).await;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn config(&self) -> &ConsumerConfig {
+        &self.config
+    }
+}
+
+/// Redis 队列服务
+pub struct RedisQueueService {
+    manager: Arc<RedisQueueManager>,
+}
+
+impl RedisQueueService {
+    /// 创建新的 Redis 队列服务
+    pub fn new(manager: Arc<RedisQueueManager>) -> Self {
+        Self { manager }
+    }
+
+    /// 从 URL 创建 Redis 队列服务
+    pub async fn from_url(url: &str) -> WaeResult<Self> {
+        let manager = Arc::new(RedisQueueManager::from_url(url).await?);
+        Ok(Self::new(manager))
+    }
+}
+
+impl QueueService for RedisQueueService {
+    async fn create_producer(&self, config: ProducerConfig) -> WaeResult<MessageProducer> {
+        Ok(MessageProducer::new(Box::new(RedisProducerBackend::new(config, self.manager.clone()))))
+    }
+
+    async fn create_consumer(&self, config: ConsumerConfig) -> WaeResult<MessageConsumer> {
+        self.manager.declare_queue(&QueueConfig::new(&config.queue)).await?;
+        Ok(MessageConsumer::new(Box::new(RedisConsumerBackend::new(config, self.manager.clone()))))
+    }
+
+    fn manager(&self) -> &dyn QueueManager {
+        self.manager.as_ref() as &dyn QueueManager
+    }
+
+    async fn close(&self) -> WaeResult<()> {
+        Ok(())
+    }
+}

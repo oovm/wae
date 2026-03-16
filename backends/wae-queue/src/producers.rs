@@ -1,6 +1,9 @@
 //! 消息生产者实现
 
 use super::types::*;
+use super::WaeResult;
+use serde::Serialize;
+use std::time::Duration;
 
 /// 消息生产者后端 trait (dyn 兼容)
 #[async_trait::async_trait]

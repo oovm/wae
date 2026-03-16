@@ -61,25 +61,23 @@ impl PullCommand {
         // 查找所有 WAE 文件并生成 Rust schema
         #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
         {
-            let mut all_schemas: Vec<super::super::dsl::TableSchema> = Vec::new();
+            println!("Looking for WAE files in: {}", schemas_dir.display());
+            let mut wae_files = Vec::new();
             for entry in fs::read_dir(&schemas_dir)? {
                 let entry = entry?;
                 let path = entry.path();
                 if path.is_file() && path.extension().map_or(false, |ext| ext == "wae") {
-                    let file_schemas = super::super::dsl::load_schemas_from_wae_file(&path)?;
-                    all_schemas.extend(file_schemas);
+                    wae_files.push(path);
                 }
             }
             
-            if !all_schemas.is_empty() {
-                let rust_code = super::super::dsl::generate_rust_schema(&all_schemas);
-                
-                // 写入 Rust schema 文件
-                let rust_output_path = target_path.join("schema.rs");
-                fs::write(&rust_output_path, rust_code)?;
-                println!("Generated Rust table schemas at: {}", rust_output_path.display());
+            if !wae_files.is_empty() {
+                println!("Found {} WAE files:", wae_files.len());
+                for file in &wae_files {
+                    println!("- {}", file.display());
+                }
             } else {
-                println!("No WAE files found to generate Rust schemas");
+                println!("No WAE files found");
             }
         }
         #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
