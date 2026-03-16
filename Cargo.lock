@@ -7546,6 +7546,7 @@ dependencies = [
  "figment",
  "notify",
  "notify-debouncer-mini",
+ "oak-rbq",
  "serde",
  "serde_json",
  "tokio",

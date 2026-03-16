@@ -244,9 +244,10 @@ impl SchemaSynchronizer {
         // 创建默认数据库配置
         let database = DatabaseSchema {
             name: "default".to_string(),
-            r#type: DatabaseType::Sqlite,
+            r#type: DatabaseType::Turso,
             url: None,
             schemas,
+            env: None,
         };
         
         let config = SchemaConfig {
@@ -277,9 +278,10 @@ impl SchemaSynchronizer {
         // 创建默认数据库配置
         let database = DatabaseSchema {
             name: "default".to_string(),
-            r#type: DatabaseType::Sqlite,
+            r#type: DatabaseType::Turso,
             url: None,
             schemas: all_schemas,
+            env: None,
         };
         
         let config = SchemaConfig {

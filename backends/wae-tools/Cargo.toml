@@ -25,6 +25,8 @@ notify-debouncer-mini = { workspace = true }
 figment = { workspace = true }
 # YYKV we-trust gateway 依赖
 yyds-gateway = { path = "../../../yykv/servers/yyds-gateway", version = "0.0.0" }
+# Oak RBQ parser 依赖
+oak-rbq = { path = "../../../oaks/examples/oak-rbq" }
 
 [features]
 default = []

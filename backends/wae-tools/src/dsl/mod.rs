@@ -95,7 +95,7 @@ pub fn generate_rust_schema(schemas: &[TableSchema]) -> String {
         
         for column in &schema.columns {
             rust_code.push_str(&format!("        .column(ColumnDef::new(\"{}\", ColumnType::{})
-", column.name, column_type_to_rust_enum(&column.r#type)));
+", column.name, column_type_to_rust_enum(&column.col_type)));
             
             if column.primary_key {
                 rust_code.push_str("            .primary_key()
@@ -105,11 +105,11 @@ pub fn generate_rust_schema(schemas: &[TableSchema]) -> String {
                 rust_code.push_str("            .unique()
 ");
             }
-            if column.not_null {
+            if column.not_null() {
                 rust_code.push_str("            .not_null()
 ");
             }
-            if let Some(default) = &column.default {
+            if let Some(default) = column.default() {
                 rust_code.push_str(&format!("            .default(\"{}\")
 ", default));
             }
