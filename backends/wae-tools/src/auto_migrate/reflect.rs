@@ -419,12 +419,12 @@ impl<'a> SchemaReflector<'a> {
 
     async fn get_foreign_keys_mysql(&self, table_name: &str) -> DatabaseResult<Vec<ForeignKeyDef>> {
         let sql = format!(
-            "SELECT constraint_name, column_name, referenced_table_name, referenced_column_name, \
-             update_rule, delete_rule \
-             FROM information_schema.key_column_usage \
-             JOIN information_schema.referential_constraints \
-             USING (constraint_name) \
-             WHERE table_name = '{}' AND table_schema = DATABASE() AND referenced_table_name IS NOT NULL",
+            "SELECT kcu.constraint_name, kcu.column_name, kcu.referenced_table_name, kcu.referenced_column_name, \
+             rc.update_rule, rc.delete_rule \
+             FROM information_schema.key_column_usage kcu \
+             JOIN information_schema.referential_constraints rc \
+             ON kcu.constraint_name = rc.constraint_name \
+             WHERE kcu.table_name = '{}' AND kcu.table_schema = DATABASE() AND kcu.referenced_table_name IS NOT NULL",
             table_name
         );
         let mut rows = self.conn.query(&sql).await?;
