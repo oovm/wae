@@ -12,7 +12,7 @@
   - `programmatic` TR-1.2: 能够正确导入和使用 we-trust gateway 的 RBQ 解析器
 - **Notes**: 需要确保 YYKV 项目的路径正确，并且版本兼容
 
-## [/] Task 2: 创建 DSL 解析模块
+## [x] Task 2: 创建 DSL 解析模块
 - **Priority**: P0
 - **Depends On**: Task 1
 - **Description**:
@@ -25,7 +25,7 @@
   - `programmatic` TR-2.2: 解析结果包含正确的模型定义、字段属性和关系
 - **Notes**: 解析模块应该与现有数据库操作逻辑解耦
 
-## [ ] Task 3: 实现数据库配置加载
+## [/] Task 3: 实现数据库配置加载
 - **Priority**: P0
 - **Depends On**: Task 2
 - **Description**:

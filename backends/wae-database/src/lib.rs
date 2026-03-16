@@ -50,8 +50,7 @@ pub use schema::{
     export_schema_config_to_yaml_file, export_schemas_to_yaml, generate_full_sql_for_registered_schemas,
     generate_full_sql_for_registered_schemas_for, get_registered_schemas, get_schema,
     load_and_register_schemas_from_yaml_file, load_schema_config_from_yaml, load_schema_config_from_yaml_file,
-    load_schemas_from_yaml, load_schemas_from_yaml_file, load_schemas_from_wae, load_schemas_from_wae_file,
-    load_and_register_schemas_from_wae_file, register_schema, register_schemas, ColumnDef, ColumnType,
+    load_schemas_from_yaml, load_schemas_from_yaml_file, register_schema, register_schemas, ColumnDef, ColumnType,
     DatabaseLinkConfig, DatabaseSchema, DatabaseType, ForeignKeyDef, IndexDef, ReferentialAction, SchemaConfig, TableSchema, col,
 };
 

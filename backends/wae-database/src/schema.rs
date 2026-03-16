@@ -808,38 +808,3 @@ pub fn export_sql_for_all_databases(output_dir: impl AsRef<Path>) -> Result<(), 
 
     Ok(())
 }
-
-/// 从 .wae 文件加载并解析 TableSchema
-pub fn load_schemas_from_wae_file(path: impl AsRef<Path>) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
-    let content = fs::read_to_string(path)?;
-    load_schemas_from_wae(&content)
-}
-
-/// 从 .wae 字符串加载并解析 TableSchema
-pub fn load_schemas_from_wae(wae_str: &str) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
-    let parser = RbqParser::new();
-    let statements = parser.parse(wae_str)?;
-    
-    let mut schemas = Vec::new();
-    for statement in statements {
-        if let Some(schema) = parse_rbq_statement(&statement) {
-            schemas.push(schema);
-        }
-    }
-    
-    Ok(schemas)
-}
-
-/// 从 .wae 文件加载并注册所有 TableSchema
-pub fn load_and_register_schemas_from_wae_file(path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
-    let schemas = load_schemas_from_wae_file(path)?;
-    register_schemas(schemas);
-    Ok(())
-}
-
-/// 解析 RBQ 语句为 TableSchema
-fn parse_rbq_statement(statement: &RbqStatement) -> Option<TableSchema> {
-    // 这里需要根据实际的 RbqStatement 结构进行解析
-    // 暂时返回一个示例实现
-    Some(TableSchema::new("example"))
-}

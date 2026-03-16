@@ -25,12 +25,6 @@ enum Commands {
         #[command(subcommand)]
         migrate_command: MigrateCommands,
     },
-    /// DSL 相关命令
-    #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-    Dsl {
-        #[command(subcommand)]
-        dsl_command: DslCommands,
-    },
     /// 创建新项目脚手架
     New {
         /// 项目名称
@@ -56,18 +50,6 @@ enum Commands {
         /// 输出目录
         #[arg(long, short)]
         out: Option<String>,
-    },
-}
-
-#[derive(clap::Subcommand)]
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-enum DslCommands {
-    /// 将 .wae 文件转换为 .yaml 文件
-    Convert {
-        /// 输入的 .wae 文件路径
-        input: String,
-        /// 输出的 .yaml 文件路径
-        output: String,
     },
 }
 
@@ -132,10 +114,6 @@ async fn main() {
         Commands::Migrate { migrate_command } => {
             handle_migrate_command(migrate_command).await;
         }
-        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        Commands::Dsl { dsl_command } => {
-            handle_dsl_command(dsl_command).await;
-        }
         Commands::New { name, path } => {
             if let Err(e) = handle_new_project(name, path) {
                 eprintln!("Error creating project: {}", e);
@@ -152,41 +130,6 @@ async fn main() {
             }
         }
     }
-}
-
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-async fn handle_dsl_command(cmd: &DslCommands) {
-    match cmd {
-        DslCommands::Convert { input, output } => {
-            if let Err(e) = handle_dsl_convert(input, output) {
-                eprintln!("Error converting DSL: {}", e);
-                std::process::exit(1);
-            }
-        }
-    }
-}
-
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-async fn handle_dsl_convert(input: &str, output: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use wae_tools::dsl::load_schemas_from_wae_file;
-    use serde_yaml;
-    use std::fs;
-    
-    println!("WAE DSL Convert");
-    println!("{}", "=".repeat(60));
-    println!("Input: {}", input);
-    println!("Output: {}", output);
-    println!();
-    
-    // 加载 .wae 文件并解析为 TableSchema
-    let schemas = load_schemas_from_wae_file(input)?;
-    
-    // 将 TableSchema 导出为 YAML 文件
-    let yaml = serde_yaml::to_string(&schemas)?;
-    fs::write(output, yaml)?;
-    
-    println!("Successfully converted {} to {}", input, output);
-    Ok(())
 }
 
 #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]

@@ -7193,7 +7193,6 @@ dependencies = [
  "tower",
  "turso",
  "wae-types",
- "yyds-gateway",
 ]
 
 [[package]]
@@ -7554,6 +7553,7 @@ dependencies = [
  "wae-database",
  "wae-tools",
  "wae-types",
+ "yyds-gateway",
 ]
 
 [[package]]
