@@ -8,8 +8,10 @@ use crate::connection::{
 };
 use async_trait::async_trait;
 use mysql_async::prelude::*;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
 use tokio::sync::Mutex;
 use wae_types::{WaeError, WaeErrorKind};
 
@@ -36,11 +38,7 @@ struct AtomicMySqlPoolMetrics {
 
 impl AtomicMySqlPoolMetrics {
     fn new() -> Self {
-        Self {
-            get_success: AtomicU64::new(0),
-            get_timeout: AtomicU64::new(0),
-            get_error: AtomicU64::new(0),
-        }
+        Self { get_success: AtomicU64::new(0), get_timeout: AtomicU64::new(0), get_error: AtomicU64::new(0) }
     }
 
     fn increment_get_success(&self) {
@@ -73,9 +71,7 @@ impl MySqlConnection {
             WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: "Connection closed".to_string() })
         })?;
         conn.query_drop("SELECT 1").await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: format!("Health check failed: {}", e),
-            })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Health check failed: {}", e) })
         })?;
         Ok(())
     }
@@ -226,25 +222,22 @@ impl MySqlDatabaseService {
                         reason: format!("Invalid connection string: {}", e),
                     })
                 })?;
-                
+
                 let min_idle = pool_config.min_idle.unwrap_or(1);
-                let constraints = mysql_async::PoolConstraints::new(min_idle, pool_config.max_connections).ok_or_else(|| {
-                    WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                        reason: "Invalid pool constraints: min must be <= max".to_string(),
-                    })
-                })?;
-                
+                let constraints =
+                    mysql_async::PoolConstraints::new(min_idle, pool_config.max_connections).ok_or_else(|| {
+                        WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                            reason: "Invalid pool constraints: min must be <= max".to_string(),
+                        })
+                    })?;
+
                 let pool_opts = mysql_async::PoolOpts::default().with_constraints(constraints);
-                
+
                 let opts = mysql_async::OptsBuilder::from_opts(opts).pool_opts(pool_opts);
                 let pool = mysql_async::Pool::new(opts);
                 let metrics = Arc::new(AtomicMySqlPoolMetrics::new());
-                
-                Ok(Self { 
-                    pool, 
-                    metrics,
-                    pool_config: pool_config.clone(),
-                })
+
+                Ok(Self { pool, metrics, pool_config: pool_config.clone() })
             }
         }
     }
@@ -255,20 +248,20 @@ impl MySqlDatabaseService {
             Ok(conn) => {
                 self.metrics.increment_get_success();
                 let connection = MySqlConnection::new(conn);
-                
+
                 if self.pool_config.health_check_enabled {
                     if let Err(e) = connection.health_check().await {
                         self.metrics.increment_get_error();
                         return Err(e);
                     }
                 }
-                
+
                 Ok(connection)
             }
             Err(e) => {
                 self.metrics.increment_get_error();
-                Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed { 
-                    reason: format!("Failed to get connection: {}", e) 
+                Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                    reason: format!("Failed to get connection: {}", e),
                 }))
             }
         }
@@ -299,5 +292,4 @@ impl MySqlDatabaseService {
         }
         Ok(())
     }
-
 }

@@ -1,5 +1,4 @@
-
-use wae_cache::{memory_cache, CacheConfig, EvictionPolicy};
+use wae_cache::{CacheConfig, EvictionPolicy, memory_cache};
 
 #[tokio::test]
 async fn test_cache_config_default() {

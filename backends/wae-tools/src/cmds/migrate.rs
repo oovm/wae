@@ -1,5 +1,5 @@
 //! 迁移命令模块
-//! 
+//!
 //! 提供数据库迁移相关的功能。
 
 use clap::Parser;
@@ -74,7 +74,7 @@ impl MigrateCommand {
                     println!("Would sync schema from: {}", schema);
                     println!("Execute: {}", execute);
                     println!("Force: {}", force);
-                    
+
                     if *execute {
                         println!("\n⚠️  Note: Full database migration execution requires additional setup.");
                         println!("   Preview generation is complete. SQL can be manually applied.");

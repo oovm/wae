@@ -1,7 +1,5 @@
-
 use async_trait::async_trait;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use wae_scheduler::{IntervalScheduler, IntervalSchedulerConfig, ScheduledTask, TaskState};
 use wae_types::WaeResult;
 
@@ -52,15 +50,13 @@ async fn test_interval_scheduler_default_config() {
 #[tokio::test]
 async fn test_interval_scheduler_schedule_task() {
     let scheduler = IntervalScheduler::default_config();
-    
-    let task = Arc::new(TestTask {
-        name: "Test Interval Task".to_string(),
-    });
-    
+
+    let task = Arc::new(TestTask { name: "Test Interval Task".to_string() });
+
     let interval = Duration::from_secs(1);
     let result = scheduler.schedule_interval(task, interval).await;
     assert!(result.is_ok());
-    
+
     let handle = result.unwrap();
     assert_eq!(handle.name, "Test Interval Task");
     assert_eq!(handle.state().await, TaskState::Pending);
@@ -69,14 +65,12 @@ async fn test_interval_scheduler_schedule_task() {
 #[tokio::test]
 async fn test_interval_scheduler_get_handle() {
     let scheduler = IntervalScheduler::default_config();
-    
-    let task = Arc::new(TestTask {
-        name: "Test Task".to_string(),
-    });
-    
+
+    let task = Arc::new(TestTask { name: "Test Task".to_string() });
+
     let handle = scheduler.schedule_interval(task, Duration::from_secs(1)).await.unwrap();
     let task_id = handle.id.clone();
-    
+
     let retrieved = scheduler.get_handle(&task_id).await;
     assert!(retrieved.is_some());
     assert_eq!(retrieved.unwrap().id, task_id);
@@ -85,18 +79,14 @@ async fn test_interval_scheduler_get_handle() {
 #[tokio::test]
 async fn test_interval_scheduler_get_all_handles() {
     let scheduler = IntervalScheduler::default_config();
-    
-    let task1 = Arc::new(TestTask {
-        name: "Task 1".to_string(),
-    });
-    
-    let task2 = Arc::new(TestTask {
-        name: "Task 2".to_string(),
-    });
-    
+
+    let task1 = Arc::new(TestTask { name: "Task 1".to_string() });
+
+    let task2 = Arc::new(TestTask { name: "Task 2".to_string() });
+
     scheduler.schedule_interval(task1, Duration::from_secs(1)).await.unwrap();
     scheduler.schedule_interval(task2, Duration::from_secs(1)).await.unwrap();
-    
+
     let handles = scheduler.get_all_handles().await;
     assert_eq!(handles.len(), 2);
 }
@@ -104,18 +94,16 @@ async fn test_interval_scheduler_get_all_handles() {
 #[tokio::test]
 async fn test_interval_scheduler_cancel_task() {
     let scheduler = IntervalScheduler::default_config();
-    
-    let task = Arc::new(TestTask {
-        name: "Test Task".to_string(),
-    });
-    
+
+    let task = Arc::new(TestTask { name: "Test Task".to_string() });
+
     let handle = scheduler.schedule_interval(task, Duration::from_secs(1)).await.unwrap();
     let task_id = handle.id.clone();
-    
+
     let result = scheduler.cancel_task(&task_id).await;
     assert!(result.is_ok());
     assert!(result.unwrap());
-    
+
     let handle = scheduler.get_handle(&task_id).await;
     assert!(handle.is_some());
     assert!(handle.unwrap().is_cancelled());
@@ -124,17 +112,15 @@ async fn test_interval_scheduler_cancel_task() {
 #[tokio::test]
 async fn test_interval_scheduler_shutdown() {
     let scheduler = IntervalScheduler::default_config();
-    
+
     assert!(!scheduler.is_shutdown());
-    
+
     scheduler.shutdown().await;
-    
+
     assert!(scheduler.is_shutdown());
-    
-    let task = Arc::new(TestTask {
-        name: "Test Task".to_string(),
-    });
-    
+
+    let task = Arc::new(TestTask { name: "Test Task".to_string() });
+
     let result = scheduler.schedule_interval(task, Duration::from_secs(1)).await;
     assert!(result.is_err());
 }

@@ -16,9 +16,7 @@ fn test_swagger_ui_config_new() {
 
 #[test]
 fn test_swagger_ui_config_custom() {
-    let config = SwaggerUiConfig::new()
-        .openapi_url("/api/openapi.json")
-        .title("My API Docs");
+    let config = SwaggerUiConfig::new().openapi_url("/api/openapi.json").title("My API Docs");
 
     assert_eq!(config.openapi_url, "/api/openapi.json".to_string());
     assert_eq!(config.title, "My API Docs".to_string());
@@ -26,9 +24,7 @@ fn test_swagger_ui_config_custom() {
 
 #[test]
 fn test_generate_html() {
-    let config = SwaggerUiConfig::new()
-        .openapi_url("/openapi.json")
-        .title("Test API");
+    let config = SwaggerUiConfig::new().openapi_url("/openapi.json").title("Test API");
 
     let html = generate_html(&config);
 

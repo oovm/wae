@@ -51,10 +51,7 @@ fn test_password() {
 
 #[test]
 fn test_password_argon2() {
-    let config = PasswordHasherConfig {
-        algorithm: PasswordAlgorithm::Argon2,
-        ..PasswordHasherConfig::default()
-    };
+    let config = PasswordHasherConfig { algorithm: PasswordAlgorithm::Argon2, ..PasswordHasherConfig::default() };
     let hasher = PasswordHasher::new(config);
     let password = "test-password-123";
     let hash = hasher.hash_password(password).unwrap();

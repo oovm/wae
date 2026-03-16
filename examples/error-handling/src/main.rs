@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use wae_https::{
-    error::{ErrorExt, ErrorResponse, HttpError, HttpResult},
-    router::RouterBuilder,
-    response::JsonResponse,
     HttpsServerBuilder,
+    error::{ErrorExt, ErrorResponse, HttpError, HttpResult},
+    response::JsonResponse,
+    router::RouterBuilder,
 };
 use wae_types::{WaeError, WaeResult};
 
@@ -36,12 +36,9 @@ fn validate_user(user: &User) -> WaeResult<()> {
 
 fn find_user(id: u64) -> WaeResult<User> {
     if id == 1 {
-        Ok(User {
-            id: Some(1),
-            name: "张三".to_string(),
-            email: "zhangsan@example.com".to_string(),
-        })
-    } else {
+        Ok(User { id: Some(1), name: "张三".to_string(), email: "zhangsan@example.com".to_string() })
+    }
+    else {
         Err(WaeError::not_found("user", id.to_string()))
     }
 }
@@ -50,11 +47,7 @@ async fn demonstrate_errors() {
     println!("=== 错误处理演示 ===\n");
 
     println!("1. 验证错误演示:");
-    let invalid_user = User {
-        id: None,
-        name: "".to_string(),
-        email: "invalid-email".to_string(),
-    };
+    let invalid_user = User { id: None, name: "".to_string(), email: "invalid-email".to_string() };
     match validate_user(&invalid_user) {
         Ok(_) => println!("验证通过（不应该发生）"),
         Err(err) => {
@@ -119,11 +112,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("服务器将在 http://127.0.0.1:3000 启动");
     println!();
 
-    let server = HttpsServerBuilder::new()
-        .addr("127.0.0.1:3000".parse()?)
-        .service_name("wae-error-handling")
-        .router(router)
-        .build();
+    let server =
+        HttpsServerBuilder::new().addr("127.0.0.1:3000".parse()?).service_name("wae-error-handling").router(router).build();
 
     println!("=== 示例说明 ===");
     println!("本示例展示了 WAE 框架的统一错误处理机制，包括:");

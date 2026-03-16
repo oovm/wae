@@ -1,13 +1,11 @@
 //! 开发服务器命令模块
-//! 
+//!
 //! 提供热重载开发服务器的功能。
 
 use clap::Parser;
 use notify::RecursiveMode;
 use notify_debouncer_mini::new_debouncer;
-use std::path::Path;
-use std::process::Stdio;
-use std::time::Duration;
+use std::{path::Path, process::Stdio, time::Duration};
 use tokio::process::Command;
 
 /// 开发服务器命令

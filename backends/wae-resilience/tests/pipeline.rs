@@ -77,11 +77,7 @@ async fn test_resilience_pipeline_with_retry() {
                 let mut lock = attempts_clone.lock().unwrap();
                 *lock += 1;
                 let current = *lock;
-                if current < 2 {
-                    Err("temporary error")
-                } else {
-                    Ok("success")
-                }
+                if current < 2 { Err("temporary error") } else { Ok("success") }
             }
         })
         .await;
@@ -130,10 +126,7 @@ async fn test_resilience_pipeline_with_circuit_breaker() {
 
 #[tokio::test]
 async fn test_resilience_pipeline_with_bulkhead() {
-    let config = ResiliencePipelineConfig {
-        bulkhead: Some(BulkheadConfig::new(1, Duration::ZERO)),
-        ..Default::default()
-    };
+    let config = ResiliencePipelineConfig { bulkhead: Some(BulkheadConfig::new(1, Duration::ZERO)), ..Default::default() };
 
     let pipeline = ResiliencePipeline::new("test-bulkhead", config);
 
@@ -143,10 +136,7 @@ async fn test_resilience_pipeline_with_bulkhead() {
 
 #[tokio::test]
 async fn test_resilience_pipeline_with_rate_limiter() {
-    let config = ResiliencePipelineConfig {
-        rate_limiter: Some(TokenBucketConfig::new(3, 100)),
-        ..Default::default()
-    };
+    let config = ResiliencePipelineConfig { rate_limiter: Some(TokenBucketConfig::new(3, 100)), ..Default::default() };
 
     let pipeline = ResiliencePipeline::new("test-rate-limiter", config);
 

@@ -1,10 +1,9 @@
 //! Push 命令模块
-//! 
+//!
 //! 提供将 WAE 文件推送到数据库的功能。
 
 use clap::Parser;
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 /// Push 命令
 #[derive(Parser, Debug)]
@@ -30,9 +29,9 @@ impl PushCommand {
         }
         println!("Force: {}", self.force);
         println!();
-        
+
         let input_path = Path::new(&self.input);
-        
+
         // 处理输入文件或目录
         if input_path.is_dir() {
             // 处理目录，遍历所有 .wae 文件
@@ -47,38 +46,40 @@ impl PushCommand {
                 }
             }
             println!("\nFound {} WAE files", wae_files.len());
-        } else {
+        }
+        else {
             // 处理单个文件
             println!("Processing file: {}", self.input);
             if input_path.extension().map_or(false, |ext| ext == "wae") {
                 println!("Valid WAE file found");
-            } else {
+            }
+            else {
                 println!("Warning: Input file does not have .wae extension");
             }
         }
-        
+
         // 自动生成 Rust table schema
         println!("\nGenerating Rust table schemas...");
-        
+
         #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
         {
             println!("Schema generation functionality temporarily disabled");
         }
-        
+
         #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
         {
             println!("Error: Database features are not enabled. Please enable one of the database features.");
         }
-        
+
         // 这里应该实现推送到数据库的逻辑
         // 目前只是模拟实现
         println!("\nSimulating push to database...");
         println!("Would apply WAE schemas to database");
-        
+
         if self.force {
             println!("Force mode enabled - will perform destructive operations");
         }
-        
+
         println!("\nPush completed successfully!");
         Ok(())
     }

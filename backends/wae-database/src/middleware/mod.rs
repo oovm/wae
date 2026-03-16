@@ -51,9 +51,7 @@ pub struct TransactionMiddlewareBuilder {
 
 impl Default for TransactionMiddlewareBuilder {
     fn default() -> Self {
-        Self {
-            config: TransactionConfig::default(),
-        }
+        Self { config: TransactionConfig::default() }
     }
 }
 
@@ -80,10 +78,7 @@ impl TransactionMiddlewareBuilder {
     where
         C: DatabaseConnection + Send + Sync + 'static,
     {
-        TransactionLayer {
-            config: self.config,
-            connection,
-        }
+        TransactionLayer { config: self.config, connection }
     }
 }
 
@@ -108,11 +103,7 @@ where
     type Service = TransactionService<S, C>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        TransactionService {
-            inner,
-            config: self.config.clone(),
-            connection: self.connection.clone(),
-        }
+        TransactionService { inner, config: self.config.clone(), connection: self.connection.clone() }
     }
 }
 

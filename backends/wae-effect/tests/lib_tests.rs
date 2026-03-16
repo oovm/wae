@@ -31,9 +31,7 @@ fn test_algebraic_effect_simple() {
 
 #[test]
 fn test_algebraic_effect_with_type() {
-    let deps = AlgebraicEffect::new()
-        .with_type(TestConfig { name: "test".to_string() })
-        .build();
+    let deps = AlgebraicEffect::new().with_type(TestConfig { name: "test".to_string() }).build();
 
     let config: TestConfig = deps.get_type().unwrap();
     assert_eq!(config.name, "test");
@@ -41,9 +39,7 @@ fn test_algebraic_effect_with_type() {
 
 #[test]
 fn test_algebraic_effect_with_config() {
-    let deps = AlgebraicEffect::new()
-        .with_config(TestConfig { name: "test_config".to_string() })
-        .build();
+    let deps = AlgebraicEffect::new().with_config(TestConfig { name: "test_config".to_string() }).build();
 
     let config: TestConfig = deps.get_type().unwrap();
     assert_eq!(config.name, "test_config");
@@ -51,9 +47,7 @@ fn test_algebraic_effect_with_config() {
 
 #[test]
 fn test_algebraic_effect_with_auth() {
-    let deps = AlgebraicEffect::new()
-        .with_auth(TestAuthService)
-        .build();
+    let deps = AlgebraicEffect::new().with_auth(TestAuthService).build();
 
     let auth: TestAuthService = deps.get_type().unwrap();
     assert_eq!(auth, TestAuthService);
@@ -61,9 +55,7 @@ fn test_algebraic_effect_with_auth() {
 
 #[test]
 fn test_effectful_use_type() {
-    let deps = AlgebraicEffect::new()
-        .with_type(TestConfig { name: "test".to_string() })
-        .build();
+    let deps = AlgebraicEffect::new().with_type(TestConfig { name: "test".to_string() }).build();
 
     let (parts, _) = http::Request::new(()).into_parts();
     let effectful = Effectful::new(deps, parts);
@@ -74,9 +66,7 @@ fn test_effectful_use_type() {
 
 #[test]
 fn test_effectful_use_config() {
-    let deps = AlgebraicEffect::new()
-        .with_config(TestConfig { name: "use_config_test".to_string() })
-        .build();
+    let deps = AlgebraicEffect::new().with_config(TestConfig { name: "use_config_test".to_string() }).build();
 
     let (parts, _) = http::Request::new(()).into_parts();
     let effectful = Effectful::new(deps, parts);
@@ -87,9 +77,7 @@ fn test_effectful_use_config() {
 
 #[test]
 fn test_effectful_use_auth() {
-    let deps = AlgebraicEffect::new()
-        .with_auth(TestAuthService)
-        .build();
+    let deps = AlgebraicEffect::new().with_auth(TestAuthService).build();
 
     let (parts, _) = http::Request::new(()).into_parts();
     let effectful = Effectful::new(deps, parts);
@@ -107,18 +95,14 @@ fn test_scope_singleton() {
 
 #[test]
 fn test_scope_request_scoped() {
-    let deps = AlgebraicEffect::new()
-        .with_type_scope(42i32, Scope::RequestScoped)
-        .build();
+    let deps = AlgebraicEffect::new().with_type_scope(42i32, Scope::RequestScoped).build();
 
     assert_eq!(deps.get_type_scope::<i32>(), Some(Scope::RequestScoped));
 }
 
 #[test]
 fn test_effectful_set_request_scoped() {
-    let deps = AlgebraicEffect::new()
-        .with_type_scope(42i32, Scope::RequestScoped)
-        .build();
+    let deps = AlgebraicEffect::new().with_type_scope(42i32, Scope::RequestScoped).build();
 
     let (parts, _) = http::Request::new(()).into_parts();
     let mut effectful = Effectful::new(deps, parts);

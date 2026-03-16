@@ -1,5 +1,5 @@
-use wae_types::*;
 use serde_json::json;
+use wae_types::*;
 
 #[test]
 fn test_error_category_http_status() {
@@ -20,66 +20,43 @@ fn test_error_category_http_status() {
 
 #[test]
 fn test_wae_error_kind_category() {
-    let validation_error = WaeErrorKind::InvalidFormat {
-        field: "email".to_string(),
-        expected: "email format".to_string(),
-    };
+    let validation_error = WaeErrorKind::InvalidFormat { field: "email".to_string(), expected: "email format".to_string() };
     assert_eq!(validation_error.category(), ErrorCategory::Validation);
 
     let auth_error = WaeErrorKind::InvalidCredentials;
     assert_eq!(auth_error.category(), ErrorCategory::Auth);
 
-    let permission_error = WaeErrorKind::PermissionDenied {
-        action: "delete".to_string(),
-    };
+    let permission_error = WaeErrorKind::PermissionDenied { action: "delete".to_string() };
     assert_eq!(permission_error.category(), ErrorCategory::Permission);
 
-    let not_found_error = WaeErrorKind::ResourceNotFound {
-        resource_type: "user".to_string(),
-        identifier: "123".to_string(),
-    };
+    let not_found_error = WaeErrorKind::ResourceNotFound { resource_type: "user".to_string(), identifier: "123".to_string() };
     assert_eq!(not_found_error.category(), ErrorCategory::NotFound);
 
-    let conflict_error = WaeErrorKind::ResourceConflict {
-        resource: "file".to_string(),
-        reason: "already exists".to_string(),
-    };
+    let conflict_error = WaeErrorKind::ResourceConflict { resource: "file".to_string(), reason: "already exists".to_string() };
     assert_eq!(conflict_error.category(), ErrorCategory::Conflict);
 
-    let network_error = WaeErrorKind::ConnectionFailed {
-        target: "api.example.com".to_string(),
-    };
+    let network_error = WaeErrorKind::ConnectionFailed { target: "api.example.com".to_string() };
     assert_eq!(network_error.category(), ErrorCategory::Network);
 }
 
 #[test]
 fn test_wae_error_kind_i18n_key() {
-    let error = WaeErrorKind::InvalidFormat {
-        field: "email".to_string(),
-        expected: "email format".to_string(),
-    };
+    let error = WaeErrorKind::InvalidFormat { field: "email".to_string(), expected: "email format".to_string() };
     assert_eq!(error.i18n_key(), "wae.error.validation.invalid_format");
 
     let error = WaeErrorKind::InvalidCredentials;
     assert_eq!(error.i18n_key(), "wae.error.auth.invalid_credentials");
 
-    let error = WaeErrorKind::PermissionDenied {
-        action: "delete".to_string(),
-    };
+    let error = WaeErrorKind::PermissionDenied { action: "delete".to_string() };
     assert_eq!(error.i18n_key(), "wae.error.permission.denied");
 }
 
 #[test]
 fn test_wae_error_kind_i18n_data() {
-    let error = WaeErrorKind::InvalidFormat {
-        field: "email".to_string(),
-        expected: "email format".to_string(),
-    };
+    let error = WaeErrorKind::InvalidFormat { field: "email".to_string(), expected: "email format".to_string() };
     assert_eq!(error.i18n_data(), json!({ "field": "email", "expected": "email format" }));
 
-    let error = WaeErrorKind::UserNotFound {
-        identifier: "test@example.com".to_string(),
-    };
+    let error = WaeErrorKind::UserNotFound { identifier: "test@example.com".to_string() };
     assert_eq!(error.i18n_data(), json!({ "identifier": "test@example.com" }));
 
     let error = WaeErrorKind::InvalidCredentials;
@@ -88,10 +65,7 @@ fn test_wae_error_kind_i18n_data() {
 
 #[test]
 fn test_wae_error_new() {
-    let kind = WaeErrorKind::InvalidFormat {
-        field: "email".to_string(),
-        expected: "email format".to_string(),
-    };
+    let kind = WaeErrorKind::InvalidFormat { field: "email".to_string(), expected: "email format".to_string() };
     let error = WaeError::new(kind);
     assert_eq!(error.i18n_key(), "wae.error.validation.invalid_format");
 }
@@ -160,10 +134,7 @@ fn test_wae_error_display() {
 
 #[test]
 fn test_wae_error_kind_display() {
-    let kind = WaeErrorKind::InvalidFormat {
-        field: "email".to_string(),
-        expected: "email format".to_string(),
-    };
+    let kind = WaeErrorKind::InvalidFormat { field: "email".to_string(), expected: "email format".to_string() };
     let display_str = format!("{}", kind);
     assert_eq!(display_str, "wae.error.validation.invalid_format");
 }

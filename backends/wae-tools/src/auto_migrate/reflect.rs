@@ -3,7 +3,10 @@
 //! 从数据库读取现有表结构信息。
 
 use std::collections::HashMap;
-use wae_database::{ColumnDef, ColumnType, DatabaseBackend, DatabaseConnection, DatabaseResult, ForeignKeyDef, IndexDef, ReferentialAction, TableSchema};
+use wae_database::{
+    ColumnDef, ColumnType, DatabaseBackend, DatabaseConnection, DatabaseResult, ForeignKeyDef, IndexDef, ReferentialAction,
+    TableSchema,
+};
 use wae_types::WaeResult;
 
 /// Schema 反射器
@@ -372,9 +375,8 @@ impl<'a> SchemaReflector<'a> {
 
             let fk_name = format!("fk_{}_{}", table_name, column);
 
-            foreign_keys.push(ForeignKeyDef::new(fk_name, column, ref_table, ref_column)
-                .on_update(on_update)
-                .on_delete(on_delete));
+            foreign_keys
+                .push(ForeignKeyDef::new(fk_name, column, ref_table, ref_column).on_update(on_update).on_delete(on_delete));
         }
 
         Ok(foreign_keys)
@@ -408,9 +410,8 @@ impl<'a> SchemaReflector<'a> {
             let on_update = Self::parse_referential_action(&on_update_str);
             let on_delete = Self::parse_referential_action(&on_delete_str);
 
-            foreign_keys.push(ForeignKeyDef::new(name, column, ref_table, ref_column)
-                .on_update(on_update)
-                .on_delete(on_delete));
+            foreign_keys
+                .push(ForeignKeyDef::new(name, column, ref_table, ref_column).on_update(on_update).on_delete(on_delete));
         }
 
         Ok(foreign_keys)
@@ -440,9 +441,8 @@ impl<'a> SchemaReflector<'a> {
             let on_update = Self::parse_referential_action(&on_update_str);
             let on_delete = Self::parse_referential_action(&on_delete_str);
 
-            foreign_keys.push(ForeignKeyDef::new(name, column, ref_table, ref_column)
-                .on_update(on_update)
-                .on_delete(on_delete));
+            foreign_keys
+                .push(ForeignKeyDef::new(name, column, ref_table, ref_column).on_update(on_update).on_delete(on_delete));
         }
 
         Ok(foreign_keys)

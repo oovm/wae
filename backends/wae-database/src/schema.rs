@@ -2,12 +2,9 @@
 //!
 //! 提供数据库表结构的元信息定义，用于自动迁移。
 
-use serde::{Deserialize, Serialize};
 use once_cell::sync::Lazy;
-use std::sync::Mutex;
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fs, path::Path, sync::Mutex};
 
 /// 数据库类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -279,42 +276,36 @@ pub struct DatabaseSchema {
 impl DatabaseSchema {
     /// 创建新的数据库 schema
     pub fn new(name: impl Into<String>, db_type: DatabaseType) -> Self {
-        Self {
-            name: name.into(),
-            r#type: db_type,
-            url: None,
-            env: None,
-            schemas: Vec::new(),
-        }
+        Self { name: name.into(), r#type: db_type, url: None, env: None, schemas: Vec::new() }
     }
-    
+
     /// 设置数据库连接 URL
     pub fn url(mut self, url: impl Into<String>) -> Self {
         self.url = Some(url.into());
         self
     }
-    
+
     /// 设置环境变量名称
     pub fn env(mut self, env: impl Into<String>) -> Self {
         self.env = Some(env.into());
         self
     }
-    
+
     /// 添加表结构
     pub fn schema(mut self, schema: TableSchema) -> Self {
         self.schemas.push(schema);
         self
     }
-    
+
     /// 获取数据库连接字符串
     pub fn get_url(&self) -> Result<String, Box<dyn std::error::Error>> {
         if let Some(url) = &self.url {
             Ok(url.clone())
-        } else if let Some(env_name) = &self.env {
-            std::env::var(env_name).map_err(|e| {
-                format!("Failed to read environment variable {}: {}", env_name, e).into()
-            })
-        } else {
+        }
+        else if let Some(env_name) = &self.env {
+            std::env::var(env_name).map_err(|e| format!("Failed to read environment variable {}: {}", env_name, e).into())
+        }
+        else {
             Err("No database URL or environment variable specified".into())
         }
     }
@@ -424,7 +415,12 @@ impl ForeignKeyDef {
     pub fn to_constraint_sql(&self) -> String {
         format!(
             "CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {} ({}) ON UPDATE {} ON DELETE {}",
-            self.name, self.column, self.ref_table, self.ref_column, self.on_update.to_sql(), self.on_delete.to_sql()
+            self.name,
+            self.column,
+            self.ref_table,
+            self.ref_column,
+            self.on_update.to_sql(),
+            self.on_delete.to_sql()
         )
     }
 
@@ -479,33 +475,31 @@ pub struct SchemaConfig {
 impl SchemaConfig {
     /// 创建新的 schema 配置
     pub fn new() -> Self {
-        Self {
-            databases: Vec::new(),
-            default_database: None,
-        }
+        Self { databases: Vec::new(), default_database: None }
     }
-    
+
     /// 添加数据库
     pub fn database(mut self, database: DatabaseSchema) -> Self {
         self.databases.push(database);
         self
     }
-    
+
     /// 设置默认数据库
     pub fn default_database(mut self, name: impl Into<String>) -> Self {
         self.default_database = Some(name.into());
         self
     }
-    
+
     /// 获取默认数据库
     pub fn get_default_database(&self) -> Option<&DatabaseSchema> {
         if let Some(default_name) = &self.default_database {
             self.databases.iter().find(|db| db.name == *default_name)
-        } else {
+        }
+        else {
             self.databases.first()
         }
     }
-    
+
     /// 根据名称获取数据库
     pub fn get_database(&self, name: &str) -> Option<&DatabaseSchema> {
         self.databases.iter().find(|db| db.name == name)
@@ -528,11 +522,11 @@ impl DatabaseLinkConfig {
     pub fn get_url(&self) -> Result<String, Box<dyn std::error::Error>> {
         if let Some(url) = &self.url {
             Ok(url.clone())
-        } else if let Some(env_name) = &self.env {
-            std::env::var(env_name).map_err(|e| {
-                format!("Failed to read environment variable {}: {}", env_name, e).into()
-            })
-        } else {
+        }
+        else if let Some(env_name) = &self.env {
+            std::env::var(env_name).map_err(|e| format!("Failed to read environment variable {}: {}", env_name, e).into())
+        }
+        else {
             Err("No database URL or environment variable specified".into())
         }
     }
@@ -584,9 +578,7 @@ pub mod col {
 }
 
 /// 全局 Schema 注册表
-static SCHEMA_REGISTRY: Lazy<Mutex<HashMap<String, TableSchema>>> = Lazy::new(|| {
-    Mutex::new(HashMap::new())
-});
+static SCHEMA_REGISTRY: Lazy<Mutex<HashMap<String, TableSchema>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// 注册 TableSchema 到全局注册表
 pub fn register_schema(schema: TableSchema) {
@@ -629,8 +621,7 @@ pub fn export_schemas_to_yaml() -> String {
 /// 将所有已注册的 TableSchema 导出到 YAML 文件
 #[cfg(debug_assertions)]
 pub fn export_schemas_to_yaml_file(path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
-    use std::fs::File;
-    use std::io::Write;
+    use std::{fs::File, io::Write};
 
     let yaml = export_schemas_to_yaml();
     let mut file = File::create(path)?;
@@ -644,7 +635,8 @@ pub fn auto_export_schemas() {
     let path = std::path::Path::new("schemas.yaml");
     if let Err(e) = export_schemas_to_yaml_file(path) {
         eprintln!("Warning: Failed to export schemas: {}", e);
-    } else {
+    }
+    else {
         println!("Schemas exported to: {}", path.display());
     }
 }
@@ -750,8 +742,7 @@ pub fn export_schema_config_to_yaml(config: &SchemaConfig) -> String {
 
 /// 将 SchemaConfig 导出到 YAML 文件
 pub fn export_schema_config_to_yaml_file(config: &SchemaConfig, path: impl AsRef<Path>) -> std::io::Result<()> {
-    use std::fs::File;
-    use std::io::Write;
+    use std::{fs::File, io::Write};
 
     let yaml = export_schema_config_to_yaml(config);
     let mut file = File::create(path)?;
@@ -764,10 +755,7 @@ pub fn create_schema_config_from_registered(default_db: DatabaseSchema, default_
     let schemas = get_registered_schemas();
     let mut default_db = default_db;
     default_db.schemas = schemas;
-    SchemaConfig {
-        databases: vec![default_db],
-        default_database,
-    }
+    SchemaConfig { databases: vec![default_db], default_database }
 }
 
 /// 为所有已注册的 schema 生成完整的 SQL（使用当前数据库类型）

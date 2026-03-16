@@ -191,54 +191,36 @@ impl DatabaseConfig {
     /// 创建 PostgreSQL 配置
     #[cfg(feature = "postgres")]
     pub fn postgres<S: Into<String>>(connection_string: S) -> Self {
-        Self::Postgres {
-            connection_string: connection_string.into(),
-            pool_config: PoolConfig::default(),
-        }
+        Self::Postgres { connection_string: connection_string.into(), pool_config: PoolConfig::default() }
     }
 
     /// 创建 PostgreSQL 配置，带最大连接数
     #[cfg(feature = "postgres")]
     pub fn postgres_with_max_connections<S: Into<String>>(connection_string: S, max_connections: usize) -> Self {
-        Self::Postgres {
-            connection_string: connection_string.into(),
-            pool_config: PoolConfig::new(max_connections),
-        }
+        Self::Postgres { connection_string: connection_string.into(), pool_config: PoolConfig::new(max_connections) }
     }
 
     /// 创建 PostgreSQL 配置，带完整的连接池配置
     #[cfg(feature = "postgres")]
     pub fn postgres_with_pool_config<S: Into<String>>(connection_string: S, pool_config: PoolConfig) -> Self {
-        Self::Postgres {
-            connection_string: connection_string.into(),
-            pool_config,
-        }
+        Self::Postgres { connection_string: connection_string.into(), pool_config }
     }
 
     /// 创建 MySQL 配置
     #[cfg(feature = "mysql")]
     pub fn mysql<S: Into<String>>(connection_string: S) -> Self {
-        Self::MySql {
-            connection_string: connection_string.into(),
-            pool_config: PoolConfig::default(),
-        }
+        Self::MySql { connection_string: connection_string.into(), pool_config: PoolConfig::default() }
     }
 
     /// 创建 MySQL 配置，带最大连接数
     #[cfg(feature = "mysql")]
     pub fn mysql_with_max_connections<S: Into<String>>(connection_string: S, max_connections: usize) -> Self {
-        Self::MySql {
-            connection_string: connection_string.into(),
-            pool_config: PoolConfig::new(max_connections),
-        }
+        Self::MySql { connection_string: connection_string.into(), pool_config: PoolConfig::new(max_connections) }
     }
 
     /// 创建 MySQL 配置，带完整的连接池配置
     #[cfg(feature = "mysql")]
     pub fn mysql_with_pool_config<S: Into<String>>(connection_string: S, pool_config: PoolConfig) -> Self {
-        Self::MySql {
-            connection_string: connection_string.into(),
-            pool_config,
-        }
+        Self::MySql { connection_string: connection_string.into(), pool_config }
     }
 }

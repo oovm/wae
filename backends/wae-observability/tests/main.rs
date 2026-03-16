@@ -1,4 +1,3 @@
-
 use wae_observability::*;
 
 #[test]
@@ -41,8 +40,7 @@ fn test_health_report() {
 
 #[test]
 fn test_health_check_with_details() {
-    let check = HealthCheck::new("test".to_string(), HealthStatus::Warning)
-        .with_details("warning details".to_string());
+    let check = HealthCheck::new("test".to_string(), HealthStatus::Warning).with_details("warning details".to_string());
     assert_eq!(check.details, Some("warning details".to_string()));
 }
 
@@ -60,4 +58,3 @@ fn test_metric_labels_default() {
 }
 
 fn main() {}
-

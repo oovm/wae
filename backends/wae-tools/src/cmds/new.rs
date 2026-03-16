@@ -1,10 +1,9 @@
 //! 新项目命令模块
-//! 
+//!
 //! 提供创建新项目脚手架的功能。
 
 use clap::Parser;
-use std::path::PathBuf;
-use std::fs;
+use std::{fs, path::PathBuf};
 
 /// 新项目命令
 #[derive(Parser, Debug)]

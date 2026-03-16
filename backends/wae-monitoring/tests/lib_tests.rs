@@ -1,5 +1,4 @@
-
-use wae_monitoring::{Alert, AlertSeverity, AlertConfig};
+use wae_monitoring::{Alert, AlertConfig, AlertSeverity};
 
 #[test]
 fn test_alert_creation() {

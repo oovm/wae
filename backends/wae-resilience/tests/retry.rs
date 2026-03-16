@@ -76,13 +76,7 @@ async fn test_retry_async_success_after_retries() {
     let mut attempts = 0;
     let result = retry_async(&config, |_ctx| {
         attempts += 1;
-        async move {
-            if attempts < 3 {
-                Err("temporary error")
-            } else {
-                Ok(42)
-            }
-        }
+        async move { if attempts < 3 { Err("temporary error") } else { Ok(42) } }
     })
     .await;
     assert_eq!(result.unwrap(), 42);
@@ -110,13 +104,7 @@ async fn test_retry_async_if_should_retry_true() {
         &config,
         |_ctx| {
             attempts += 1;
-            async move {
-                if attempts < 2 {
-                    Err("temporary error")
-                } else {
-                    Ok("success")
-                }
-            }
+            async move { if attempts < 2 { Err("temporary error") } else { Ok("success") } }
         },
         |_e| true,
     )

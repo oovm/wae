@@ -8,8 +8,10 @@ use crate::connection::{
 };
 use async_trait::async_trait;
 use deadpool_postgres::{Manager, ManagerConfig, Pool, PoolError, RecyclingMethod as DeadpoolRecyclingMethod};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
 use tokio_postgres::{
     Config, NoTls,
     types::{ToSql, private::BytesMut},
@@ -141,9 +143,7 @@ impl PostgresConnection {
     /// 检查连接是否健康
     pub async fn health_check(&self) -> DatabaseResult<()> {
         self.client.simple_query("SELECT 1").await.map_err(|e| {
-            WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: format!("Health check failed: {}", e),
-            })
+            WaeError::database(WaeErrorKind::DatabaseConnectionFailed { reason: format!("Health check failed: {}", e) })
         })?;
         Ok(())
     }
@@ -234,36 +234,31 @@ impl PostgresDatabaseService {
                         reason: format!("Invalid connection string: {}", e),
                     })
                 })?;
-                
+
                 let recycling_method = match pool_config.recycling_method {
                     RecyclingMethod::Fast => DeadpoolRecyclingMethod::Fast,
                     RecyclingMethod::Verified => DeadpoolRecyclingMethod::Verified,
                     RecyclingMethod::Clean => DeadpoolRecyclingMethod::Clean,
                 };
-                
+
                 let manager_config = ManagerConfig { recycling_method };
                 let manager = Manager::from_config(pg_config, NoTls, manager_config);
-                
-                let mut pool_builder = Pool::builder(manager)
-                    .max_size(pool_config.max_connections);
-                
+
+                let mut pool_builder = Pool::builder(manager).max_size(pool_config.max_connections);
+
                 if let Some(wait_timeout) = pool_config.wait_timeout() {
                     pool_builder = pool_builder.wait_timeout(Some(wait_timeout));
                 }
-                
+
                 let pool = pool_builder.build().map_err(|e| {
                     WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                         reason: format!("Failed to create pool: {}", e),
                     })
                 })?;
-                
+
                 let metrics = Arc::new(AtomicPoolMetrics::new());
-                
-                Ok(Self { 
-                    pool, 
-                    metrics,
-                    pool_config: pool_config.clone(),
-                })
+
+                Ok(Self { pool, metrics, pool_config: pool_config.clone() })
             }
             #[cfg(feature = "mysql")]
             DatabaseConfig::MySql { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
@@ -278,24 +273,25 @@ impl PostgresDatabaseService {
             Ok(client) => {
                 self.metrics.increment_get_success();
                 let conn = PostgresConnection::new(client);
-                
+
                 if self.pool_config.health_check_enabled {
                     if let Err(e) = conn.health_check().await {
                         self.metrics.increment_get_error();
                         return Err(e);
                     }
                 }
-                
+
                 Ok(conn)
             }
             Err(e) => {
                 if let PoolError::Timeout(_) = e {
                     self.metrics.increment_get_timeout();
-                } else {
+                }
+                else {
                     self.metrics.increment_get_error();
                 }
-                Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed { 
-                    reason: format!("Failed to get connection: {}", e) 
+                Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                    reason: format!("Failed to get connection: {}", e),
                 }))
             }
         }

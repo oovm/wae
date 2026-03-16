@@ -1,5 +1,4 @@
-
-use wae_websocket::{Message, ServerConfig, ClientConfig};
+use wae_websocket::{ClientConfig, Message, ServerConfig};
 
 #[test]
 fn test_message_text() {

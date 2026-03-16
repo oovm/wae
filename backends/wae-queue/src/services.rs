@@ -1,9 +1,6 @@
 //! 队列管理和服务实现
 
-use super::types::*;
-use super::producers::MessageProducer;
-use super::consumers::MessageConsumer;
-use super::WaeResult;
+use super::{WaeResult, consumers::MessageConsumer, producers::MessageProducer, types::*};
 
 /// 队列管理 trait
 #[async_trait::async_trait]

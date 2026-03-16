@@ -1,5 +1,5 @@
 //! 代码生成命令模块
-//! 
+//!
 //! 提供从 OpenAPI/Swagger 生成代码的功能。
 
 use clap::Parser;

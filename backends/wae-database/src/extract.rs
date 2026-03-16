@@ -54,9 +54,7 @@ pub struct DatabaseConnectionExtractor {
 
 impl fmt::Debug for DatabaseConnectionExtractor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DatabaseConnectionExtractor")
-            .field("backend", &self.connection.backend())
-            .finish()
+        f.debug_struct("DatabaseConnectionExtractor").field("backend", &self.connection.backend()).finish()
     }
 }
 
@@ -143,9 +141,7 @@ pub struct TursoConnectionExtractor {
 #[cfg(feature = "turso")]
 impl fmt::Debug for TursoConnectionExtractor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TursoConnectionExtractor")
-            .field("backend", &DatabaseBackend::Turso)
-            .finish()
+        f.debug_struct("TursoConnectionExtractor").field("backend", &DatabaseBackend::Turso).finish()
     }
 }
 
@@ -249,9 +245,7 @@ pub struct PostgresConnectionExtractor {
 #[cfg(feature = "postgres")]
 impl fmt::Debug for PostgresConnectionExtractor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("PostgresConnectionExtractor")
-            .field("backend", &DatabaseBackend::Postgres)
-            .finish()
+        f.debug_struct("PostgresConnectionExtractor").field("backend", &DatabaseBackend::Postgres).finish()
     }
 }
 
@@ -339,9 +333,7 @@ pub struct MySqlConnectionExtractor {
 #[cfg(feature = "mysql")]
 impl fmt::Debug for MySqlConnectionExtractor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MySqlConnectionExtractor")
-            .field("backend", &DatabaseBackend::MySql)
-            .finish()
+        f.debug_struct("MySqlConnectionExtractor").field("backend", &DatabaseBackend::MySql).finish()
     }
 }
 

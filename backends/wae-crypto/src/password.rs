@@ -1,8 +1,9 @@
 //! 密码哈希和验证模块
 
 use crate::error::{CryptoError, CryptoResult};
-use argon2::{Argon2, PasswordHash, PasswordHasher as Argon2PasswordHasher, PasswordVerifier, Version};
-use argon2::password_hash::SaltString;
+use argon2::{
+    Argon2, PasswordHash, PasswordHasher as Argon2PasswordHasher, PasswordVerifier, Version, password_hash::SaltString,
+};
 use rand::thread_rng;
 use zeroize::Zeroize;
 
@@ -103,7 +104,8 @@ impl PasswordHasher {
                 self.config.argon2_time_cost,
                 self.config.argon2_parallelism,
                 None,
-            ).map_err(|_| CryptoError::PasswordHashError)?,
+            )
+            .map_err(|_| CryptoError::PasswordHashError)?,
         );
         let password_hash = argon2.hash_password(password, &salt).map_err(|_| CryptoError::PasswordHashError)?;
         Ok(password_hash.to_string())

@@ -30,16 +30,8 @@ impl UserRepository {
     fn new() -> Self {
         Self {
             users: vec![
-                User {
-                    id: "user-001".to_string(),
-                    name: "张三".to_string(),
-                    email: "zhangsan@example.com".to_string(),
-                },
-                User {
-                    id: "user-002".to_string(),
-                    name: "李四".to_string(),
-                    email: "lisi@example.com".to_string(),
-                },
+                User { id: "user-001".to_string(), name: "张三".to_string(), email: "zhangsan@example.com".to_string() },
+                User { id: "user-002".to_string(), name: "李四".to_string(), email: "lisi@example.com".to_string() },
             ],
         }
     }
@@ -80,10 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = AppConfig {
         app_name: "WAE Effect Demo".to_string(),
         version: "1.0.0".to_string(),
-        database: DatabaseConfig {
-            url: "postgres://localhost:5432/wae".to_string(),
-            max_connections: 20,
-        },
+        database: DatabaseConfig { url: "postgres://localhost:5432/wae".to_string(), max_connections: 20 },
     };
     println!("   配置创建完成\n");
 
@@ -120,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut typed_deps = Dependencies::new();
     typed_deps.register_type(config.clone());
     typed_deps.register_type(user_repo.clone());
-    
+
     let config_by_type: AppConfig = typed_deps.get_type()?;
     println!("   通过类型获取配置: {}", config_by_type.app_name);
     println!();
@@ -135,7 +124,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let user_id = "user-001";
     if let Some(user) = repo.get_user(user_id) {
         logger.info(&format!("找到用户: {} ({})", user.name, user.email));
-    } else {
+    }
+    else {
         logger.error(&format!("未找到用户 ID: {}", user_id));
     }
     println!();

@@ -11,8 +11,8 @@ pub mod tls;
 
 pub use wae_session as session;
 
-pub use router::{RouterBuilder, MethodRouter, get, post, put, delete, patch, options, head, trace};
-pub use response::{JsonResponse, Html, Redirect, Attachment, StreamResponse};
+pub use response::{Attachment, Html, JsonResponse, Redirect, StreamResponse};
+pub use router::{MethodRouter, RouterBuilder, delete, get, head, options, patch, post, put, trace};
 
 use http::{Response, StatusCode, header};
 use http_body_util::Full;
@@ -103,11 +103,7 @@ struct RouteEntry<S> {
 
 impl<S: Clone> Clone for RouteEntry<S> {
     fn clone(&self) -> Self {
-        Self {
-            method: self.method.clone(),
-            path: self.path.clone(),
-            handler: self.handler.clone(),
-        }
+        Self { method: self.method.clone(), path: self.path.clone(), handler: self.handler.clone() }
     }
 }
 
@@ -118,11 +114,7 @@ impl<S: Clone> Clone for Router<S> {
             let new_router = matchit::Router::new();
             routes.insert(method.clone(), new_router);
         }
-        let mut new_router = Self {
-            routes,
-            raw_routes: Vec::new(),
-            state: self.state.clone(),
-        };
+        let mut new_router = Self { routes, raw_routes: Vec::new(), state: self.state.clone() };
         for entry in &self.raw_routes {
             let router = new_router.routes.entry(entry.method.clone()).or_insert_with(matchit::Router::new);
             let _ = router.insert(entry.path.clone(), entry.handler.clone());
@@ -176,12 +168,8 @@ where
     S: Clone + Send + Sync + 'static,
 {
     /// 添加路由
-    pub fn add_route<H, T>(
-        &mut self,
-        method: http::Method,
-        path: &str,
-        handler: H,
-    ) where
+    pub fn add_route<H, T>(&mut self, method: http::Method, path: &str, handler: H)
+    where
         H: Fn(T) -> Response<Body> + Clone + Send + Sync + 'static,
         T: crate::extract::FromRequestParts<S, Error = crate::extract::ExtractorError> + 'static,
     {
@@ -227,11 +215,7 @@ where
             let new_path = format!("{}{}", prefix.trim_end_matches('/'), entry.path);
             let router = self.routes.entry(entry.method.clone()).or_insert_with(matchit::Router::new);
             let _ = router.insert(new_path.clone(), entry.handler.clone());
-            self.raw_routes.push(RouteEntry {
-                method: entry.method,
-                path: new_path,
-                handler: entry.handler,
-            });
+            self.raw_routes.push(RouteEntry { method: entry.method, path: new_path, handler: entry.handler });
         }
         self
     }
@@ -540,10 +524,7 @@ where
     /// 启动 HTTP 服务器
     async fn serve_plain(self, listener: TcpListener) -> HttpsResult<()> {
         loop {
-            let (stream, _addr) = listener
-                .accept()
-                .await
-                .map_err(|e| WaeError::internal(format!("Accept error: {}", e)))?;
+            let (stream, _addr) = listener.accept().await.map_err(|e| WaeError::internal(format!("Accept error: {}", e)))?;
 
             let router = self.router.clone();
             tokio::spawn(async move {
@@ -558,22 +539,12 @@ where
 
     /// 启动 HTTPS 服务器
     async fn serve_tls(self, listener: TcpListener, tls_config: &TlsConfig) -> HttpsResult<()> {
-        let enable_http2 = matches!(
-            self.config.http_version,
-            HttpVersion::Http2Only | HttpVersion::Both
-        );
+        let enable_http2 = matches!(self.config.http_version, HttpVersion::Http2Only | HttpVersion::Both);
 
-        let acceptor = crate::tls::create_tls_acceptor_with_http2(
-            &tls_config.cert_path,
-            &tls_config.key_path,
-            enable_http2,
-        )?;
+        let acceptor = crate::tls::create_tls_acceptor_with_http2(&tls_config.cert_path, &tls_config.key_path, enable_http2)?;
 
         loop {
-            let (stream, _addr) = listener
-                .accept()
-                .await
-                .map_err(|e| WaeError::internal(format!("Accept error: {}", e)))?;
+            let (stream, _addr) = listener.accept().await.map_err(|e| WaeError::internal(format!("Accept error: {}", e)))?;
 
             let acceptor = acceptor.clone();
             let router = self.router.clone();
@@ -723,46 +694,32 @@ pub fn static_files_router(base_path: impl AsRef<Path>, prefix: &str) -> Router 
     let mut router = Router::new();
     let base_path = base_path.as_ref().to_path_buf();
     let prefix = prefix.to_string();
-    
+
     router.add_route(http::Method::GET, &format!("{}/*path", prefix), move |parts: crate::extract::RequestParts| {
         let path = parts.uri.path();
         let file_path = if let Some(stripped) = path.strip_prefix(&prefix) {
             base_path.join(stripped.trim_start_matches('/'))
-        } else {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(empty_body())
-                .unwrap();
-        };
-        
-        if !file_path.exists() || !file_path.is_file() {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(empty_body())
-                .unwrap();
         }
-        
+        else {
+            return Response::builder().status(StatusCode::NOT_FOUND).body(empty_body()).unwrap();
+        };
+
+        if !file_path.exists() || !file_path.is_file() {
+            return Response::builder().status(StatusCode::NOT_FOUND).body(empty_body()).unwrap();
+        }
+
         let content = match std::fs::read(&file_path) {
             Ok(c) => c,
             Err(_) => {
-                return Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(empty_body())
-                    .unwrap();
+                return Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(empty_body()).unwrap();
             }
         };
-        
-        let mime_type = mime_guess::from_path(&file_path)
-            .first_or_octet_stream()
-            .to_string();
-        
-        Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, mime_type)
-            .body(full_body(content))
-            .unwrap()
+
+        let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream().to_string();
+
+        Response::builder().status(StatusCode::OK).header(header::CONTENT_TYPE, mime_type).body(full_body(content)).unwrap()
     });
-    
+
     router
 }
 
@@ -793,10 +750,7 @@ where
     }
 
     /// 处理 HTTP 请求并返回响应
-    pub async fn handle_request(
-        &self,
-        request: hyper::Request<hyper::body::Incoming>,
-    ) -> http::Response<Body> {
+    pub async fn handle_request(&self, request: hyper::Request<hyper::body::Incoming>) -> http::Response<Body> {
         let (parts, _body) = request.into_parts();
         let method = parts.method.clone();
         let uri = parts.uri.clone();
@@ -807,20 +761,16 @@ where
 
         let path = uri.path();
 
-        let Some(method_router) = self.router.routes.get(&method) else {
-            return Response::builder()
-                .status(StatusCode::METHOD_NOT_ALLOWED)
-                .body(empty_body())
-                .unwrap();
+        let Some(method_router) = self.router.routes.get(&method)
+        else {
+            return Response::builder().status(StatusCode::METHOD_NOT_ALLOWED).body(empty_body()).unwrap();
         };
 
         let match_result = method_router.at(path);
 
-        let Ok(matched) = match_result else {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(empty_body())
-                .unwrap();
+        let Ok(matched) = match_result
+        else {
+            return Response::builder().status(StatusCode::NOT_FOUND).body(empty_body()).unwrap();
         };
 
         request_parts.path_params = matched.params.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();

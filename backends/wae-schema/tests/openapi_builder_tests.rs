@@ -1,15 +1,10 @@
-use wae_schema::*;
-use wae_schema::openapi::builder::OpenApiBuilder;
-use std::collections::BTreeMap;
 use serde_json::json;
+use std::collections::BTreeMap;
+use wae_schema::{openapi::builder::OpenApiBuilder, *};
 
 #[test]
 fn test_basic_builder() {
-    let doc = OpenApiBuilder::new()
-        .title("Test API")
-        .version("1.0.0")
-        .description("This is a test API")
-        .build();
+    let doc = OpenApiBuilder::new().title("Test API").version("1.0.0").description("This is a test API").build();
 
     assert_eq!(doc.info.title, "Test API");
     assert_eq!(doc.info.version, "1.0.0");
@@ -201,9 +196,7 @@ fn test_parameter_methods() {
 
 #[test]
 fn test_request_body_json() {
-    let body = RequestBody::json(Schema::string())
-        .description("Request body")
-        .required(true);
+    let body = RequestBody::json(Schema::string()).description("Request body").required(true);
 
     assert_eq!(body.description, Some("Request body".to_string()));
     assert_eq!(body.required, true);
@@ -233,8 +226,7 @@ fn test_openapi_info_default() {
 
 #[test]
 fn test_security_scheme_api_key() {
-    let scheme = SecurityScheme::api_key("X-API-Key", ApiKeyLocation::Header)
-        .description("API Key authentication");
+    let scheme = SecurityScheme::api_key("X-API-Key", ApiKeyLocation::Header).description("API Key authentication");
 
     assert_eq!(scheme.scheme_type, SecuritySchemeType::ApiKey);
     assert_eq!(scheme.name, Some("X-API-Key".to_string()));
@@ -266,12 +258,7 @@ fn test_security_scheme_oauth2() {
         .scope("read", "Read access")
         .scope("write", "Write access");
 
-    let flows = OAuthFlows {
-        implicit: Some(flow),
-        password: None,
-        client_credentials: None,
-        authorization_code: None,
-    };
+    let flows = OAuthFlows { implicit: Some(flow), password: None, client_credentials: None, authorization_code: None };
 
     let scheme = SecurityScheme::oauth2(flows);
     assert_eq!(scheme.scheme_type, SecuritySchemeType::OAuth2);
@@ -303,9 +290,7 @@ fn test_oauth_flow() {
 
 #[test]
 fn test_security_requirement() {
-    let req = SecurityRequirement::new()
-        .scheme("api_key", vec![])
-        .scheme("oauth2", vec!["read", "write"]);
+    let req = SecurityRequirement::new().scheme("api_key", vec![]).scheme("oauth2", vec!["read", "write"]);
 
     assert!(req.schemes.contains_key("api_key"));
     assert!(req.schemes.contains_key("oauth2"));
@@ -372,10 +357,8 @@ fn test_openapi_builder_with_tags() {
 
 #[test]
 fn test_openapi_builder_with_securities() {
-    let securities = vec![
-        SecurityRequirement::new().scheme("api_key", vec![]),
-        SecurityRequirement::new().scheme("oauth2", vec!["read"]),
-    ];
+    let securities =
+        vec![SecurityRequirement::new().scheme("api_key", vec![]), SecurityRequirement::new().scheme("oauth2", vec!["read"])];
 
     let doc = OpenApiBuilder::new().securities(securities).build();
     assert_eq!(doc.security.as_ref().unwrap().len(), 2);

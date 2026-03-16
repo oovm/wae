@@ -3,8 +3,7 @@
 use super::super::*;
 use ::redis::{AsyncCommands, Client, FromRedisValue, RedisResult, streams::StreamReadOptions};
 use base64::{Engine as _, engine::general_purpose};
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
 /// Redis 队列管理器
@@ -414,8 +413,7 @@ impl ConsumerBackend for RedisConsumerBackend {
         let mut delivery_tags = self.delivery_tags.lock().await;
         if let Some(message_id) = delivery_tags.remove(&delivery_tag) {
             if requeue {
-                let _: RedisResult<()> =
-                    conn.xclaim(&stream_name, group_name, &self.consumer_name, 0, &[&message_id]).await;
+                let _: RedisResult<()> = conn.xclaim(&stream_name, group_name, &self.consumer_name, 0, &[&message_id]).await;
             }
             else {
                 let configs = self.manager.configs.lock().await;

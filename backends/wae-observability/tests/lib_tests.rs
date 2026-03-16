@@ -1,4 +1,3 @@
-
 use wae_observability::{HealthCheck, HealthStatus, ObservabilityConfig};
 
 #[test]

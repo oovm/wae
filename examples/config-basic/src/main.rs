@@ -26,14 +26,8 @@ impl Default for AppConfig {
         Self {
             app_name: "WAE App".to_string(),
             version: "0.1.0".to_string(),
-            database: DatabaseConfig {
-                url: "sqlite://:memory:".to_string(),
-                max_connections: 10,
-            },
-            server: ServerConfig {
-                host: "127.0.0.1".to_string(),
-                port: 3000,
-            },
+            database: DatabaseConfig { url: "sqlite://:memory:".to_string(), max_connections: 10 },
+            server: ServerConfig { host: "127.0.0.1".to_string(), port: 3000 },
         }
     }
 }
@@ -52,9 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     println!("2. 使用 ConfigLoader 加载配置（仅默认值）:");
-    let config: AppConfig = ConfigLoader::new()
-        .with_defaults(&AppConfig::default())
-        .extract()?;
+    let config: AppConfig = ConfigLoader::new().with_defaults(&AppConfig::default()).extract()?;
     println!("   应用名称: {}", config.app_name);
     println!("   版本: {}", config.version);
     println!();
@@ -62,11 +54,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("3. 尝试从环境变量加载（设置 APP_NAME）:");
     std::env::set_var("APP_APP_NAME", "My Awesome App");
     std::env::set_var("APP_SERVER_PORT", "8080");
-    
-    let config_with_env: AppConfig = ConfigLoader::new()
-        .with_defaults(&AppConfig::default())
-        .with_env("APP_")
-        .extract()?;
+
+    let config_with_env: AppConfig = ConfigLoader::new().with_defaults(&AppConfig::default()).with_env("APP_").extract()?;
     println!("   应用名称: {}", config_with_env.app_name);
     println!("   服务器端口: {}", config_with_env.server.port);
     println!();

@@ -1,5 +1,5 @@
-use wae_crypto::{hash, HashAlgorithm};
 use hex::ToHex;
+use wae_crypto::{HashAlgorithm, hash};
 
 #[test]
 fn test_hash_sha1() {
@@ -34,16 +34,16 @@ fn test_hash_sha512() {
 #[test]
 fn test_hash_empty_input() {
     let data = b"";
-    
+
     let sha1_result = hash(HashAlgorithm::SHA1, data).unwrap();
     assert_eq!(sha1_result.len(), 20);
-    
+
     let sha256_result = hash(HashAlgorithm::SHA256, data).unwrap();
     assert_eq!(sha256_result.len(), 32);
-    
+
     let sha384_result = hash(HashAlgorithm::SHA384, data).unwrap();
     assert_eq!(sha384_result.len(), 48);
-    
+
     let sha512_result = hash(HashAlgorithm::SHA512, data).unwrap();
     assert_eq!(sha512_result.len(), 64);
 }
@@ -53,7 +53,7 @@ fn test_hash_algorithm_clone_copy() {
     let alg = HashAlgorithm::SHA256;
     let alg2 = alg;
     assert_eq!(alg, alg2);
-    
+
     let alg3 = alg.clone();
     assert_eq!(alg, alg3);
 }

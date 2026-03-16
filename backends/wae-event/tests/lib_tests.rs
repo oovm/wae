@@ -1,6 +1,5 @@
-
-use wae_event::{EventBusConfig, BaseEvent};
 use serde::{Deserialize, Serialize};
+use wae_event::{BaseEvent, EventBusConfig};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct TestPayload {

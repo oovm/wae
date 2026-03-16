@@ -1,4 +1,3 @@
-
 use wae_session::SessionConfig;
 
 #[test]

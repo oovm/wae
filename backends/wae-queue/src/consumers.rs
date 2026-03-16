@@ -1,7 +1,6 @@
 //! 消息消费者实现
 
-use super::types::*;
-use super::WaeResult;
+use super::{WaeResult, types::*};
 use serde::de::DeserializeOwned;
 
 /// 消息消费者后端 trait (dyn 兼容)

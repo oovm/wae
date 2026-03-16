@@ -1,5 +1,4 @@
-
-use wae_queue::{QueueConfig, ProducerConfig, ConsumerConfig};
+use wae_queue::{ConsumerConfig, ProducerConfig, QueueConfig};
 
 #[test]
 fn test_queue_config() {

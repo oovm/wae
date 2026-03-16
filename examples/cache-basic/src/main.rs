@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 #[derive(Debug, Clone)]
 struct CachedValue<T> {
@@ -15,28 +17,15 @@ struct MockCacheService {
 
 impl MockCacheService {
     fn new(default_ttl: Duration) -> Self {
-        Self {
-            cache: HashMap::new(),
-            default_ttl,
-        }
+        Self { cache: HashMap::new(), default_ttl }
     }
 
     fn set(&mut self, key: &str, value: String, ttl: Option<Duration>) {
-        let expires_at = ttl.map(|ttl| Instant::now() + ttl).or_else(|| {
-            if self.default_ttl > Duration::ZERO {
-                Some(Instant::now() + self.default_ttl)
-            } else {
-                None
-            }
-        });
+        let expires_at = ttl
+            .map(|ttl| Instant::now() + ttl)
+            .or_else(|| if self.default_ttl > Duration::ZERO { Some(Instant::now() + self.default_ttl) } else { None });
 
-        self.cache.insert(
-            key.to_string(),
-            CachedValue {
-                value,
-                expires_at,
-            },
-        );
+        self.cache.insert(key.to_string(), CachedValue { value, expires_at });
     }
 
     fn get(&self, key: &str) -> Option<String> {
@@ -118,11 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     println!("5. 设置缓存项 (带 TTL):");
-    cache.set(
-        "temp:session",
-        "临时会话数据".to_string(),
-        Some(Duration::from_secs(5)),
-    );
+    cache.set("temp:session", "临时会话数据".to_string(), Some(Duration::from_secs(5)));
     println!("   设置缓存: temp:session = \"临时会话数据\" (TTL: 5 秒)");
     if let Some(ttl) = cache.get_ttl("temp:session") {
         println!("   剩余过期时间: {} 秒", ttl.as_secs());
@@ -146,7 +131,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("8. 获取不存在的缓存:");
     if let Some(value) = cache.get("user:9999") {
         println!("   获取 user:9999 = \"{}\"", value);
-    } else {
+    }
+    else {
         println!("   获取 user:9999: 缓存不存在 (预期行为)");
     }
     println!();

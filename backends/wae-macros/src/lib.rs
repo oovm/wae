@@ -419,23 +419,10 @@ pub fn use_effect(input: TokenStream) -> TokenStream {
 }
 
 enum UseEffectInput {
-    TypeOnly {
-        effectful: syn::Expr,
-        ty: syn::Type,
-    },
-    Named {
-        effectful: syn::Expr,
-        name: syn::LitStr,
-        ty: syn::Type,
-    },
-    Config {
-        effectful: syn::Expr,
-        ty: syn::Type,
-    },
-    Auth {
-        effectful: syn::Expr,
-        ty: syn::Type,
-    },
+    TypeOnly { effectful: syn::Expr, ty: syn::Type },
+    Named { effectful: syn::Expr, name: syn::LitStr, ty: syn::Type },
+    Config { effectful: syn::Expr, ty: syn::Type },
+    Auth { effectful: syn::Expr, ty: syn::Type },
 }
 
 impl syn::parse::Parse for UseEffectInput {
@@ -450,17 +437,21 @@ impl syn::parse::Parse for UseEffectInput {
 
             if ident == "config" {
                 Ok(UseEffectInput::Config { effectful, ty })
-            } else if ident == "auth" {
+            }
+            else if ident == "auth" {
                 Ok(UseEffectInput::Auth { effectful, ty })
-            } else {
+            }
+            else {
                 Err(syn::Error::new_spanned(ident, "Expected 'config' or 'auth'"))
             }
-        } else if input.peek(syn::LitStr) {
+        }
+        else if input.peek(syn::LitStr) {
             let name: syn::LitStr = input.parse()?;
             let _: syn::Token![,] = input.parse()?;
             let ty: syn::Type = input.parse()?;
             Ok(UseEffectInput::Named { effectful, name, ty })
-        } else {
+        }
+        else {
             let ty: syn::Type = input.parse()?;
             Ok(UseEffectInput::TypeOnly { effectful, ty })
         }

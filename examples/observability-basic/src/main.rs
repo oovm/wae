@@ -1,8 +1,6 @@
-use std::sync::Arc;
 use async_trait::async_trait;
-use wae_observability::{
-    HealthChecker, HealthCheck, HealthStatus, ObservabilityConfig, init_observability,
-};
+use std::sync::Arc;
+use wae_observability::{HealthCheck, HealthChecker, HealthStatus, ObservabilityConfig, init_observability};
 
 #[derive(Debug, Clone)]
 struct MemoryHealthChecker {
@@ -12,10 +10,7 @@ struct MemoryHealthChecker {
 
 impl MemoryHealthChecker {
     fn new(name: String) -> Self {
-        Self {
-            name,
-            memory_usage: Arc::new(std::sync::Mutex::new(0)),
-        }
+        Self { name, memory_usage: Arc::new(std::sync::Mutex::new(0)) }
     }
 
     fn set_usage(&self, usage: u64) {
@@ -30,13 +25,14 @@ impl HealthChecker for MemoryHealthChecker {
         let usage = *self.memory_usage.lock().unwrap();
         let status = if usage > 80 {
             HealthStatus::Critical
-        } else if usage > 60 {
+        }
+        else if usage > 60 {
             HealthStatus::Warning
-        } else {
+        }
+        else {
             HealthStatus::Passing
         };
-        HealthCheck::new(self.name.clone(), status)
-            .with_details(format!("当前内存使用率: {}%", usage))
+        HealthCheck::new(self.name.clone(), status).with_details(format!("当前内存使用率: {}%", usage))
     }
 }
 
@@ -48,10 +44,7 @@ struct InMemoryMetrics {
 
 impl InMemoryMetrics {
     fn new() -> Self {
-        Self {
-            request_count: Arc::new(std::sync::Mutex::new(0)),
-            active_users: Arc::new(std::sync::Mutex::new(0)),
-        }
+        Self { request_count: Arc::new(std::sync::Mutex::new(0)), active_users: Arc::new(std::sync::Mutex::new(0)) }
     }
 
     fn increment_request(&self) {
@@ -87,8 +80,7 @@ impl ServiceHealthChecker {
 #[async_trait]
 impl HealthChecker for ServiceHealthChecker {
     async fn check(&self) -> HealthCheck {
-        HealthCheck::new(self.name.clone(), HealthStatus::Passing)
-            .with_details("服务运行正常".to_string())
+        HealthCheck::new(self.name.clone(), HealthStatus::Passing).with_details("服务运行正常".to_string())
     }
 }
 
@@ -98,8 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("初始化可观测性服务");
 
-    let config = ObservabilityConfig::new("observability-demo".to_string(), "1.0.0".to_string())
-        .with_health();
+    let config = ObservabilityConfig::new("observability-demo".to_string(), "1.0.0".to_string()).with_health();
 
     let mut observability = init_observability(config)?;
 

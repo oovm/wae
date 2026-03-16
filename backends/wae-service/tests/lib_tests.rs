@@ -1,5 +1,4 @@
-
-use wae_service::{ServiceRegistration, HealthCheckConfig};
+use wae_service::{HealthCheckConfig, ServiceRegistration};
 
 #[test]
 fn test_service_registration_default() {

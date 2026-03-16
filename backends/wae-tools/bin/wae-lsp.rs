@@ -1,6 +1,6 @@
 //! WAE LSP Server - 使用 oak-lsp 实现的标准 Language Server Protocol 服务器
 
-use oak_lsp::{LspServer, LanguageService};
+use oak_lsp::{LanguageService, LspServer};
 use oak_vfs::{MemoryVfs, Vfs};
 use std::sync::Arc;
 
@@ -84,7 +84,12 @@ impl LanguageService for WaeLanguageService {
         Box::pin(std::future::ready(Vec::new()))
     }
 
-    fn range_formatting(&self, _uri: &str, _range: oak_core::Range, _options: oak_lsp::types::FormattingOptions) -> oak_lsp::service::TextEditsFuture {
+    fn range_formatting(
+        &self,
+        _uri: &str,
+        _range: oak_core::Range,
+        _options: oak_lsp::types::FormattingOptions,
+    ) -> oak_lsp::service::TextEditsFuture {
         Box::pin(std::future::ready(Vec::new()))
     }
 

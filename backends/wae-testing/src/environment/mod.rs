@@ -263,4 +263,133 @@ impl TestEnv {
     ///
     /// # Errors
     ///
-    /// 如果环境未初始化或任何钩子执行失败，将返回 [`W
+    /// 如果环境未初始化或任何钩子执行失败，将返回 [`WaeError`] 错误。
+    pub async fn teardown_async(&self) -> TestingResult<()> {
+        {
+            let mut state = self.state.write();
+            if *state != TestEnvState::Initialized {
+                return Err(WaeError::new(WaeErrorKind::EnvironmentError {
+                    reason: "Environment not initialized".to_string(),
+                }));
+            }
+            *state = TestEnvState::Destroying;
+        }
+
+        let result = (async {
+            for hook in self.lifecycle_hooks.read().iter() {
+                hook.before_teardown(self)?;
+            }
+
+            #[allow(clippy::await_holding_lock)]
+            for hook in self.async_lifecycle_hooks.read().iter() {
+                hook.before_teardown_async(self).await?;
+            }
+
+            #[allow(clippy::await_holding_lock)]
+            {
+                let handlers = self.async_cleanup_handlers.write();
+                for handler in handlers.iter().rev() {
+                    handler().await;
+                }
+            }
+
+            {
+                let handlers = self.cleanup_handlers.write();
+                for handler in handlers.iter().rev() {
+                    handler();
+                }
+            }
+
+            self.storage.write().clear();
+
+            #[allow(clippy::await_holding_lock)]
+            for hook in self.async_lifecycle_hooks.read().iter() {
+                hook.after_teardown_async(self).await?;
+            }
+
+            for hook in self.lifecycle_hooks.read().iter() {
+                hook.after_teardown(self)?;
+            }
+
+            Ok(())
+        })
+        .await;
+
+        let mut state = self.state.write();
+        *state = TestEnvState::Destroyed;
+        result
+    }
+
+    /// 获取环境状态
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use wae_testing::{TestEnv, TestEnvState};
+    ///
+    /// let env = TestEnv::default_env();
+    /// assert_eq!(env.state(), TestEnvState::Uninitialized);
+    /// ```
+    pub fn state(&self) -> TestEnvState {
+        self.state.read().clone()
+    }
+
+    /// 获取环境运行时间
+    ///
+    /// 返回从环境创建到现在经过的时间。
+    pub fn elapsed(&self) -> Duration {
+        self.created_at.elapsed()
+    }
+
+    /// 获取环境初始化后运行的时间
+    ///
+    /// 如果环境尚未初始化，返回 [`None`]。
+    pub fn initialized_elapsed(&self) -> Option<Duration> {
+        self.initialized_at.read().map(|t| t.elapsed())
+    }
+
+    /// 注册同步生命周期钩子
+    ///
+    /// 添加一个同步钩子函数，在测试环境的各个生命周期阶段执行。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use wae_testing::TestEnv;
+    ///
+    /// struct MyHook;
+    ///
+    /// impl wae_testing::TestLifecycleHook for MyHook {
+    ///     fn after_setup(&self, _env: &TestEnv) -> wae_testing::TestingResult<()> {
+    ///         println!("Environment setup complete!");
+    ///         Ok(())
+    ///     }
+    /// }
+    ///
+    /// let env = TestEnv::default_env();
+    /// env.add_lifecycle_hook(MyHook);
+    /// ```
+    pub fn add_lifecycle_hook<H>(&self, hook: H)
+    where
+        H: TestLifecycleHook + 'static,
+    {
+        self.lifecycle_hooks.write().push(Box::new(hook));
+    }
+
+    /// 注册异步生命周期钩子
+    ///
+    /// 添加一个异步钩子函数，在测试环境的各个生命周期阶段异步执行。
+    pub fn add_async_lifecycle_hook<H>(&self, hook: H)
+    where
+        H: AsyncTestLifecycleHook + 'static,
+    {
+        self.async_lifecycle_hooks.write().push(Box::new(hook));
+    }
+
+    /// 注册清理函数
+    ///
+    /// 添加一个同步清理函数，在测试环境清理时执行。清理函数按注册的逆序执行。
+    ///
+    /// # Examples
+    ///
+    ///

@@ -28,15 +28,15 @@ fn test_hex_encode() {
 fn test_hex_decode() {
     let expected1: Vec<u8> = vec![0x00, 0x01, 0x02];
     assert_eq!(hex_decode("000102").unwrap(), expected1);
-    
+
     let expected2: Vec<u8> = vec![0xff, 0xee, 0xdd];
     assert_eq!(hex_decode("ffeedd").unwrap(), expected2);
-    
+
     assert_eq!(hex_decode("").unwrap(), Vec::<u8>::new());
-    
+
     let expected3: Vec<u8> = vec![0x12, 0x34, 0x56];
     assert_eq!(hex_decode("123456").unwrap(), expected3);
-    
+
     assert!(hex_decode("1").is_err());
     assert!(hex_decode("gg").is_err());
 }

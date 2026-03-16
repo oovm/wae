@@ -1,7 +1,6 @@
 //! 消息生产者实现
 
-use super::types::*;
-use super::WaeResult;
+use super::{WaeResult, types::*};
 use serde::Serialize;
 use std::time::Duration;
 

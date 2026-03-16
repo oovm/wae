@@ -152,10 +152,10 @@ fn test_value_json_parsing() {
     assert_eq!(Value::from_json_str("42").unwrap(), Value::Integer(42));
     assert_eq!(Value::from_json_str("3.14").unwrap(), Value::Float(3.14));
     assert_eq!(Value::from_json_str("\"hello\"").unwrap(), Value::String("hello".to_string()));
-    
+
     let parsed_array = Value::from_json_str("[1, 2, 3]").unwrap();
     assert!(parsed_array.is_array());
-    
+
     let parsed_object = Value::from_json_str("{\"key\": 42}").unwrap();
     assert!(parsed_object.is_object());
 }
@@ -182,11 +182,11 @@ fn test_value_merge() {
         "only_b" => "hello",
     };
     a.merge(b);
-    
+
     assert_eq!(a.get("common"), Some(&Value::String("new".to_string())));
     assert_eq!(a.get("only_a"), Some(&Value::Integer(42)));
     assert_eq!(a.get("only_b"), Some(&Value::String("hello".to_string())));
-    
+
     let mut arr1 = array![1, 2];
     let arr2 = array![3, 4];
     arr1.merge(arr2);

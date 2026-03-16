@@ -1,8 +1,10 @@
 //! 内存队列实现
 
 use super::super::*;
-use std::collections::{HashMap, VecDeque};
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+};
 use tokio::sync::RwLock;
 
 /// 待处理消息状态

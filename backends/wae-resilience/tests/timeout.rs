@@ -10,9 +10,7 @@ async fn test_timeout_config_new() {
 
 #[tokio::test]
 async fn test_timeout_config_builder() {
-    let config = TimeoutConfig::default()
-        .global_timeout(Duration::from_secs(120))
-        .operation_timeout(Duration::from_secs(60));
+    let config = TimeoutConfig::default().global_timeout(Duration::from_secs(120)).operation_timeout(Duration::from_secs(60));
 
     assert_eq!(config.global_timeout, Duration::from_secs(120));
     assert_eq!(config.operation_timeout, Duration::from_secs(60));

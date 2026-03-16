@@ -3,7 +3,7 @@
 //! 提供从 schemas.yaml 到数据库的同步功能。
 
 use std::path::Path;
-use wae_database::{DatabaseType, DatabaseSchema, SchemaConfig, TableSchema, load_schema_config_from_yaml_file};
+use wae_database::{DatabaseSchema, DatabaseType, SchemaConfig, TableSchema, load_schema_config_from_yaml_file};
 use wae_types::{WaeError, WaeResult};
 
 /// 迁移操作类型
@@ -69,10 +69,7 @@ impl DatabaseMigrationPlan {
 
     /// 获取所有破坏性操作
     pub fn destructive_operations(&self) -> Vec<&MigrationOperation> {
-        self.operations
-            .iter()
-            .filter(|op| Self::is_destructive(op))
-            .collect()
+        self.operations.iter().filter(|op| Self::is_destructive(op)).collect()
     }
 
     /// 生成 SQL 语句列表
@@ -87,21 +84,13 @@ impl DatabaseMigrationPlan {
                     sqls.push(format!("DROP TABLE IF EXISTS {}", table_name));
                 }
                 MigrationOperation::AddColumn { table_name, column } => {
-                    sqls.push(format!(
-                        "ALTER TABLE {} ADD COLUMN {}",
-                        table_name,
-                        column.to_sql_for(self.db_type)
-                    ));
+                    sqls.push(format!("ALTER TABLE {} ADD COLUMN {}", table_name, column.to_sql_for(self.db_type)));
                 }
                 MigrationOperation::DropColumn { table_name, column_name } => {
                     sqls.push(format!("ALTER TABLE {} DROP COLUMN {}", table_name, column_name));
                 }
                 MigrationOperation::AlterColumn { table_name, column } => {
-                    sqls.push(format!(
-                        "ALTER TABLE {} ALTER COLUMN {}",
-                        table_name,
-                        column.to_sql_for(self.db_type)
-                    ));
+                    sqls.push(format!("ALTER TABLE {} ALTER COLUMN {}", table_name, column.to_sql_for(self.db_type)));
                 }
                 MigrationOperation::CreateIndex { table_name: _, index } => {
                     sqls.push(index.to_create_sql_for(self.db_type));
@@ -118,7 +107,7 @@ impl DatabaseMigrationPlan {
     pub fn print(&self) {
         println!("\nDatabase: {}", self.database_name);
         println!("{}", "-".repeat(60));
-        
+
         if self.is_empty() {
             println!("No migration needed. Database is already up to date.");
             return;
@@ -283,29 +272,28 @@ impl SchemaSynchronizer {
         println!("Schema Preview");
         println!("{}", "=".repeat(60));
         println!("Total databases: {}", self.config.databases.len());
-        
+
         if let Some(default_name) = &self.config.default_database {
             println!("Default database: {}", default_name);
         }
-        
+
         for db in &self.config.databases {
             println!("\nDatabase: {} ({:?})", db.name, db.r#type);
-            
+
             if let Ok(url) = db.get_url() {
                 println!("  URL: {}", mask_database_url(&url));
             }
-            
+
             println!("  Tables: {}", db.schemas.len());
-            
+
             for schema in &db.schemas {
-                println!("    - {} ({} columns, {} indexes)", 
-                    schema.name, schema.columns.len(), schema.indexes.len());
+                println!("    - {} ({} columns, {} indexes)", schema.name, schema.columns.len(), schema.indexes.len());
             }
         }
 
         println!("\n{}", "=".repeat(60));
         println!("\nGenerated SQL:");
-        
+
         for (db_name, sqls) in self.generate_preview_sql() {
             println!("\n-- Database: {}", db_name);
             for sql in sqls {
@@ -322,10 +310,12 @@ fn mask_database_url(url: &str) -> String {
             let protocol = &url[..=protocol_pos + 2];
             let rest = &url[pos + 1..];
             format!("{}***@{}", protocol, rest)
-        } else {
+        }
+        else {
             url.to_string()
         }
-    } else {
+    }
+    else {
         url.to_string()
     }
 }

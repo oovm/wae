@@ -1,5 +1,5 @@
-use wae_schema::*;
 use serde_json::json;
+use wae_schema::*;
 
 #[test]
 fn test_schema_type_default() {
@@ -32,12 +32,7 @@ fn test_string_schema() {
 
 #[test]
 fn test_integer_schema() {
-    let schema = Schema::integer()
-        .minimum(0.0)
-        .maximum(100.0)
-        .with_default(json!(0))
-        .read_only(true)
-        .write_only(false);
+    let schema = Schema::integer().minimum(0.0).maximum(100.0).with_default(json!(0)).read_only(true).write_only(false);
 
     assert_eq!(schema.schema_type, SchemaType::Integer);
     assert_eq!(schema.minimum, Some(0.0));
@@ -49,9 +44,7 @@ fn test_integer_schema() {
 
 #[test]
 fn test_number_schema() {
-    let schema = Schema::number()
-        .minimum(0.5)
-        .maximum(99.9);
+    let schema = Schema::number().minimum(0.5).maximum(99.9);
 
     assert_eq!(schema.schema_type, SchemaType::Number);
     assert_eq!(schema.minimum, Some(0.5));
@@ -140,8 +133,6 @@ fn test_schema_default() {
     let schema = Schema::default();
     assert_eq!(schema.schema_type, SchemaType::Object);
 }
-
-
 
 #[test]
 fn test_to_schema_for_string() {

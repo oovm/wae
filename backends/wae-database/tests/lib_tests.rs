@@ -1,4 +1,3 @@
-
 use wae_database::{ColumnDef, ColumnType, TableSchema};
 
 #[test]

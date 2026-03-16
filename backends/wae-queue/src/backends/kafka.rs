@@ -9,9 +9,7 @@ use rdkafka::{
     producer::{DeliveryFuture, FutureProducer, FutureRecord},
     util::Timeout,
 };
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -160,8 +158,8 @@ impl ProducerBackend for KafkaProducerBackend {
         let mut fields = Self::encode_metadata(&metadata);
         fields.insert("data".to_string(), data_b64);
 
-        let payload = serde_json::to_vec(&fields)
-            .map_err(|e| WaeError::internal(format!("Failed to serialize Kafka message: {}", e)))?;
+        let payload =
+            serde_json::to_vec(&fields).map_err(|e| WaeError::internal(format!("Failed to serialize Kafka message: {}", e)))?;
 
         let record = FutureRecord::to(&topic).payload(&payload).key(&id);
 
@@ -309,16 +307,9 @@ impl KafkaQueueService {
 
 impl QueueService for KafkaQueueService {
     async fn create_producer(&self, config: ProducerConfig) -> WaeResult<MessageProducer> {
-        let producer: FutureProducer = self
-            .manager
-            .config
-            .create()
-            .map_err(|e| WaeError::internal(format!("Failed to create Kafka producer: {}", e)))?;
-        Ok(MessageProducer::new(Box::new(KafkaProducerBackend::new(
-            config,
-            self.manager.clone(),
-            Arc::new(producer),
-        ))))
+        let producer: FutureProducer =
+            self.manager.config.create().map_err(|e| WaeError::internal(format!("Failed to create Kafka producer: {}", e)))?;
+        Ok(MessageProducer::new(Box::new(KafkaProducerBackend::new(config, self.manager.clone(), Arc::new(producer)))))
     }
 
     async fn create_consumer(&self, config: ConsumerConfig) -> WaeResult<MessageConsumer> {
@@ -326,19 +317,12 @@ impl QueueService for KafkaQueueService {
         consumer_config.set("group.id", format!("wae-consumer-group-{}", uuid::Uuid::new_v4()));
         consumer_config.set("auto.offset.reset", "earliest");
 
-        let consumer: StreamConsumer = consumer_config
-            .create()
-            .map_err(|e| WaeError::internal(format!("Failed to create Kafka consumer: {}", e)))?;
+        let consumer: StreamConsumer =
+            consumer_config.create().map_err(|e| WaeError::internal(format!("Failed to create Kafka consumer: {}", e)))?;
 
-        consumer
-            .subscribe(&[&config.queue])
-            .map_err(|e| WaeError::internal(format!("Failed to subscribe to topic: {}", e)))?;
+        consumer.subscribe(&[&config.queue]).map_err(|e| WaeError::internal(format!("Failed to subscribe to topic: {}", e)))?;
 
-        Ok(MessageConsumer::new(Box::new(KafkaConsumerBackend::new(
-            config,
-            self.manager.clone(),
-            Arc::new(consumer),
-        ))))
+        Ok(MessageConsumer::new(Box::new(KafkaConsumerBackend::new(config, self.manager.clone(), Arc::new(consumer)))))
     }
 
     fn manager(&self) -> &dyn QueueManager {

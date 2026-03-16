@@ -10,9 +10,7 @@ async fn test_bulkhead_config_new() {
 
 #[tokio::test]
 async fn test_bulkhead_config_builder() {
-    let config = BulkheadConfig::default()
-        .max_concurrent_calls(50)
-        .max_wait_duration(Duration::from_secs(30));
+    let config = BulkheadConfig::default().max_concurrent_calls(50).max_wait_duration(Duration::from_secs(30));
 
     assert_eq!(config.max_concurrent_calls, 50);
     assert_eq!(config.max_wait_duration, Duration::from_secs(30));

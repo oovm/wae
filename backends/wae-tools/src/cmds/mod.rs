@@ -1,20 +1,17 @@
 //! 命令模块
-//! 
+//!
 //! 包含所有 WAE Tools 的命令定义。
 
-pub mod migrate;
-pub mod new;
 pub mod dev;
 pub mod generate;
+pub mod migrate;
+pub mod new;
 pub mod pull;
 pub mod push;
 
-use crate::migrate::MigrateCommand;
-use crate::new::NewCommand;
-use crate::dev::DevCommand;
-use crate::generate::GenerateCommand;
-use crate::pull::PullCommand;
-use crate::push::PushCommand;
+use crate::{
+    dev::DevCommand, generate::GenerateCommand, migrate::MigrateCommand, new::NewCommand, pull::PullCommand, push::PushCommand,
+};
 use wae_types::WaeResult;
 
 #[derive(clap::Subcommand)]
@@ -38,9 +35,7 @@ pub enum Commands {
 }
 
 // 共享参数
-pub struct Arguements {
-
-}
+pub struct Arguements {}
 
 impl Commands {
     pub async fn run(&self, _args: &Arguements) -> WaeResult<()> {

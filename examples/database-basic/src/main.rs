@@ -36,18 +36,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     ];
     let products = vec![
-        Product {
-            id: "prod-001".to_string(),
-            name: "笔记本电脑".to_string(),
-            price: 5999.0,
-            stock: 50,
-        },
-        Product {
-            id: "prod-002".to_string(),
-            name: "无线鼠标".to_string(),
-            price: 99.0,
-            stock: 200,
-        },
+        Product { id: "prod-001".to_string(), name: "笔记本电脑".to_string(), price: 5999.0, stock: 50 },
+        Product { id: "prod-002".to_string(), name: "无线鼠标".to_string(), price: 99.0, stock: 200 },
     ];
     println!("   模拟数据库初始化完成\n");
 
@@ -94,10 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("6. 查询所有产品:");
     println!("   找到 {} 个产品:", products.len());
     for product in &products {
-        println!(
-            "   - {}: ¥{} (库存: {})",
-            product.name, product.price, product.stock
-        );
+        println!("   - {}: ¥{} (库存: {})", product.name, product.price, product.stock);
     }
     println!();
 
@@ -105,12 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let delete_id = "user-002";
     let initial_count = users.len();
     users.retain(|u| u.id != delete_id);
-    println!(
-        "   删除用户 ID: {} (删除前: {}, 删除后: {})",
-        delete_id,
-        initial_count,
-        users.len()
-    );
+    println!("   删除用户 ID: {} (删除前: {}, 删除后: {})", delete_id, initial_count, users.len());
     println!();
 
     println!("=== 示例总结 ===");

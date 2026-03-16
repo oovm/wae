@@ -1,7 +1,7 @@
 //! WAE MCP Server - 使用 oak-mcp 实现的标准 Model Context Protocol 服务器
 
+use oak_lsp::LanguageService;
 use oak_mcp::{McpServer, NoSemanticSearch};
-use oak_lsp::{LanguageService};
 use oak_vfs::{MemoryVfs, Vfs};
 use std::sync::Arc;
 
@@ -85,7 +85,12 @@ impl LanguageService for WaeLanguageService {
         Box::pin(std::future::ready(Vec::new()))
     }
 
-    fn range_formatting(&self, _uri: &str, _range: oak_core::Range, _options: oak_lsp::types::FormattingOptions) -> oak_lsp::service::TextEditsFuture {
+    fn range_formatting(
+        &self,
+        _uri: &str,
+        _range: oak_core::Range,
+        _options: oak_lsp::types::FormattingOptions,
+    ) -> oak_lsp::service::TextEditsFuture {
         Box::pin(std::future::ready(Vec::new()))
     }
 
@@ -107,13 +112,13 @@ async fn main() {
     let vfs = Arc::new(MemoryVfs::default());
     let service = WaeLanguageService { vfs };
     let mcp_server = McpServer::new(service);
-    
+
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
-    
+
     let reader = tokio::io::BufReader::new(stdin);
     let writer = tokio::io::BufWriter::new(stdout);
-    
+
     if let Err(e) = mcp_server.run(reader, writer).await {
         eprintln!("Error: {}", e);
         std::process::exit(1);

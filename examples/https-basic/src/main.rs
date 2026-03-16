@@ -1,9 +1,5 @@
 use serde::{Deserialize, Serialize};
-use wae_https::{
-    router::RouterBuilder,
-    response::JsonResponse,
-    HttpsServerBuilder,
-};
+use wae_https::{HttpsServerBuilder, response::JsonResponse, router::RouterBuilder};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct User {
@@ -46,47 +42,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     router = router.get("/users", || async {
         println!("收到获取用户列表请求");
         let users = vec![
-            User {
-                id: Some(1),
-                name: "张三".to_string(),
-                email: "zhangsan@example.com".to_string(),
-            },
-            User {
-                id: Some(2),
-                name: "李四".to_string(),
-                email: "lisi@example.com".to_string(),
-            },
+            User { id: Some(1), name: "张三".to_string(), email: "zhangsan@example.com".to_string() },
+            User { id: Some(2), name: "李四".to_string(), email: "lisi@example.com".to_string() },
         ];
         JsonResponse::success(users)
     });
 
     router = router.get("/users/:id", || async {
         println!("收到获取用户详情请求");
-        let user = User {
-            id: Some(1),
-            name: "张三".to_string(),
-            email: "zhangsan@example.com".to_string(),
-        };
+        let user = User { id: Some(1), name: "张三".to_string(), email: "zhangsan@example.com".to_string() };
         JsonResponse::success(user)
     });
 
     router = router.post("/users", || async {
         println!("收到创建用户请求");
-        let user = User {
-            id: Some(3),
-            name: "新用户".to_string(),
-            email: "newuser@example.com".to_string(),
-        };
+        let user = User { id: Some(3), name: "新用户".to_string(), email: "newuser@example.com".to_string() };
         JsonResponse::success(user)
     });
 
     router = router.put("/users/:id", || async {
         println!("收到更新用户请求");
-        let user = User {
-            id: Some(1),
-            name: "张三（已更新）".to_string(),
-            email: "zhangsan_updated@example.com".to_string(),
-        };
+        let user =
+            User { id: Some(1), name: "张三（已更新）".to_string(), email: "zhangsan_updated@example.com".to_string() };
         JsonResponse::success(user)
     });
 
@@ -110,11 +87,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("服务器将在 http://127.0.0.1:3000 启动");
     println!();
 
-    let server = HttpsServerBuilder::new()
-        .addr("127.0.0.1:3000".parse()?)
-        .service_name("wae-https-basic")
-        .router(router)
-        .build();
+    let server =
+        HttpsServerBuilder::new().addr("127.0.0.1:3000".parse()?).service_name("wae-https-basic").router(router).build();
 
     println!("=== 示例说明 ===");
     println!("注意：本示例演示了路由配置和 API 响应格式化");

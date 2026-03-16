@@ -74,7 +74,7 @@ fn test_base64url_roundtrip() {
 #[test]
 fn test_base64_invalid_input() {
     let invalid_inputs = vec!["invalid!", "SGVsbG8=!", "SGVsbG8==", "SGVsbG8"];
-    
+
     for input in invalid_inputs {
         let result = base64_decode(input);
         if input != "SGVsbG8==" && input != "SGVsbG8" {

@@ -1,8 +1,8 @@
 #![doc = include_str!("readme.md")]
 
 use http::{Method, Uri, Version, header::HeaderMap};
-use std::fmt;
 use serde::de::DeserializeOwned;
+use std::fmt;
 
 /// 请求上下文
 ///
@@ -24,13 +24,7 @@ pub struct RequestParts {
 impl RequestParts {
     /// 创建新的请求上下文
     pub fn new(method: Method, uri: Uri, version: Version, headers: HeaderMap) -> Self {
-        Self {
-            method,
-            uri,
-            version,
-            headers,
-            path_params: Vec::new(),
-        }
+        Self { method, uri, version, headers, path_params: Vec::new() }
     }
 }
 
@@ -145,7 +139,8 @@ where
             T::from_str(value)
                 .map(Path)
                 .map_err(|e| ExtractorError::PathRejection(format!("Failed to parse path parameter: {}", e)))
-        } else {
+        }
+        else {
             Err(ExtractorError::PathRejection("No path parameters found".to_string()))
         }
     }

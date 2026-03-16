@@ -39,7 +39,7 @@ struct MockAuthService {
 impl MockAuthService {
     fn new() -> Self {
         let mut users = HashMap::new();
-        
+
         users.insert(
             "admin".to_string(),
             User {
@@ -50,7 +50,7 @@ impl MockAuthService {
                 roles: vec!["admin".to_string(), "user".to_string()],
             },
         );
-        
+
         users.insert(
             "user".to_string(),
             User {
@@ -61,40 +61,33 @@ impl MockAuthService {
                 roles: vec!["user".to_string()],
             },
         );
-        
-        Self {
-            users,
-            tokens: HashMap::new(),
-        }
+
+        Self { users, tokens: HashMap::new() }
     }
 
     fn login(&mut self, request: LoginRequest) -> Option<AuthToken> {
         let user = self.users.get(&request.username)?;
-        
+
         let is_valid = match request.username.as_str() {
             "admin" => request.password == "admin123",
             "user" => request.password == "user123",
             _ => false,
         };
-        
+
         if !is_valid {
             return None;
         }
-        
+
         let token = format!("token_{}_{}", user.id, chrono::Utc::now().timestamp());
         self.tokens.insert(token.clone(), user.id.clone());
-        
-        Some(AuthToken {
-            access_token: token,
-            token_type: "Bearer".to_string(),
-            expires_in: 3600,
-        })
+
+        Some(AuthToken { access_token: token, token_type: "Bearer".to_string(), expires_in: 3600 })
     }
 
     fn validate_token(&self, token: &str) -> Option<UserProfile> {
         let user_id = self.tokens.get(token)?;
         let user = self.users.values().find(|u| u.id == *user_id)?;
-        
+
         Some(UserProfile {
             id: user.id.clone(),
             username: user.username.clone(),
@@ -126,16 +119,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   认证服务初始化完成\n");
 
     println!("2. 用户登录 (admin):");
-    let admin_login = LoginRequest {
-        username: "admin".to_string(),
-        password: "admin123".to_string(),
-    };
+    let admin_login = LoginRequest { username: "admin".to_string(), password: "admin123".to_string() };
     if let Some(token) = auth_service.login(admin_login) {
         println!("   登录成功!");
         println!("   Access Token: {}", token.access_token);
         println!("   Token Type: {}", token.token_type);
         println!("   Expires In: {} seconds", token.expires_in);
-        
+
         let admin_token = token.access_token.clone();
         println!();
 
@@ -158,10 +148,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     println!("5. 用户登录 (普通用户):");
-    let user_login = LoginRequest {
-        username: "user".to_string(),
-        password: "user123".to_string(),
-    };
+    let user_login = LoginRequest { username: "user".to_string(), password: "user123".to_string() };
     if let Some(token) = auth_service.login(user_login) {
         println!("   登录成功!");
         let user_token = token.access_token.clone();
@@ -183,10 +170,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     println!("8. 测试错误密码:");
-    let wrong_login = LoginRequest {
-        username: "admin".to_string(),
-        password: "wrongpassword".to_string(),
-    };
+    let wrong_login = LoginRequest { username: "admin".to_string(), password: "wrongpassword".to_string() };
     if auth_service.login(wrong_login).is_none() {
         println!("   登录失败 (密码错误) - 预期行为");
     }
