@@ -35,3 +35,15 @@ database-mysql = ["wae-database/mysql"]
 [dev-dependencies]
 wae-database = { workspace = true, features = ["turso"] }
 wae-tools = { workspace = true, features = ["database-turso"] }
+
+[[bin]]
+name = "wae"
+path = "bin/wae.rs"
+
+[[bin]]
+name = "wae-lsp"
+path = "bin/wae-lsp.rs"
+
+[[bin]]
+name = "wae-mcp"
+path = "bin/wae-mcp.rs"
