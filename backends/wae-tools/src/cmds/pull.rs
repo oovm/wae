@@ -115,8 +115,8 @@ impl PullCommand {
                     column_def.push_str(" auto_increment");
                 }
                 
-                if !column.nullable {
-                    column_def.push_str(" not null");
+                if column.nullable {
+                    column_def.push_str(" T");
                 }
                 
                 if column.unique {
