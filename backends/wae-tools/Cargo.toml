@@ -25,18 +25,15 @@ notify = { workspace = true }
 notify-debouncer-mini = { workspace = true }
 figment = { workspace = true }
 # LSP 依赖
-tower-lsp = "0.17.0"
-tower-lsp-types = "0.17.0"
-tokio-stream = "0.1.14"
-# MCP 依赖
-anyhow = "1.0.86"
-url = "2.5.0"
-reqwest = { version = "0.11.28", features = ["json"] }
+oak-lsp = { path = "../../../oaks/projects/oak-lsp" }
+oak-mcp = { path = "../../../oaks/projects/oak-mcp" }
+oak-core = { path = "../../../oaks/projects/oak-core" }
+oak-vfs = { path = "../../../oaks/projects/oak-vfs" }
+oak-semantic-search = { path = "../../../oaks/projects/oak-semantic-search" }
 # YYKV we-trust gateway 依赖
 yyds-gateway = { workspace = true }
 # Oak RBQ parser 依赖
 oak-rbq = { workspace = true }
-oak-core = { workspace = true }
 
 [features]
 default = []

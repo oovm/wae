@@ -1,80 +1,110 @@
-//! WAE LSP Server - 标准 Language Server Protocol 实现
+//! WAE LSP Server - 使用 oak-lsp 实现的标准 Language Server Protocol 服务器
 
-use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::*
-use tower_lsp::{Client, LanguageServer, LspService, Server};
+use oak_lsp::{LspServer, LanguageService};
+use oak_vfs::{MemoryVfs, Vfs};
+use std::sync::Arc;
 
-#[derive(Debug)]
-struct WaeLanguageServer {
-    client: Client,
+/// WAE 语言服务实现
+struct WaeLanguageService {
+    vfs: Arc<MemoryVfs>,
 }
 
-#[tower_lsp::async_trait]
-impl LanguageServer for WaeLanguageServer {
-    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
-        Ok(InitializeResult {
-            capabilities: ServerCapabilities {
-                text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::INCREMENTAL)),
-                hover_provider: Some(HoverProviderCapability::Simple(true)),
-                completion_provider: Some(CompletionOptions {
-                    resolve_provider: Some(false),
-                    trigger_characters: Some(vec!["~".to_string(), ".".to_string()]),
-                    ..Default::default()
-                }),
-                definition_provider: Some(OneOf::Left(true)),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+impl LanguageService for WaeLanguageService {
+    type Vfs = MemoryVfs;
+
+    fn vfs(&self) -> Arc<Self::Vfs> {
+        self.vfs.clone()
     }
 
-    async fn initialized(&self, _: InitializedParams) {
-        self.client
-            .log_message(MessageType::INFO, "WAE LSP Server initialized")
-            .await;
-    }
-
-    async fn shutdown(&self) -> Result<()> {
-        Ok(())
-    }
-
-    async fn hover(&self, _: HoverParams) -> Result<Option<Hover>> {
-        Ok(Some(Hover {
-            contents: HoverContents::Markup(MarkupContent {
-                kind: MarkupKind::Markdown,
-                value: "# WAE Language Server\n\nThis is a standard LSP server implementation for WAE files.".to_string(),
-            }),
+    fn hover(&self, uri: &str, range: oak_core::Range) -> oak_lsp::service::HoverFuture {
+        let response = oak_lsp::types::Hover {
+            contents: "# WAE Language Server\n\nThis is a standard LSP server implementation for WAE files.".to_string(),
             range: None,
-        }))
+        };
+        Box::pin(std::future::ready(Some(response)))
     }
 
-    async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
-        Ok(Some(CompletionResponse::Array(vec![
-            CompletionItem {
+    fn definition(&self, _uri: &str, _range: oak_core::Range) -> oak_lsp::service::LocationListFuture {
+        Box::pin(std::future::ready(Vec::new()))
+    }
+
+    fn references(&self, _uri: &str, _range: oak_core::Range) -> oak_lsp::service::LocationListFuture {
+        Box::pin(std::future::ready(Vec::new()))
+    }
+
+    fn diagnostics(&self, _uri: &str) -> oak_lsp::service::DiagnosticsFuture {
+        Box::pin(std::future::ready(Vec::new()))
+    }
+
+    fn completion(&self, _uri: &str, _offset: usize) -> oak_lsp::service::CompletionFuture {
+        let items = vec![
+            oak_lsp::types::CompletionItem {
                 label: "model".to_string(),
-                kind: Some(CompletionItemKind::CLASS),
+                kind: Some(oak_lsp::types::CompletionItemKind::CLASS),
                 detail: Some("Define a data model".to_string()),
-                ..Default::default()
+                documentation: None,
+                sort_text: None,
+                filter_text: None,
+                insert_text: Some("model".to_string()),
+                insert_text_format: None,
+                text_edit: None,
+                additional_text_edits: None,
+                commit_characters: None,
+                command: None,
+                data: None,
             },
-            CompletionItem {
+            oak_lsp::types::CompletionItem {
                 label: "field".to_string(),
-                kind: Some(CompletionItemKind::FIELD),
+                kind: Some(oak_lsp::types::CompletionItemKind::FIELD),
                 detail: Some("Define a field in a model".to_string()),
-                ..Default::default()
+                documentation: None,
+                sort_text: None,
+                filter_text: None,
+                insert_text: Some("field".to_string()),
+                insert_text_format: None,
+                text_edit: None,
+                additional_text_edits: None,
+                commit_characters: None,
+                command: None,
+                data: None,
             },
-        ])))
+        ];
+        Box::pin(std::future::ready(items))
     }
 
-    async fn definition(&self, _: DefinitionParams) -> Result<Option<GotoDefinitionResponse>> {
-        Ok(None)
+    fn document_symbols(&self, _uri: &str) -> oak_lsp::service::DocumentSymbolsFuture {
+        Box::pin(std::future::ready(Vec::new()))
+    }
+
+    fn workspace_symbols(&self, _query: &str) -> oak_lsp::service::WorkspaceSymbolsFuture {
+        Box::pin(std::future::ready(Vec::new()))
+    }
+
+    fn formatting(&self, _uri: &str, _options: oak_lsp::types::FormattingOptions) -> oak_lsp::service::TextEditsFuture {
+        Box::pin(std::future::ready(Vec::new()))
+    }
+
+    fn range_formatting(&self, _uri: &str, _range: oak_core::Range, _options: oak_lsp::types::FormattingOptions) -> oak_lsp::service::TextEditsFuture {
+        Box::pin(std::future::ready(Vec::new()))
+    }
+
+    fn on_change(&self, _uri: &str, _content: &str) {
+        // 处理文件变化
+    }
+
+    fn on_open(&self, _uri: &str, _content: &str) {
+        // 处理文件打开
+    }
+
+    fn on_close(&self, _uri: &str) {
+        // 处理文件关闭
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let stdin = tokio::io::stdin();
-    let stdout = tokio::io::stdout();
-
-    let (service, socket) = LspService::new(|client| WaeLanguageServer { client });
-    Server::new(stdin, stdout, socket).serve(service).await;
+    let vfs = Arc::new(MemoryVfs::default());
+    let service = WaeLanguageService { vfs };
+    let server = LspServer::new(service);
+    server.run().await;
 }

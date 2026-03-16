@@ -3709,11 +3709,93 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak-folding"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+ "serde",
+]
+
+[[package]]
+name = "oak-hover"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+ "serde",
+]
+
+[[package]]
+name = "oak-lsp"
+version = "0.0.6"
+dependencies = [
+ "dashmap",
+ "futures",
+ "oak-core",
+ "oak-folding",
+ "oak-navigation",
+ "oak-resolver",
+ "oak-symbols",
+ "oak-vfs",
+ "serde",
+ "serde_json",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "oak-mcp"
+version = "0.0.6"
+dependencies = [
+ "futures",
+ "oak-core",
+ "oak-hover",
+ "oak-lsp",
+ "oak-navigation",
+ "oak-semantic-search",
+ "oak-symbols",
+ "oak-vfs",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "oak-navigation"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+]
+
+[[package]]
 name = "oak-rbq"
 version = "0.0.6"
 dependencies = [
  "oak-core",
  "serde",
+]
+
+[[package]]
+name = "oak-resolver"
+version = "0.0.6"
+dependencies = [
+ "dashmap",
+ "oak-core",
+ "oak-symbols",
+ "oak-vfs",
+ "serde",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "oak-semantic-search"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
@@ -3723,6 +3805,25 @@ dependencies = [
  "oak-core",
  "serde",
  "tracing",
+]
+
+[[package]]
+name = "oak-symbols"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+ "serde",
+]
+
+[[package]]
+name = "oak-vfs"
+version = "0.0.6"
+dependencies = [
+ "notify",
+ "oak-core",
+ "serde",
+ "url",
+ "walkdir",
 ]
 
 [[package]]
@@ -7032,6 +7133,7 @@ dependencies = [
  "idna",
  "percent-encoding",
  "serde",
+ "serde_derive",
 ]
 
 [[package]]
@@ -7533,7 +7635,11 @@ dependencies = [
  "notify",
  "notify-debouncer-mini",
  "oak-core",
+ "oak-lsp",
+ "oak-mcp",
  "oak-rbq",
+ "oak-semantic-search",
+ "oak-vfs",
  "serde",
  "serde_json",
  "serde_yaml",
