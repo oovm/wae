@@ -5,7 +5,8 @@ use crate::{
     error::{CryptoError, CryptoResult},
     hmac::{HmacAlgorithm, hmac_sign},
 };
-use rand::{Rng, RngCore};
+use rand::Rng;
+use rand_core::RngCore;
 
 /// TOTP 算法
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
