@@ -5,7 +5,7 @@
 use clap::Parser;
 
 /// 迁移命令
-#[derive(Parser, Debug)]
+#[derive(clap::Subcommand, Debug)]
 pub enum MigrateCommand {
     /// 运行所有待迁移
     Up {

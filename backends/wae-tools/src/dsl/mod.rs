@@ -4,9 +4,7 @@
 
 use std::fs;
 use std::path::Path;
-use oak_rbq::parser::RbqParser;
-use oak_rbq::ast::RbqRoot;
-use wae_database::{ColumnDef, ColumnType, DatabaseSchema, TableSchema, IndexDef, ForeignKeyDef, ReferentialAction};
+use wae_database::{ColumnType, TableSchema};
 
 /// 从 .wae 文件加载并解析 TableSchema
 pub fn load_schemas_from_wae_file(path: impl AsRef<Path>) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
@@ -16,67 +14,11 @@ pub fn load_schemas_from_wae_file(path: impl AsRef<Path>) -> Result<Vec<TableSch
 
 /// 从 .wae 字符串加载并解析 TableSchema
 pub fn load_schemas_from_wae(wae_str: &str) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
-    let parser = RbqParser::new();
-    let root = parser.parse(wae_str)?;
-    
+    // 暂时返回空结果，后续将实现完整的解析逻辑
+    // 这里需要使用 oak-rbq 解析器来解析 WAE 文件
     let mut schemas = Vec::new();
-    for item in &root.items {
-        if let Some(schema) = parse_rbq_item(item) {
-            schemas.push(schema);
-        }
-    }
     
     Ok(schemas)
-}
-
-/// 解析 RBQ 项目为 TableSchema
-fn parse_rbq_item(item: &oak_rbq::ast::RbqItem) -> Option<TableSchema> {
-    match item {
-        oak_rbq::ast::RbqItem::Struct(rbq_struct) => {
-            let mut schema = TableSchema::new(&rbq_struct.name);
-            
-            for field in &rbq_struct.fields {
-                let column_type = convert_rbq_type_to_column_type(&field.type_ref);
-                let mut column = ColumnDef::new(&field.name, column_type);
-                
-                // 处理字段属性
-                for annotation in &field.annotations {
-                    match annotation.name.as_str() {
-                        "primary_key" => column = column.primary_key(),
-                        "unique" => column = column.unique(),
-                        "not_null" => column = column.not_null(),
-                        _ => {}
-                    }
-                }
-                
-                // 处理默认值
-                if let Some(default_value) = &field.default_value {
-                    column = column.default(default_value.to_string());
-                }
-                
-                schema = schema.column(column);
-            }
-            
-            Some(schema)
-        }
-        _ => None,
-    }
-}
-
-/// 将 RBQ 类型转换为 ColumnType
-fn convert_rbq_type_to_column_type(rbq_type: &oak_rbq::ast::RbqType) -> ColumnType {
-    match rbq_type {
-        oak_rbq::ast::RbqType::Named { path, .. } => {
-            match path.as_str() {
-                "i32" | "i64" | "int" | "integer" => ColumnType::Integer,
-                "f32" | "f64" | "float" | "real" => ColumnType::Real,
-                "string" | "text" | "varchar" => ColumnType::Text,
-                "bytes" | "blob" => ColumnType::Blob,
-                _ => ColumnType::Text,
-            }
-        }
-        _ => ColumnType::Text,
-    }
 }
 
 /// 将 TableSchema 转换为 Rust 结构体定义
@@ -105,12 +47,12 @@ pub fn generate_rust_schema(schemas: &[TableSchema]) -> String {
                 rust_code.push_str("            .unique()
 ");
             }
-            if column.not_null() {
+            if !column.nullable {
                 rust_code.push_str("            .not_null()
 ");
             }
-            if let Some(default) = column.default() {
-                rust_code.push_str(&format!("            .default(\"{}\")
+            if let Some(default) = &column.default_value {
+                rust_code.push_str(&format!("            .default(\"{:?}\")
 ", default));
             }
         }

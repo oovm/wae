@@ -24,7 +24,7 @@
   - `human-judgement` TR-2.2: 模块间依赖关系清晰合理
 - **Notes**: 保持文档注释的完整性
 
-## [/] Task 3: 分析 wae-schema/src/lib.rs 的结构
+## [x] Task 3: 分析 wae-schema/src/lib.rs 的结构
 - **Priority**: P0
 - **Depends On**: None
 - **Description**:
@@ -35,7 +35,7 @@
   - `human-judgement` TR-3.1: 分析报告包含文件结构分析和拆分方案
 - **Notes**: 需考虑模块间的依赖关系
 
-## [ ] Task 4: 拆分 wae-schema/src/lib.rs
+## [/] Task 4: 拆分 wae-schema/src/lib.rs
 - **Priority**: P0
 - **Depends On**: Task 3
 - **Description**:

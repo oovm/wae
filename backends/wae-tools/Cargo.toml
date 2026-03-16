@@ -15,6 +15,7 @@ wae-types = { workspace = true }
 wae-database = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 tokio = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
@@ -27,6 +28,7 @@ figment = { workspace = true }
 yyds-gateway = { path = "../../../yykv/servers/yyds-gateway", version = "0.0.0" }
 # Oak RBQ parser 依赖
 oak-rbq = { path = "../../../oaks/examples/oak-rbq" }
+oak-core = { path = "../../../oaks/projects/oak-core" }
 
 [features]
 default = []
