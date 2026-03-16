@@ -4,9 +4,9 @@
 
 use wae_types::Value;
 
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 use crate::types::from_wae_value;
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 use turso::Value as TursoValue;
 
 #[cfg(feature = "mysql")]
@@ -172,7 +172,7 @@ impl Condition {
         Condition::Raw { sql: sql.into(), params }
     }
 
-    #[cfg(feature = "turso")]
+    #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用 turso::Value)
     pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
         match self {

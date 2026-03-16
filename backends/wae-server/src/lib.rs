@@ -3,7 +3,7 @@
 
 pub use wae_ai as ai;
 pub use wae_config as config;
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+#[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
 pub use wae_database as database;
 pub use wae_distributed as distributed;
 pub use wae_effect as effect;

@@ -224,7 +224,7 @@ impl PostgresDatabaseService {
     /// 创建 PostgreSQL 数据库服务实例
     pub async fn new(config: &DatabaseConfig) -> DatabaseResult<Self> {
         match config {
-            #[cfg(feature = "turso")]
+            #[cfg(feature = "limbo")]
             DatabaseConfig::Turso { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use DatabaseService for Turso".to_string(),
             })),

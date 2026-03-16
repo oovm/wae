@@ -1,25 +1,25 @@
 #![warn(missing_docs)]
 #![doc = include_str!("readme.md")]
 
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 mod connection;
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 mod extract;
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 mod middleware;
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 mod orm;
 mod schema;
-#[cfg(feature = "turso")]
+#[cfg(any(feature = "limbo", feature = "mysql"))]
 mod types;
 
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 pub use connection::{
     DatabaseBackend, DatabaseConfig, DatabaseConnection, DatabaseError, DatabaseResult, DatabaseRow, DatabaseRows,
     DatabaseStatement, FromDatabaseValue,
 };
-#[cfg(feature = "turso")]
-pub use connection::{DatabaseService, TursoConnection};
+#[cfg(feature = "limbo")]
+pub use connection::{DatabaseService, LimboConnection};
 #[cfg(feature = "mysql")]
 pub use connection::{MySqlConnection, MySqlDatabaseService};
 #[cfg(feature = "postgres")]
@@ -28,21 +28,24 @@ pub use connection::{PostgresConnection, PostgresDatabaseService};
 pub use extract::MySqlConnectionExtractor;
 #[cfg(feature = "postgres")]
 pub use extract::PostgresConnectionExtractor;
-#[cfg(feature = "turso")]
-pub use extract::TursoConnectionExtractor;
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(feature = "limbo")]
+pub use extract::LimboConnectionExtractor;
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 pub use extract::{DatabaseConnectionExtractor, DatabaseRejection};
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 pub use middleware::{TransactionConfig, TransactionLayer, TransactionMiddlewareBuilder, TransactionService};
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 pub use orm::DbRepository;
 #[cfg(feature = "mysql")]
 pub use orm::MySqlDbRepository;
-#[cfg(any(feature = "turso", feature = "postgres", feature = "mysql"))]
+#[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 pub use orm::{
-    BelongsTo, Condition, DeleteBuilder, Entity, FromRow, HasMany, InsertBuilder, Join, JoinType, ManyToMany, QueryBuilder,
-    Repository, SelectBuilder, ToRow, UpdateBuilder,
+    BelongsTo, Condition, DeleteBuilder, Entity, FromRow, HasMany, Join, JoinType, ManyToMany, QueryBuilder,
+    SelectBuilder, ToRow, UpdateBuilder,
 };
+
+#[cfg(any(feature = "limbo", feature = "postgres"))]
+pub use orm::Repository;
 pub use schema::{
     ColumnDef, ColumnType, DatabaseLinkConfig, DatabaseSchema, DatabaseType, ForeignKeyDef, IndexDef, ReferentialAction,
     SchemaConfig, TableSchema, clear_schemas, col, create_schema_config_from_registered, export_schema_config_to_yaml,

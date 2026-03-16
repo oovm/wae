@@ -34,7 +34,7 @@ wae-observability = { workspace = true, optional = true }
 
 [features]
 default = []
-database-turso = ["wae-database/turso"]
+database-limbo = ["wae-database/limbo"]
 database-postgres = ["wae-database/postgres"]
 database-mysql = ["wae-database/mysql"]
 tools = ["wae-tools"]

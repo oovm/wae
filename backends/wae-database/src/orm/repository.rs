@@ -10,10 +10,12 @@ use super::{
 use crate::{DatabaseResult, connection::DatabaseConnection};
 use std::marker::PhantomData;
 
-#[cfg(feature = "turso")]
-use crate::{DatabaseError, connection::DatabaseRows};
-#[cfg(feature = "turso")]
-use turso::Value as TursoValue;
+#[cfg(feature = "limbo")]
+use crate::DatabaseError;
+#[cfg(any(feature = "limbo", feature = "mysql"))]
+use crate::connection::DatabaseRows;
+#[cfg(feature = "limbo")]
+use limbo::Value as LimboValue;
 
 /// 仓储 trait - 提供 CRUD 操作
 #[allow(async_fn_in_trait)]
@@ -56,14 +58,14 @@ pub trait Repository<E: Entity + FromRow>: Send + Sync {
     async fn exists(&self, id: E::Id) -> DatabaseResult<bool>;
 }
 
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 /// 基于数据库连接的仓储实现
 pub struct DbRepository<E: Entity + FromRow> {
     conn: Box<dyn DatabaseConnection>,
     _marker: PhantomData<E>,
 }
 
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 impl<E: Entity + FromRow> DbRepository<E> {
     /// 创建仓储
     pub fn new(conn: Box<dyn DatabaseConnection>) -> Self {
@@ -91,8 +93,8 @@ impl<E: Entity + FromRow> DbRepository<E> {
     }
 
     /// 执行查询并解析结果
-    async fn query_and_parse(&self, sql: &str, params: Vec<TursoValue>) -> DatabaseResult<Vec<E>> {
-        let rows = self.conn.query_with_turso(sql, params).await?;
+    async fn query_and_parse(&self, sql: &str, params: Vec<LimboValue>) -> DatabaseResult<Vec<E>> {
+        let rows = self.conn.query_with_limbo(sql, params).await?;
         self.parse_rows(rows).await
     }
 
@@ -106,7 +108,7 @@ impl<E: Entity + FromRow> DbRepository<E> {
     }
 }
 
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 impl<E: Entity + FromRow> Repository<E> for DbRepository<E> {
     async fn find_by_id(&self, id: E::Id) -> DatabaseResult<Option<E>> {
         let condition = Condition::eq(E::id_column(), id);
@@ -114,17 +116,17 @@ impl<E: Entity + FromRow> Repository<E> for DbRepository<E> {
     }
 
     async fn find_all(&self) -> DatabaseResult<Vec<E>> {
-        let (sql, params) = QueryBuilder::select::<E>().build_turso();
+        let (sql, params) = QueryBuilder::select::<E>().build_limbo();
         self.query_and_parse(&sql, params).await
     }
 
     async fn find_by(&self, condition: Condition) -> DatabaseResult<Vec<E>> {
-        let (sql, params) = QueryBuilder::select::<E>().where_(condition).build_turso();
+        let (sql, params) = QueryBuilder::select::<E>().where_(condition).build_limbo();
         self.query_and_parse(&sql, params).await
     }
 
     async fn find_one(&self, condition: Condition) -> DatabaseResult<Option<E>> {
-        let (sql, params) = QueryBuilder::select::<E>().where_(condition).limit(1).build_turso();
+        let (sql, params) = QueryBuilder::select::<E>().where_(condition).limit(1).build_limbo();
         let mut entities = self.query_and_parse(&sql, params).await?;
         Ok(entities.pop())
     }
@@ -133,8 +135,8 @@ impl<E: Entity + FromRow> Repository<E> for DbRepository<E> {
     where
         E: ToRow,
     {
-        let (sql, params) = InsertBuilder::<E>::from_entity(entity).build_turso();
-        self.conn.execute_with_turso(&sql, params).await?;
+        let (sql, params) = InsertBuilder::<E>::from_entity(entity).build_limbo();
+        self.conn.execute_with_limbo(&sql, params).await?;
         let rows = self.conn.query("SELECT last_insert_rowid()").await?;
         let mut rows = rows;
         if let Some(row) = rows.next().await? {
@@ -150,8 +152,8 @@ impl<E: Entity + FromRow> Repository<E> for DbRepository<E> {
         E: ToRow,
     {
         let id = entity.id();
-        let (sql, params) = UpdateBuilder::<E>::from_entity(entity).where_id(id).build_turso();
-        self.conn.execute_with_turso(&sql, params).await
+        let (sql, params) = UpdateBuilder::<E>::from_entity(entity).where_id(id).build_limbo();
+        self.conn.execute_with_limbo(&sql, params).await
     }
 
     async fn delete_by_id(&self, id: E::Id) -> DatabaseResult<u64> {

@@ -5,6 +5,6 @@ edition = "2021"
 publish = false
 
 [dependencies]
-wae-database = { workspace = true, features = ["turso"] }
+wae-database = { workspace = true, features = ["limbo"] }
 tokio = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

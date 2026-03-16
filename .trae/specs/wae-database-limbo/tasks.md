@@ -41,21 +41,24 @@
   - `programmatic` TR-3.3: trait_impl.rs 中正确更新 DatabaseBackend 枚举
 - **Notes**: 确保所有导出和配置都与之前的 Turso 实现保持一致
 
-## [/] Task 4: 更新其他相关文件
+## [x] Task 4: 更新其他相关文件
 - **Priority**: P1
 - **Depends On**: Task 3
 - **Description**:
   - 更新 row.rs 文件，添加 Limbo 相关的实现
   - 更新 statement.rs 文件，添加 Limbo 相关的实现
   - 更新 types.rs 文件，添加 Limbo 相关的类型转换
+  - 更新 value_impl.rs 文件，添加 Limbo 相关的类型转换实现
+  - 更新 wae-server 模块，将 `database-turso` 替换为 `database-limbo`
 - **Acceptance Criteria Addressed**: AC-3
 - **Test Requirements**:
   - `programmatic` TR-4.1: row.rs 中正确实现 Limbo 相关的行处理
   - `programmatic` TR-4.2: statement.rs 中正确实现 Limbo 相关的语句处理
   - `programmatic` TR-4.3: types.rs 中正确实现 Limbo 相关的类型转换
+  - `programmatic` TR-4.4: value_impl.rs 中正确实现 Limbo 相关的类型转换
 - **Notes**: 确保所有相关文件都能正确处理 Limbo 的数据类型
 
-## [ ] Task 5: 运行测试验证实现
+## [x] Task 5: 运行测试验证实现
 - **Priority**: P0
 - **Depends On**: Task 4
 - **Description**:
@@ -68,7 +71,7 @@
   - `programmatic` TR-5.2: 整个项目的所有测试通过
 - **Notes**: 如果测试失败，需要分析原因并修复
 
-## [ ] Task 6: 清理和文档更新
+## [x] Task 6: 清理和文档更新
 - **Priority**: P2
 - **Depends On**: Task 5
 - **Description**:

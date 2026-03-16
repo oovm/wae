@@ -1,5 +1,5 @@
 //! Pull 命令模块
-//!
+//! 
 //! 提供从远程同步 WAE 文件的功能。
 
 use clap::Parser;
@@ -8,9 +8,9 @@ use std::{fs, path::Path};
 /// Pull 命令
 #[derive(Parser, Debug)]
 pub struct PullCommand {
-    /// 可选：远程仓库 URL
+    /// 数据库 URL
     #[clap(long, short)]
-    remote: Option<String>,
+    remote: String,
     /// 可选：目标目录
     #[clap(long, short, default_value = "schemas")]
     target: String,
@@ -21,9 +21,7 @@ impl PullCommand {
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("WAE DSL Pull");
         println!("{}", "=".repeat(60));
-        if let Some(remote_url) = &self.remote {
-            println!("Remote: {}", remote_url);
-        }
+        println!("Remote: {}", self.remote);
         println!("Target: {}", self.target);
         println!();
 
@@ -35,51 +33,25 @@ impl PullCommand {
         }
 
         // 从数据库 URL 中提取数据库名称
-        let db_name = if let Some(remote_url) = &self.remote {
-            if let Some(name) = Self::extract_db_name(remote_url) { name } else { "authentication".to_string() }
-        }
-        else {
-            "authentication".to_string()
-        };
+        let db_name = if let Some(name) = Self::extract_db_name(&self.remote) { name } else { "authentication".to_string() };
 
         // 生成 WAE 文件路径
         let wae_file_path = schemas_dir.join(format!("{}.wae", db_name));
 
-        // 这里应该实现从远程同步 WAE 文件的逻辑
+        // 实现从数据库提取 schema 的逻辑
+        println!("Extracting schema from database...");
+        println!("Would extract schema to: {}", wae_file_path.display());
+
+        // 这里应该实现真正的数据库连接和 schema 提取逻辑
         // 目前只是模拟实现
-        println!("Simulating pull from remote...");
-        println!("Would sync WAE files to: {}", wae_file_path.display());
-
-        // 自动生成 Rust table schema
-        println!("\nGenerating Rust table schemas...");
-
-        // 查找所有 WAE 文件并生成 Rust schema
-        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        {
-            println!("Looking for WAE files in: {}", schemas_dir.display());
-            let mut wae_files = Vec::new();
-            for entry in fs::read_dir(&schemas_dir)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path.is_file() && path.extension().map_or(false, |ext| ext == "wae") {
-                    wae_files.push(path);
-                }
-            }
-
-            if !wae_files.is_empty() {
-                println!("Found {} WAE files:", wae_files.len());
-                for file in &wae_files {
-                    println!("- {}", file.display());
-                }
-            }
-            else {
-                println!("No WAE files found");
-            }
-        }
-        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
-        {
-            println!("Error: Database features are not enabled. Please enable one of the database features.");
-        }
+        println!("Simulating schema extraction...");
+        
+        // 模拟生成 WAE 文件
+        let wae_content = format!("# WAE Schema for {}\n\ndatabase {} {{\n  // Tables will be generated here\n}}", db_name, db_name);
+        
+        // 写入 WAE 文件
+        fs::write(&wae_file_path, wae_content)?;
+        println!("Generated WAE file: {}", wae_file_path.display());
 
         println!("\nPull completed successfully!");
         Ok(())

@@ -129,41 +129,41 @@ impl DatabaseConnectionExtractor {
     }
 }
 
-#[cfg(feature = "turso")]
-/// Turso 数据库连接提取器
+#[cfg(feature = "limbo")]
+/// Limbo 数据库连接提取器
 ///
-/// 用于从 HTTP 请求的扩展中提取 Turso 数据库连接。
+/// 用于从 HTTP 请求的扩展中提取 Limbo 数据库连接。
 #[derive(Clone)]
-pub struct TursoConnectionExtractor {
-    connection: Arc<crate::connection::TursoConnection>,
+pub struct LimboConnectionExtractor {
+    connection: Arc<crate::connection::LimboConnection>,
 }
 
-#[cfg(feature = "turso")]
-impl fmt::Debug for TursoConnectionExtractor {
+#[cfg(feature = "limbo")]
+impl fmt::Debug for LimboConnectionExtractor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TursoConnectionExtractor").field("backend", &DatabaseBackend::Turso).finish()
+        f.debug_struct("LimboConnectionExtractor").field("backend", &DatabaseBackend::Limbo).finish()
     }
 }
 
-#[cfg(feature = "turso")]
-impl TursoConnectionExtractor {
-    /// 创建 Turso 连接提取器
-    pub fn new(connection: Arc<crate::connection::TursoConnection>) -> Self {
+#[cfg(feature = "limbo")]
+impl LimboConnectionExtractor {
+    /// 创建 Limbo 连接提取器
+    pub fn new(connection: Arc<crate::connection::LimboConnection>) -> Self {
         Self { connection }
     }
 
-    /// 从请求的扩展中提取 Turso 连接
+    /// 从请求的扩展中提取 Limbo 连接
     pub fn from_request<B>(request: &http::Request<B>) -> Result<Self, DatabaseRejection> {
         request
             .extensions()
-            .get::<Arc<crate::connection::TursoConnection>>()
+            .get::<Arc<crate::connection::LimboConnection>>()
             .cloned()
-            .map(|connection| TursoConnectionExtractor { connection })
-            .ok_or_else(|| DatabaseRejection::new(WaeError::internal("Turso connection not found in request extensions")))
+            .map(|connection| LimboConnectionExtractor { connection })
+            .ok_or_else(|| DatabaseRejection::new(WaeError::internal("Limbo connection not found in request extensions")))
     }
 
-    /// 获取内部 Turso 连接的引用
-    pub fn inner(&self) -> &crate::connection::TursoConnection {
+    /// 获取内部 Limbo 连接的引用
+    pub fn inner(&self) -> &crate::connection::LimboConnection {
         &*self.connection
     }
 
@@ -216,20 +216,20 @@ impl TursoConnectionExtractor {
         self.connection.rollback().await
     }
 
-    #[cfg(feature = "turso")]
-    /// 执行带参数的查询 (内部使用 turso::Value)
-    pub async fn query_with_turso(
+    #[cfg(feature = "limbo")]
+    /// 执行带参数的查询 (内部使用 limbo::Value)
+    pub async fn query_with_limbo(
         &self,
         sql: &str,
-        params: Vec<turso::Value>,
+        params: Vec<limbo::Value>,
     ) -> crate::connection::DatabaseResult<crate::connection::DatabaseRows> {
-        self.connection.query_with_turso(sql, params).await
+        self.connection.query_with_limbo(sql, params).await
     }
 
-    #[cfg(feature = "turso")]
-    /// 执行带参数的语句 (内部使用 turso::Value)
-    pub async fn execute_with_turso(&self, sql: &str, params: Vec<turso::Value>) -> crate::connection::DatabaseResult<u64> {
-        self.connection.execute_with_turso(sql, params).await
+    #[cfg(feature = "limbo")]
+    /// 执行带参数的语句 (内部使用 limbo::Value)
+    pub async fn execute_with_limbo(&self, sql: &str, params: Vec<limbo::Value>) -> crate::connection::DatabaseResult<u64> {
+        self.connection.execute_with_limbo(sql, params).await
     }
 }
 

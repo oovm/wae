@@ -37,13 +37,13 @@ oak-rbq = { workspace = true }
 
 [features]
 default = []
-database-turso = ["wae-database/turso"]
+database-limbo = ["wae-database/limbo"]
 database-postgres = ["wae-database/postgres"]
 database-mysql = ["wae-database/mysql"]
 
 [dev-dependencies]
-wae-database = { workspace = true, features = ["turso"] }
-wae-tools = { workspace = true, features = ["database-turso"] }
+wae-database = { workspace = true, features = ["limbo"] }
+wae-tools = { workspace = true, features = ["database-limbo"] }
 
 [[bin]]
 name = "wae"

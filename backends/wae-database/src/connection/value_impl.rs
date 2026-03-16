@@ -5,9 +5,9 @@ use wae_types::WaeError;
 
 /// 从数据库值转换的 trait
 pub trait FromDatabaseValue: Sized {
-    /// 从 Turso 数据库值转换
-    #[cfg(feature = "turso")]
-    fn from_turso_value(value: turso::Value) -> DatabaseResult<Self>;
+    /// 从 Limbo 数据库值转换
+    #[cfg(feature = "limbo")]
+    fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self>;
 
     /// 从 PostgreSQL 行获取值
     #[cfg(feature = "postgres")]
@@ -18,14 +18,14 @@ pub trait FromDatabaseValue: Sized {
     fn from_mysql_row(row: &mysql_async::Row, index: usize) -> DatabaseResult<Self>;
 }
 
-#[cfg(all(feature = "turso", not(feature = "postgres"), not(feature = "mysql")))]
+#[cfg(all(feature = "limbo", not(feature = "postgres"), not(feature = "mysql")))]
 mod database_value_impl {
     use super::*;
 
     macro_rules! impl_from_value {
         ($type:ty, $pattern:pat => $expr:expr) => {
             impl FromDatabaseValue for $type {
-                fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+                fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
                     match value {
                         $pattern => Ok($expr),
                         _ => Err(WaeError::invalid_format(stringify!($type), format!("{:?}", value))),
@@ -35,18 +35,18 @@ mod database_value_impl {
         };
     }
 
-    impl_from_value!(i64, turso::Value::Integer(i) => i);
-    impl_from_value!(i32, turso::Value::Integer(i) => i as i32);
-    impl_from_value!(i16, turso::Value::Integer(i) => i as i16);
-    impl_from_value!(u64, turso::Value::Integer(i) => i as u64);
-    impl_from_value!(u32, turso::Value::Integer(i) => i as u32);
-    impl_from_value!(Vec<u8>, turso::Value::Blob(b) => b);
+    impl_from_value!(i64, limbo::Value::Integer(i) => i);
+    impl_from_value!(i32, limbo::Value::Integer(i) => i as i32);
+    impl_from_value!(i16, limbo::Value::Integer(i) => i as i16);
+    impl_from_value!(u64, limbo::Value::Integer(i) => i as u64);
+    impl_from_value!(u32, limbo::Value::Integer(i) => i as u32);
+    impl_from_value!(Vec<u8>, limbo::Value::Blob(b) => b);
 
     impl FromDatabaseValue for f64 {
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Integer(i) => Ok(i as f64),
-                turso::Value::Text(s) => {
+                limbo::Value::Integer(i) => Ok(i as f64),
+                limbo::Value::Text(s) => {
                     s.parse().map_err(|_| WaeError::invalid_format("f64", format!("Cannot parse '{}' as float", s)))
                 }
                 _ => Err(WaeError::invalid_format("f64", format!("{:?}", value))),
@@ -55,35 +55,35 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for String {
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Text(s) => Ok(s),
-                turso::Value::Integer(i) => Ok(i.to_string()),
+                limbo::Value::Text(s) => Ok(s),
+                limbo::Value::Integer(i) => Ok(i.to_string()),
                 _ => Err(WaeError::invalid_format("String", format!("{:?}", value))),
             }
         }
     }
 
     impl FromDatabaseValue for bool {
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Integer(i) => Ok(i != 0),
+                limbo::Value::Integer(i) => Ok(i != 0),
                 _ => Err(WaeError::invalid_format("bool", format!("{:?}", value))),
             }
         }
     }
 
     impl<T: FromDatabaseValue> FromDatabaseValue for Option<T> {
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => T::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => T::from_limbo_value(v).map(Some),
             }
         }
     }
 }
 
-#[cfg(all(feature = "postgres", not(feature = "turso"), not(feature = "mysql")))]
+#[cfg(all(feature = "postgres", not(feature = "limbo"), not(feature = "mysql")))]
 mod database_value_impl {
     use super::*;
 
@@ -180,7 +180,7 @@ mod database_value_impl {
     }
 }
 
-#[cfg(all(feature = "mysql", not(feature = "turso"), not(feature = "postgres")))]
+#[cfg(all(feature = "mysql", not(feature = "limbo"), not(feature = "postgres")))]
 mod database_value_impl {
     use super::*;
     use mysql_async::prelude::FromValue;
@@ -240,10 +240,10 @@ mod database_value_impl {
 }
 
 #[cfg(any(
-    all(feature = "turso", feature = "postgres"),
-    all(feature = "turso", feature = "mysql"),
+    all(feature = "limbo", feature = "postgres"),
+    all(feature = "limbo", feature = "mysql"),
     all(feature = "postgres", feature = "mysql"),
-    all(feature = "turso", feature = "postgres", feature = "mysql")
+    all(feature = "limbo", feature = "postgres", feature = "mysql")
 ))]
 mod database_value_impl {
     use super::*;
@@ -251,11 +251,11 @@ mod database_value_impl {
     macro_rules! impl_from_value_multi {
         ($type:ty) => {
             impl FromDatabaseValue for $type {
-                #[cfg(feature = "turso")]
-                fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+                #[cfg(feature = "limbo")]
+                fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
                     match value {
-                        turso::Value::Integer(i) => Ok(i as $type),
-                        turso::Value::Text(s) => s.parse().map_err(|_| {
+                        limbo::Value::Integer(i) => Ok(i as $type),
+                        limbo::Value::Text(s) => s.parse().map_err(|_| {
                             WaeError::invalid_format(stringify!($type), format!("Cannot parse as {}", stringify!($type)))
                         }),
                         _ => Err(WaeError::invalid_format(stringify!($type), format!("{:?}", value))),
@@ -284,11 +284,11 @@ mod database_value_impl {
     impl_from_value_multi!(f64);
 
     impl FromDatabaseValue for String {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Text(s) => Ok(s),
-                turso::Value::Integer(i) => Ok(i.to_string()),
+                limbo::Value::Text(s) => Ok(s),
+                limbo::Value::Integer(i) => Ok(i.to_string()),
                 _ => Err(WaeError::invalid_format("String", format!("{:?}", value))),
             }
         }
@@ -308,10 +308,10 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Vec<u8> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Blob(b) => Ok(b),
+                limbo::Value::Blob(b) => Ok(b),
                 _ => Err(WaeError::invalid_format("Vec<u8>", format!("{:?}", value))),
             }
         }
@@ -331,10 +331,10 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for bool {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Integer(i) => Ok(i != 0),
+                limbo::Value::Integer(i) => Ok(i != 0),
                 _ => Err(WaeError::invalid_format("bool", format!("{:?}", value))),
             }
         }
@@ -354,10 +354,10 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for u64 {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Integer(i) => Ok(i as u64),
+                limbo::Value::Integer(i) => Ok(i as u64),
                 _ => Err(WaeError::invalid_format("u64", format!("{:?}", value))),
             }
         }
@@ -381,10 +381,10 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for u32 {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Integer(i) => Ok(i as u32),
+                limbo::Value::Integer(i) => Ok(i as u32),
                 _ => Err(WaeError::invalid_format("u32", format!("{:?}", value))),
             }
         }
@@ -408,11 +408,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<i64> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => i64::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => i64::from_limbo_value(v).map(Some),
             }
         }
 
@@ -432,11 +432,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<i32> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => i32::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => i32::from_limbo_value(v).map(Some),
             }
         }
 
@@ -456,11 +456,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<i16> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => i16::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => i16::from_limbo_value(v).map(Some),
             }
         }
 
@@ -480,11 +480,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<u64> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => u64::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => u64::from_limbo_value(v).map(Some),
             }
         }
 
@@ -506,11 +506,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<u32> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => u32::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => u32::from_limbo_value(v).map(Some),
             }
         }
 
@@ -532,11 +532,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<f64> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => f64::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => f64::from_limbo_value(v).map(Some),
             }
         }
 
@@ -556,11 +556,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<String> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => String::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => String::from_limbo_value(v).map(Some),
             }
         }
 
@@ -580,11 +580,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<Vec<u8>> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => Vec::<u8>::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => Vec::<u8>::from_limbo_value(v).map(Some),
             }
         }
 
@@ -604,11 +604,11 @@ mod database_value_impl {
     }
 
     impl FromDatabaseValue for Option<bool> {
-        #[cfg(feature = "turso")]
-        fn from_turso_value(value: turso::Value) -> DatabaseResult<Self> {
+        #[cfg(feature = "limbo")]
+        fn from_limbo_value(value: limbo::Value) -> DatabaseResult<Self> {
             match value {
-                turso::Value::Null => Ok(None),
-                v => bool::from_turso_value(v).map(Some),
+                limbo::Value::Null => Ok(None),
+                v => bool::from_limbo_value(v).map(Some),
             }
         }
 

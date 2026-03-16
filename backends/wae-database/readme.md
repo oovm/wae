@@ -1,7 +1,7 @@
 # WAE Database - 数据库服务抽象层
 
-提供统一的数据库操作抽象，基于 Turso (Limbo) 后端实现。
-Turso 是一个用 Rust 重写的 SQLite 兼容数据库，支持异步 I/O。
+提供统一的数据库操作抽象，基于 Limbo 后端实现。
+Limbo 是一个用 Rust 重写的 SQLite 兼容数据库，支持异步 I/O。
 
 ## ORM 功能
 

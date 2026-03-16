@@ -1,28 +1,28 @@
 //! 类型转换模块
 
-#[cfg(feature = "turso")]
-use turso::Value as TursoValue;
-#[cfg(any(feature = "turso", feature = "mysql"))]
+#[cfg(feature = "limbo")]
+use limbo::Value as LimboValue;
+#[cfg(any(feature = "limbo", feature = "mysql"))]
 use wae_types::Value;
 
-#[cfg(feature = "turso")]
-/// 将 wae_types::Value 转换为 turso::Value
-pub fn from_wae_values(values: Vec<Value>) -> Vec<TursoValue> {
+#[cfg(feature = "limbo")]
+/// 将 wae_types::Value 转换为 limbo::Value
+pub fn from_wae_values(values: Vec<Value>) -> Vec<LimboValue> {
     values.into_iter().map(from_wae_value).collect()
 }
 
-#[cfg(feature = "turso")]
-/// 将单个 wae_types::Value 转换为 turso::Value
-pub(crate) fn from_wae_value(value: Value) -> TursoValue {
+#[cfg(feature = "limbo")]
+/// 将单个 wae_types::Value 转换为 limbo::Value
+pub(crate) fn from_wae_value(value: Value) -> LimboValue {
     match value {
-        Value::Null => TursoValue::Null,
-        Value::Bool(b) => TursoValue::Integer(if b { 1 } else { 0 }),
-        Value::Integer(i) => TursoValue::Integer(i),
-        Value::Float(f) => TursoValue::Text(f.to_string()),
-        Value::String(s) => TursoValue::Text(s),
-        Value::Bytes(b) => TursoValue::Blob(b),
-        Value::Array(l) => TursoValue::Text(serde_json::to_string(&l).unwrap_or_default()),
-        Value::Object(m) => TursoValue::Text(serde_json::to_string(&m).unwrap_or_default()),
+        Value::Null => LimboValue::Null,
+        Value::Bool(b) => LimboValue::Integer(if b { 1 } else { 0 }),
+        Value::Integer(i) => LimboValue::Integer(i),
+        Value::Float(f) => LimboValue::Text(f.to_string()),
+        Value::String(s) => LimboValue::Text(s),
+        Value::Bytes(b) => LimboValue::Blob(b),
+        Value::Array(l) => LimboValue::Text(serde_json::to_string(&l).unwrap_or_default()),
+        Value::Object(m) => LimboValue::Text(serde_json::to_string(&m).unwrap_or_default()),
     }
 }
 

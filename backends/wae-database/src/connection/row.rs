@@ -23,9 +23,9 @@ pub enum DatabaseRow {
 }
 
 impl DatabaseRow {
-    #[cfg(feature = "turso")]
-    pub(crate) fn new_turso(row: Row) -> Self {
-        Self::Turso(row)
+    #[cfg(feature = "limbo")]
+    pub(crate) fn new_limbo(row: Row) -> Self {
+        Self::Limbo(row)
     }
 
     #[cfg(feature = "postgres")]
@@ -41,15 +41,15 @@ impl DatabaseRow {
     /// 获取列值
     pub fn get<T: FromDatabaseValue>(&self, index: usize) -> DatabaseResult<T> {
         match self {
-            #[cfg(feature = "turso")]
-            Self::Turso(row) => {
+            #[cfg(feature = "limbo")]
+            Self::Limbo(row) => {
                 let value = row.get_value(index).map_err(|e| {
                     WaeError::database(WaeErrorKind::QueryFailed {
                         query: None,
                         reason: format!("Failed to get column {}: {}", index, e),
                     })
                 })?;
-                T::from_turso_value(value)
+                T::from_limbo_value(value)
             }
             #[cfg(feature = "postgres")]
             Self::Postgres(row) => T::from_postgres_row(row, index),
@@ -61,8 +61,8 @@ impl DatabaseRow {
     /// 获取列数量
     pub fn column_count(&self) -> usize {
         match self {
-            #[cfg(feature = "turso")]
-            Self::Turso(row) => row.column_count(),
+            #[cfg(feature = "limbo")]
+            Self::Limbo(row) => row.column_count(),
             #[cfg(feature = "postgres")]
             Self::Postgres(row) => row.len(),
             #[cfg(feature = "mysql")]
@@ -73,9 +73,9 @@ impl DatabaseRow {
 
 /// 查询结果集迭代器
 pub enum DatabaseRows {
-    /// Turso 数据库结果集
-    #[cfg(feature = "turso")]
-    Turso(turso::Rows),
+    /// Limbo 数据库结果集
+    #[cfg(feature = "limbo")]
+    Limbo(limbo::Rows),
     /// PostgreSQL 数据库结果集
     #[cfg(feature = "postgres")]
     Postgres(Vec<PostgresRow>, usize),
@@ -85,9 +85,9 @@ pub enum DatabaseRows {
 }
 
 impl DatabaseRows {
-    #[cfg(feature = "turso")]
-    pub(crate) fn new_turso(rows: turso::Rows) -> Self {
-        Self::Turso(rows)
+    #[cfg(feature = "limbo")]
+    pub(crate) fn new_limbo(rows: limbo::Rows) -> Self {
+        Self::Limbo(rows)
     }
 
     #[cfg(feature = "postgres")]
@@ -103,14 +103,14 @@ impl DatabaseRows {
     /// 获取下一行
     pub async fn next(&mut self) -> DatabaseResult<Option<DatabaseRow>> {
         match self {
-            #[cfg(feature = "turso")]
-            Self::Turso(rows) => rows
+            #[cfg(feature = "limbo")]
+            Self::Limbo(rows) => rows
                 .next()
                 .await
                 .map_err(|e| {
                     WaeError::database(WaeErrorKind::QueryFailed { query: None, reason: format!("Failed to fetch row: {}", e) })
                 })
-                .map(|opt| opt.map(DatabaseRow::new_turso)),
+                .map(|opt| opt.map(DatabaseRow::new_limbo)),
             #[cfg(feature = "postgres")]
             Self::Postgres(rows, index) => {
                 if *index < rows.len() {

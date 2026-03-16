@@ -5,9 +5,9 @@ use wae_types::WaeError;
 
 /// 预处理语句
 pub enum DatabaseStatement {
-    /// Turso 预处理语句
-    #[cfg(feature = "turso")]
-    Turso(turso::Statement),
+    /// Limbo 预处理语句
+    #[cfg(feature = "limbo")]
+    Limbo(limbo::Statement),
     /// PostgreSQL 预处理语句
     #[cfg(feature = "postgres")]
     Postgres(String),
@@ -17,9 +17,9 @@ pub enum DatabaseStatement {
 }
 
 impl DatabaseStatement {
-    #[cfg(feature = "turso")]
-    pub(crate) fn new_turso(stmt: turso::Statement) -> Self {
-        Self::Turso(stmt)
+    #[cfg(feature = "limbo")]
+    pub(crate) fn new_limbo(stmt: limbo::Statement) -> Self {
+        Self::Limbo(stmt)
     }
 
     #[cfg(feature = "postgres")]
@@ -35,13 +35,13 @@ impl DatabaseStatement {
     /// 执行查询 (使用 wae_types::Value)
     pub async fn query(&mut self, _params: Vec<wae_types::Value>) -> DatabaseResult<DatabaseRows> {
         match self {
-            #[cfg(feature = "turso")]
-            Self::Turso(stmt) => {
-                let turso_params = crate::types::from_wae_values(_params);
-                stmt.query(turso_params)
+            #[cfg(feature = "limbo")]
+            Self::Limbo(stmt) => {
+                let limbo_params = crate::types::from_wae_values(_params);
+                stmt.query(limbo_params)
                     .await
                     .map_err(|e| WaeError::internal(format!("Query failed: {}", e)))
-                    .map(DatabaseRows::new_turso)
+                    .map(DatabaseRows::new_limbo)
             }
             #[cfg(feature = "postgres")]
             Self::Postgres(_) => Err(WaeError::internal("Prepared statements not supported for Postgres yet")),

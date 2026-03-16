@@ -9,9 +9,9 @@ use super::{
 use std::marker::PhantomData;
 use wae_types::Value;
 
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 use crate::types::from_wae_value;
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 use turso::Value as TursoValue;
 
 #[cfg(feature = "mysql")]
@@ -162,7 +162,7 @@ impl<E: Entity> SelectBuilder<E> {
         self
     }
 
-    #[cfg(feature = "turso")]
+    #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
     pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
         let columns = if self.columns.is_empty() { "*".to_string() } else { self.columns.join(", ") };
@@ -471,7 +471,7 @@ impl<E: Entity> InsertBuilder<E> {
         self
     }
 
-    #[cfg(feature = "turso")]
+    #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
     pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
         let columns: Vec<&str> = self.data.iter().map(|(col, _)| *col).collect();
@@ -539,7 +539,7 @@ impl<E: Entity> UpdateBuilder<E> {
         self
     }
 
-    #[cfg(feature = "turso")]
+    #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
     pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
         let set_parts: Vec<String> = self.data.iter().map(|(col, _)| format!("{} = ?", col)).collect();
@@ -613,7 +613,7 @@ impl<E: Entity> DeleteBuilder<E> {
         self
     }
 
-    #[cfg(feature = "turso")]
+    #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
     pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
         let mut sql = format!("DELETE FROM {}", E::table_name());

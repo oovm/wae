@@ -27,7 +27,7 @@ tower = { workspace = true }
 pin-project-lite = { workspace = true }
 
 [features]
-default = ["limbo"]
+default = []
 limbo = ["dep:limbo"]
 postgres = ["dep:tokio-postgres", "dep:deadpool-postgres"]
 mysql = ["dep:mysql_async"]
