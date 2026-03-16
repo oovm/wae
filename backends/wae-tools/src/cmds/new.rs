@@ -34,7 +34,7 @@ impl NewCommand {
         let cargo_toml_content = format!(
             r#"[package]
 name = "{}"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2024"
 
 [dependencies]

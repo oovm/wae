@@ -1,5 +1,5 @@
 use clap::Parser;
-use wae_tools::cmds::{self, migrate::MigrateCommand, new::NewCommand, dev::DevCommand, generate::GenerateCommand};
+use wae_tools::cmds::{self, migrate::MigrateCommand, new::NewCommand, dev::DevCommand, generate::GenerateCommand, pull::PullCommand, push::PushCommand};
 
 /// WAE Tools CLI - 项目脚手架、代码生成、数据库迁移命令行工具
 #[derive(Parser)]
@@ -20,6 +20,10 @@ enum Commands {
     Dev(DevCommand),
     /// 从 OpenAPI/Swagger 生成代码
     Generate(GenerateCommand),
+    /// 从远程同步 WAE 文件
+    Pull(PullCommand),
+    /// 推送到数据库
+    Push(PushCommand),
 }
 
 #[tokio::main]
@@ -28,8 +32,8 @@ async fn main() {
 
     match &cli.command {
         #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        Commands::Migrate(cmd) => {
-            if let Err(e) = cmd.run().await {
+        Commands::Migrate { migrate_command } => {
+            if let Err(e) = migrate_command.run().await {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
             }

@@ -13,7 +13,10 @@ struct Cli {
 enum Commands {
     /// 数据库迁移相关命令
     #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-    Migrate(MigrateCommand),
+    Migrate {
+        #[command(subcommand)]
+        migrate_command: MigrateCommand,
+    },
     /// 创建新项目脚手架
     New(NewCommand),
     /// 热重载开发服务器
@@ -28,8 +31,8 @@ async fn main() {
 
     match &cli.command {
         #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        Commands::Migrate(cmd) => {
-            if let Err(e) = cmd.run().await {
+        Commands::Migrate { migrate_command } => {
+            if let Err(e) = migrate_command.run().await {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
             }
