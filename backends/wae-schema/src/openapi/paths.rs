@@ -361,3 +361,30 @@ impl Parameter {
     }
 
     /// 设置废弃
+    pub fn deprecated(mut self, deprecated: bool) -> Self {
+        self.deprecated = deprecated;
+        self
+    }
+
+    /// 设置允许空值
+    pub fn allow_empty_value(mut self, allow: bool) -> Self {
+        self.allow_empty_value = allow;
+        self
+    }
+
+    /// 设置示例值
+    pub fn example(mut self, example: serde_json::Value) -> Self {
+        self.example = Some(example);
+        self
+    }
+}
+
+/// 参数或引用
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ParameterOrReference {
+    /// 参数对象
+    Parameter(Parameter),
+    /// 引用对象
+    Reference(super::Reference),
+}

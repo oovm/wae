@@ -32,39 +32,58 @@ impl PushCommand {
         println!();
         
         let input_path = Path::new(&self.input);
-        let mut schemas = Vec::new();
         
-        if input_path.is_dir() {
-            // 处理目录，遍历所有 .wae 文件
-            for entry in fs::read_dir(input_path)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path.is_file() && path.extension().map_or(false, |ext| ext == "wae") {
-                    println!("Processing file: {}", path.display());
+        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+        {
+            let mut schemas: Vec<super::super::dsl::TableSchema> = Vec::new();
+            
+            if input_path.is_dir() {
+                // 处理目录，遍历所有 .wae 文件
+                for entry in fs::read_dir(input_path)? {
+                    let entry = entry?;
+                    let path = entry.path();
+                    if path.is_file() && path.extension().map_or(false, |ext| ext == "wae") {
+                println!("Processing file: {}", path.display());
+                #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+                {
                     let file_schemas = super::super::dsl::load_schemas_from_wae_file(&path)?;
                     schemas.extend(file_schemas);
                 }
             }
-        } else {
-            // 处理单个文件
-            println!("Processing file: {}", self.input);
-            schemas = super::super::dsl::load_schemas_from_wae_file(&self.input)?;
-        }
-        
-        println!("\nLoaded {} table schemas", schemas.len());
-        
-        // 自动生成 Rust table schema
-        println!("\nGenerating Rust table schemas...");
-        
-        if !schemas.is_empty() {
-            let rust_code = super::super::dsl::generate_rust_schema(&schemas);
+                }
+            } else {
+                // 处理单个文件
+                println!("Processing file: {}", self.input);
+                #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+                {
+                    schemas = super::super::dsl::load_schemas_from_wae_file(&self.input)?;
+                }
+            }
             
-            // 写入 Rust schema 文件
-            let rust_output_path = input_path.parent().unwrap_or_else(|| Path::new("")).join("schema.rs");
-            fs::write(&rust_output_path, rust_code)?;
-            println!("Generated Rust table schemas at: {}", rust_output_path.display());
-        } else {
-            println!("No table schemas found to generate Rust schemas");
+            println!("\nLoaded {} table schemas", schemas.len());
+            
+            // 自动生成 Rust table schema
+            println!("\nGenerating Rust table schemas...");
+            
+            #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+            {
+                if !schemas.is_empty() {
+                    let rust_code = super::super::dsl::generate_rust_schema(&schemas);
+                    
+                    // 写入 Rust schema 文件
+                    let rust_output_path = input_path.parent().unwrap_or_else(|| Path::new("")).join("schema.rs");
+                    fs::write(&rust_output_path, rust_code)?;
+                    println!("Generated Rust table schemas at: {}", rust_output_path.display());
+                } else {
+                    println!("No table schemas found to generate Rust schemas");
+                }
+            }
+        }
+        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
+        {
+            println!("\nLoaded 0 table schemas");
+            println!("\nGenerating Rust table schemas...");
+            println!("Error: Database features are not enabled. Please enable one of the database features.");
         }
         
         // 这里应该实现推送到数据库的逻辑

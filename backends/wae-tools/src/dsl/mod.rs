@@ -14,11 +14,130 @@ pub fn load_schemas_from_wae_file(path: impl AsRef<Path>) -> Result<Vec<TableSch
 
 /// 从 .wae 字符串加载并解析 TableSchema
 pub fn load_schemas_from_wae(wae_str: &str) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
-    // 暂时返回空结果，后续将实现完整的解析逻辑
-    // 这里需要使用 oak-rbq 解析器来解析 WAE 文件
-    let mut schemas = Vec::new();
+    use oak_rbq::{RbqLexer, RbqParser};
+    use oak_rbq::ast::RbqRoot;
+    
+    // 创建词法分析器
+    let lexer = RbqLexer::new(wae_str);
+    let tokens = lexer.tokenize()?;
+    
+    // 创建语法分析器
+    let parser = RbqParser::new();
+    let root = parser.parse(tokens)?;
+    
+    // 处理解析结果，生成 TableSchema
+    let schemas = process_rbq_root(root)?;
     
     Ok(schemas)
+}
+
+/// 处理 RBQ 根节点，生成 TableSchema
+fn process_rbq_root(root: RbqRoot) -> Result<Vec<TableSchema>, Box<dyn std::error::Error>> {
+    use oak_rbq::ast::nodes::root_nodes::RbqStatement;
+    use oak_rbq::ast::nodes::data_def_nodes::RbqCreateTableStatement;
+    
+    let mut schemas = Vec::new();
+    
+    // 遍历所有语句
+    for statement in root.statements {
+        match statement {
+            RbqStatement::CreateTable(create_table) => {
+                let table_schema = process_create_table(create_table)?;
+                schemas.push(table_schema);
+            }
+            _ => {
+                // 忽略其他类型的语句
+                continue;
+            }
+        }
+    }
+    
+    Ok(schemas)
+}
+
+/// 处理 CREATE TABLE 语句，生成 TableSchema
+fn process_create_table(create_table: RbqCreateTableStatement) -> Result<TableSchema, Box<dyn std::error::Error>> {
+    use oak_rbq::ast::nodes::data_def_nodes::RbqColumnDefinition;
+    use oak_rbq::ast::nodes::type_nodes::RbqDataType;
+    
+    let table_name = create_table.table_name;
+    let mut columns = Vec::new();
+    
+    // 处理列定义
+    for column_def in create_table.columns {
+        let column = process_column_definition(column_def)?;
+        columns.push(column);
+    }
+    
+    // 创建 TableSchema
+    let schema = TableSchema {
+        name: table_name,
+        columns,
+    };
+    
+    Ok(schema)
+}
+
+/// 处理列定义，生成 ColumnDef
+fn process_column_definition(column_def: RbqColumnDefinition) -> Result<wae_database::ColumnDef, Box<dyn std::error::Error>> {
+    use oak_rbq::ast::nodes::type_nodes::RbqDataType;
+    use wae_database::{ColumnDef, ColumnType};
+    
+    let column_name = column_def.column_name;
+    let col_type = match column_def.data_type {
+        RbqDataType::Text => ColumnType::Text,
+        RbqDataType::Integer => ColumnType::Integer,
+        RbqDataType::Real => ColumnType::Real,
+        RbqDataType::Blob => ColumnType::Blob,
+        _ => {
+            return Err(format!("Unsupported data type: {:?}", column_def.data_type).into());
+        }
+    };
+    
+    let mut column = ColumnDef::new(column_name, col_type);
+    
+    // 处理约束
+    for constraint in column_def.constraints {
+        match constraint {
+            oak_rbq::ast::nodes::data_def_nodes::RbqColumnConstraint::PrimaryKey => {
+                column = column.primary_key();
+            }
+            oak_rbq::ast::nodes::data_def_nodes::RbqColumnConstraint::Unique => {
+                column = column.unique();
+            }
+            oak_rbq::ast::nodes::data_def_nodes::RbqColumnConstraint::NotNull => {
+                column = column.not_null();
+            }
+            oak_rbq::ast::nodes::data_def_nodes::RbqColumnConstraint::Default(default_expr) => {
+                // 处理默认值
+                let default_value = process_default_expression(default_expr)?;
+                column = column.default(&default_value);
+            }
+            _ => {
+                // 忽略其他约束
+                continue;
+            }
+        }
+    }
+    
+    Ok(column)
+}
+
+/// 处理默认值表达式，生成默认值字符串
+fn process_default_expression(expr: oak_rbq::ast::nodes::expression_nodes::RbqExpression) -> Result<String, Box<dyn std::error::Error>> {
+    // 简化处理，仅支持字面量
+    match expr {
+        oak_rbq::ast::nodes::expression_nodes::RbqExpression::Literal(literal) => {
+            match literal {
+                oak_rbq::ast::nodes::expression_nodes::RbqLiteral::String(s) => Ok(s),
+                oak_rbq::ast::nodes::expression_nodes::RbqLiteral::Integer(i) => Ok(i.to_string()),
+                oak_rbq::ast::nodes::expression_nodes::RbqLiteral::Real(r) => Ok(r.to_string()),
+                oak_rbq::ast::nodes::expression_nodes::RbqLiteral::Boolean(b) => Ok(b.to_string()),
+                _ => Err("Unsupported literal type".into()),
+            }
+        }
+        _ => Err("Unsupported default expression".into()),
+    }
 }
 
 /// 将 TableSchema 转换为 Rust 结构体定义

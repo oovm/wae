@@ -6,4 +6,5 @@ pub mod migrate;
 pub mod new;
 pub mod dev;
 pub mod generate;
-pub mod dsl;
+pub mod pull;
+pub mod push;

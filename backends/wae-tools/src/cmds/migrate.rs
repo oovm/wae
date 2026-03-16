@@ -60,20 +60,27 @@ impl MigrateCommand {
     /// 执行迁移命令
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         match self {
-            MigrateCommand::Sync { schema, execute, force } => {
-                use super::super::schema_sync::SchemaSynchronizer;
+            MigrateCommand::Sync { schema: _, execute: _, force: _ } => {
+                #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+                {
+                    use super::super::schema_sync::SchemaSynchronizer;
 
-                println!("WAE Database Schema Sync");
-                println!("{}", "=".repeat(60));
-                println!("Schema file: {}", schema);
-                println!();
+                    println!("WAE Database Schema Sync");
+                    println!("{}", "=".repeat(60));
+                    println!("Schema file: {}", schema);
+                    println!();
 
-                let synchronizer = SchemaSynchronizer::from_yaml_file(schema)?;
-                synchronizer.print_preview();
+                    let synchronizer = SchemaSynchronizer::from_yaml_file(schema)?;
+                    synchronizer.print_preview();
 
-                if *execute {
-                    println!("\n⚠️  Note: Full database migration execution requires additional setup.");
-                    println!("   Preview generation is complete. SQL can be manually applied.");
+                    if *execute {
+                        println!("\n⚠️  Note: Full database migration execution requires additional setup.");
+                        println!("   Preview generation is complete. SQL can be manually applied.");
+                    }
+                }
+                #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
+                {
+                    println!("Error: Database features are not enabled. Please enable one of the database features.");
                 }
 
                 Ok(())

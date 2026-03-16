@@ -32,8 +32,8 @@ async fn main() {
 
     match &cli.command {
         #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
-        Commands::Migrate { migrate_command } => {
-            if let Err(e) = migrate_command.run().await {
+        Commands::Migrate(cmd) => {
+            if let Err(e) = cmd.run().await {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
             }
@@ -51,6 +51,18 @@ async fn main() {
             }
         }
         Commands::Generate(cmd) => {
+            if let Err(e) = cmd.run() {
+                eprintln!("Error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Pull(cmd) => {
+            if let Err(e) = cmd.run() {
+                eprintln!("Error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Push(cmd) => {
             if let Err(e) = cmd.run() {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
