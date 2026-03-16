@@ -3698,6 +3698,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
+name = "oak-core"
+version = "0.0.6"
+dependencies = [
+ "serde",
+ "smallvec",
+ "tracing",
+ "triomphe",
+ "twox-hash",
+]
+
+[[package]]
+name = "oak-rbq"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+ "serde",
+]
+
+[[package]]
+name = "oak-sql"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+ "serde",
+ "tracing",
+]
+
+[[package]]
 name = "objc2"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6677,6 +6705,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "triomphe"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd69c5aa8f924c7519d6372789a74eac5b94fb0f8fcf0d4a97eb0bfc3e785f39"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7130,7 +7167,8 @@ dependencies = [
  "criterion",
  "hex",
  "hmac",
- "rand 0.10.0",
+ "rand 0.8.5",
+ "rand_core 0.6.4",
  "sha1",
  "sha2",
  "wae-types",
@@ -7155,6 +7193,7 @@ dependencies = [
  "tower",
  "turso",
  "wae-types",
+ "yyds-gateway",
 ]
 
 [[package]]
@@ -7708,6 +7747,39 @@ dependencies = [
  "hashbrown 0.15.5",
  "indexmap 2.13.0",
  "semver",
+]
+
+[[package]]
+name = "we-trust"
+version = "0.0.0"
+dependencies = [
+ "bytes",
+ "crc32fast",
+ "futures",
+ "serde",
+ "sha2",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "yykv-types",
+]
+
+[[package]]
+name = "we-trust-postgres"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "byteorder",
+ "bytes",
+ "chrono",
+ "futures",
+ "hex",
+ "md5 0.8.0",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "yykv-types",
 ]
 
 [[package]]
@@ -8332,6 +8404,76 @@ dependencies = [
  "quote",
  "syn 2.0.117",
  "synstructure",
+]
+
+[[package]]
+name = "yyds-gateway"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "oak-core",
+ "oak-rbq",
+ "oak-sql",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "we-trust",
+ "we-trust-postgres",
+ "yyds-types",
+ "yykv-operators",
+ "yykv-types",
+]
+
+[[package]]
+name = "yyds-types"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "chrono",
+ "crc32fast",
+ "hex",
+ "rust_decimal",
+ "serde",
+ "uuid",
+]
+
+[[package]]
+name = "yykv-operators"
+version = "0.0.0"
+dependencies = [
+ "bytes",
+ "serde",
+ "serde_json",
+ "uuid",
+ "yykv-schema",
+ "yykv-types",
+]
+
+[[package]]
+name = "yykv-schema"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "yykv-types",
+]
+
+[[package]]
+name = "yykv-types"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "chrono",
+ "crc32fast",
+ "hex",
+ "rust_decimal",
+ "serde",
+ "uuid",
+ "yyds-types",
 ]
 
 [[package]]
