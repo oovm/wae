@@ -20,7 +20,7 @@ pub struct PushCommand {
 
 impl PushCommand {
     /// 执行 Push 命令
-    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("WAE DSL Push");
         println!("{}", "=".repeat(60));
         println!("Input: {}", self.input);

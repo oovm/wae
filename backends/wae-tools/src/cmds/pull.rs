@@ -43,10 +43,10 @@ impl PullCommand {
         println!("Extracting schema from database...");
         println!("Would extract schema to: {}", wae_file_path.display());
 
-        #[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
+        #[cfg(feature = "database-mysql")]
         {
             // 连接数据库
-            let conn = wae_database::connect(&self.remote).await?;
+            let conn = Self::connect_to_mysql(&self.remote).await?;
             
             // 创建 SchemaReflector
             let reflector = crate::SchemaReflector::new(&conn);
@@ -62,7 +62,7 @@ impl PullCommand {
             println!("Generated WAE file: {}", wae_file_path.display());
         }
 
-        #[cfg(not(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql")))]
+        #[cfg(not(feature = "database-mysql"))]
         {
             // 模拟生成 WAE 文件
             println!("Simulating schema extraction...");
@@ -77,14 +77,25 @@ impl PullCommand {
         Ok(())
     }
 
-    /// 连接到数据库
-    #[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
-    async fn connect_to_database(url: &str) -> Result<Box<dyn wae_database::DatabaseConnection>, Box<dyn std::error::Error>> {
-        Ok(wae_database::connect(url).await?)
+    /// 连接到 MySQL 数据库
+    #[cfg(feature = "database-mysql")]
+    async fn connect_to_mysql(url: &str) -> Result<wae_database::MySqlConnection, Box<dyn std::error::Error>> {
+        use wae_database::{DatabaseConfig, MySqlDatabaseService};
+        println!("Attempting to connect to MySQL database: {}", url);
+        let config = DatabaseConfig::MySql {
+            connection_string: url.to_string(),
+            pool_config: Default::default(),
+        };
+        println!("Creating database service...");
+        let service = MySqlDatabaseService::new(&config).await?;
+        println!("Service created successfully. Connecting to database...");
+        let conn = service.connect().await?;
+        println!("Connection established successfully!");
+        Ok(conn)
     }
 
     /// 生成 WAE 文件内容
-    #[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
+    #[cfg(feature = "database-mysql")]
     fn generate_wae_content(db_name: &str, schemas: &std::collections::HashMap<String, wae_database::TableSchema>) -> WaeResult<String> {
         let mut content = format!("# RBQ Schema for {}\n\n@database(\"mysql.{}\")\nnamespace {};\n\n", db_name, db_name, db_name);
         
@@ -140,20 +151,13 @@ impl PullCommand {
     }
 
     /// 将 ColumnType 转换为 RBQ 类型
-    #[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
+    #[cfg(feature = "database-mysql")]
     fn column_type_to_rbq(col_type: &wae_database::ColumnType) -> String {
         match col_type {
-            wae_database::ColumnType::Bool => "bool".to_string(),
-            wae_database::ColumnType::Int => "int".to_string(),
-            wae_database::ColumnType::Double => "float".to_string(),
-            wae_database::ColumnType::Varchar => "string".to_string(),
-            wae_database::ColumnType::Text => "text".to_string(),
-            wae_database::ColumnType::Timestamp => "datetime".to_string(),
-            wae_database::ColumnType::Date => "date".to_string(),
-            wae_database::ColumnType::Time => "time".to_string(),
-            wae_database::ColumnType::Json => "json".to_string(),
+            wae_database::ColumnType::Integer => "int".to_string(),
+            wae_database::ColumnType::Real => "float".to_string(),
+            wae_database::ColumnType::Text => "string".to_string(),
             wae_database::ColumnType::Blob => "binary".to_string(),
-            _ => "string".to_string(),
         }
     }
 
