@@ -29,7 +29,7 @@ impl<'a> SchemaReflector<'a> {
         }
     }
 
-    async fn get_table_names_turso(&self) -> DatabaseResult<Vec<String>> {
+    async fn get_table_names_limbo(&self) -> DatabaseResult<Vec<String>> {
         let sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '_migrations'";
         let mut rows = self.conn.query(sql).await?;
 
@@ -93,7 +93,7 @@ impl<'a> SchemaReflector<'a> {
         }
     }
 
-    async fn get_columns_turso(&self, table_name: &str) -> DatabaseResult<Vec<ColumnDef>> {
+    async fn get_columns_limbo(&self, table_name: &str) -> DatabaseResult<Vec<ColumnDef>> {
         let sql = format!("PRAGMA table_info({})", table_name);
         let mut rows = self.conn.query(&sql).await?;
 
@@ -205,7 +205,7 @@ impl<'a> SchemaReflector<'a> {
         }
     }
 
-    async fn get_indexes_turso(&self, table_name: &str) -> DatabaseResult<Vec<IndexDef>> {
+    async fn get_indexes_limbo(&self, table_name: &str) -> DatabaseResult<Vec<IndexDef>> {
         let sql = format!("PRAGMA index_list({})", table_name);
         let mut rows = self.conn.query(&sql).await?;
 
@@ -277,7 +277,7 @@ impl<'a> SchemaReflector<'a> {
         Ok(indexes)
     }
 
-    async fn get_index_columns_turso(&self, index_name: &str) -> DatabaseResult<Vec<String>> {
+    async fn get_index_columns_limbo(&self, index_name: &str) -> DatabaseResult<Vec<String>> {
         let sql = format!("PRAGMA index_info({})", index_name);
         let mut rows = self.conn.query(&sql).await?;
 

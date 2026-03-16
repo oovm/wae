@@ -80,7 +80,7 @@ impl MigrateCommand {
                         println!("   Preview generation is complete. SQL can be manually applied.");
                     }
                 }
-                #[cfg(not(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
+                #[cfg(not(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql")))]
                 {
                     println!("Error: Database features are not enabled. Please enable one of the database features.");
                 }
