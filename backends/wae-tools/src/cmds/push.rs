@@ -34,8 +34,13 @@ impl PushCommand {
         let input_path = Path::new(&self.input);
         
         #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+        let mut schemas: Vec<super::super::dsl::TableSchema> = Vec::new();
+        
+        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
+        let schemas = Vec::<()>::new();
+        
+        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
         {
-            let mut schemas: Vec<super::super::dsl::TableSchema> = Vec::new();
             
             if input_path.is_dir() {
                 // 处理目录，遍历所有 .wae 文件
@@ -89,7 +94,13 @@ impl PushCommand {
         // 这里应该实现推送到数据库的逻辑
         // 目前只是模拟实现
         println!("\nSimulating push to database...");
+        
+        #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
         println!("Would apply {} table schemas to database", schemas.len());
+        
+        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
+        println!("Would apply 0 table schemas to database");
+        
         if self.force {
             println!("Force mode enabled - will perform destructive operations");
         }
