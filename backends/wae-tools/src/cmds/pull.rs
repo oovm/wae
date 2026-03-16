@@ -41,6 +41,14 @@ impl PullCommand {
         // 生成 WAE 文件路径
         let wae_file_path = schemas_dir.join(format!("{}.wae", db_name));
 
+        // 读取现有 WAE 文件，提取模型名称映射
+        let existing_model_mappings = if wae_file_path.exists() {
+            println!("Reading existing WAE file...");
+            Self::extract_existing_model_mappings(&wae_file_path)?
+        } else {
+            std::collections::HashMap::new()
+        };
+
         // 实现从数据库提取 schema 的逻辑
         println!("Extracting schema from database...");
         println!("Would extract schema to: {}", wae_file_path.display());
@@ -57,7 +65,7 @@ impl PullCommand {
             let schemas = reflector.get_all_schemas().await?;
             
             // 生成 WAE 文件内容
-            let wae_content = Self::generate_wae_content(&db_name, &schemas)?;
+            let wae_content = Self::generate_wae_content(&db_name, &schemas, &existing_model_mappings)?;
             
             // 写入 WAE 文件
             fs::write(&wae_file_path, wae_content)?;
@@ -79,6 +87,34 @@ impl PullCommand {
         Ok(())
     }
 
+    /// 提取现有 WAE 文件中的模型名称映射
+    fn extract_existing_model_mappings(wae_file_path: &Path) -> Result<std::collections::HashMap<String, String>, Box<dyn std::error::Error>> {
+        use oak_rbq::parse;
+        
+        let content = fs::read_to_string(wae_file_path)?;
+        let root = parse(&content)?;
+        
+        let mut mappings = std::collections::HashMap::new();
+        
+        for item in &root.items {
+            if let RbqItem::Struct(struct_def) = item {
+                // 查找 @table 注解，获取表名
+                for annotation in &struct_def.annotations {
+                    if annotation.name == "table" && !annotation.args.is_empty() {
+                        // 解析 table 注解的参数，格式为 "name = \"table_name\""
+                        let arg = &annotation.args[0];
+                        if let Some(table_name) = arg.split('"').nth(1) {
+                            mappings.insert(table_name.to_string(), struct_def.name.clone());
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        Ok(mappings)
+    }
+
     /// 连接到 MySQL 数据库
     #[cfg(feature = "database-mysql")]
     async fn connect_to_mysql(url: &str) -> Result<wae_database::MySqlConnection, Box<dyn std::error::Error>> {
@@ -98,7 +134,7 @@ impl PullCommand {
 
     /// 生成 WAE 文件内容
     #[cfg(feature = "database-mysql")]
-    pub fn generate_wae_content(db_name: &str, schemas: &std::collections::HashMap<String, wae_database::TableSchema>) -> WaeResult<String> {
+    pub fn generate_wae_content(db_name: &str, schemas: &std::collections::HashMap<String, wae_database::TableSchema>, existing_model_mappings: &std::collections::HashMap<String, String>) -> WaeResult<String> {
         // 构造 RBQ AST
         let mut items = Vec::new();
         
@@ -210,9 +246,15 @@ impl PullCommand {
             }
             
             // 构造结构体
+            // 优先使用现有的模型名称映射，否则生成新的
+            let model_name = if let Some(existing_name) = existing_model_mappings.get(table_name) {
+                existing_name.clone()
+            } else {
+                Self::table_name_to_model_name(table_name)
+            };
             let struct_def = RbqStruct {
                 annotations: table_annotations,
-                name: table_name.clone(),
+                name: model_name,
                 fields,
                 span: (0..0).into(),
             };
@@ -259,5 +301,24 @@ impl PullCommand {
         else {
             None
         }
+    }
+
+    /// 将表名转换为大写的类名格式
+    fn table_name_to_model_name(table_name: &str) -> String {
+        let mut result = String::new();
+        let mut capitalize_next = true;
+        
+        for c in table_name.chars() {
+            if c == '_' {
+                capitalize_next = true;
+            } else if capitalize_next {
+                result.push(c.to_ascii_uppercase());
+                capitalize_next = false;
+            } else {
+                result.push(c);
+            }
+        }
+        
+        result
     }
 }

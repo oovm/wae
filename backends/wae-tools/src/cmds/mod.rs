@@ -60,7 +60,7 @@ impl Commands {
                 }
             }
             Commands::Generate(cmd) => {
-                if let Err(e) = cmd.run() {
+                if let Err(e) = cmd.run().await {
                     eprintln!("Error: {}", e);
                     std::process::exit(1);
                 }
