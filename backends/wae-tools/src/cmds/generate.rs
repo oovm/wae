@@ -84,6 +84,18 @@ impl GenerateCommand {
             let root = parse(&content)?;
             println!("Parsed successfully, found {} items", root.items.len());
             
+            // 打印根节点的所有项目
+            for (index, item) in root.items.iter().enumerate() {
+                println!("Root item {}: {:?}", index, item);
+                if let oak_rbq::ast::RbqItem::Namespace(ns) = item {
+                    println!("Namespace path: {}", ns.path);
+                    println!("Namespace items: {}", ns.items.len());
+                    for (ns_index, ns_item) in ns.items.iter().enumerate() {
+                        println!("Namespace item {}: {:?}", ns_index, ns_item);
+                    }
+                }
+            }
+            
             // 提取模型定义
             for (index, item) in root.items.iter().enumerate() {
                 println!("Item {}: {:?}", index, item);
