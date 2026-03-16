@@ -1,7 +1,6 @@
 //! 测试环境配置模块
 
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 /// 测试环境配置
 #[derive(Debug, Clone)]

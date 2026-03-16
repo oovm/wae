@@ -42,10 +42,10 @@ pub enum MigrateCommand {
         #[clap(long, short)]
         migrations: Option<String>,
     },
-    /// 从 schemas.yaml 同步数据库 schema
+    /// 从 schemas.wae 同步数据库 schema
     Sync {
-        /// schemas.yaml 文件路径
-        #[clap(long, short, default_value = "schemas.yaml")]
+        /// schemas.wae 文件路径
+        #[clap(long, short, default_value = "schemas.wae")]
         schema: String,
         /// 是否自动执行迁移（否则仅打印计划）
         #[clap(long, short, default_value_t = false)]
