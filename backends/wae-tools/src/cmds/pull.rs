@@ -47,7 +47,7 @@ impl PullCommand {
         println!("Simulating schema extraction...");
         
         // 模拟生成 WAE 文件
-        let wae_content = format!("# WAE Schema for {}\n\ndatabase {} {{\n  // Tables will be generated here\n}}", db_name, db_name);
+        let wae_content = format!("# RBQ Schema for {}\n\n@database(\"mysql.{}\")\nnamespace authentication;\n\n// Tables will be generated here\n", db_name, db_name);
         
         // 写入 WAE 文件
         fs::write(&wae_file_path, wae_content)?;

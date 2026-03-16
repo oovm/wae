@@ -78,7 +78,7 @@ impl<'a> SchemaReflector<'a> {
     /// 获取表的所有外键约束
     pub async fn get_foreign_keys(&self, table_name: &str) -> DatabaseResult<Vec<ForeignKeyDef>> {
         match self.conn.backend() {
-            DatabaseBackend::Limbo => self.get_foreign_keys_limbo(table_name).await,
+            DatabaseBackend::Limbo => self.get_foreign_keys_turso(table_name).await,
             DatabaseBackend::Postgres => self.get_foreign_keys_postgres(table_name).await,
             DatabaseBackend::MySql => self.get_foreign_keys_mysql(table_name).await,
         }
@@ -214,7 +214,7 @@ impl<'a> SchemaReflector<'a> {
             let index_name = row.get::<String>(1)?;
             let unique = row.get::<i64>(2)? != 0;
 
-            let columns = self.get_index_columns_turso(&index_name).await?;
+            let columns = self.get_index_columns_limbo(&index_name).await?;
 
             indexes.push(IndexDef { name: index_name, table_name: table_name.to_string(), columns, unique });
         }
@@ -305,7 +305,7 @@ impl<'a> SchemaReflector<'a> {
     /// 检查表是否存在
     pub async fn table_exists(&self, table_name: &str) -> DatabaseResult<bool> {
         match self.conn.backend() {
-            DatabaseBackend::Limbo => self.table_exists_limbo(table_name).await,
+            DatabaseBackend::Limbo => self.table_exists_turso(table_name).await,
             DatabaseBackend::Postgres => self.table_exists_postgres(table_name).await,
             DatabaseBackend::MySql => self.table_exists_mysql(table_name).await,
         }

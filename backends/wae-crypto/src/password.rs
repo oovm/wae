@@ -4,6 +4,7 @@ use crate::error::{CryptoError, CryptoResult};
 use argon2::{
     Argon2, PasswordHash, PasswordHasher as Argon2PasswordHasher, PasswordVerifier, Version, password_hash::SaltString,
 };
+use rand::rngs::thread::ThreadRng;
 use rand::thread_rng;
 use zeroize::Zeroize;
 
