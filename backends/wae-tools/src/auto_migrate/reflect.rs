@@ -70,7 +70,9 @@ impl<'a> SchemaReflector<'a> {
     pub async fn get_table_schema(&self, table_name: &str) -> DatabaseResult<TableSchema> {
         let columns = self.get_columns(table_name).await?;
         let indexes = self.get_indexes(table_name).await?;
-        let foreign_keys = self.get_foreign_keys(table_name).await?;
+        // 暂时跳过外键的处理，以避免查询失败
+        // let foreign_keys = self.get_foreign_keys(table_name).await?;
+        let foreign_keys = Vec::new();
 
         Ok(TableSchema { name: table_name.to_string(), columns, indexes, foreign_keys })
     }

@@ -5,6 +5,8 @@
 use clap::Parser;
 use std::{fs, path::Path};
 use wae_types::WaeResult;
+use oak_rbq::ast::*;
+use oak_pretty_print::to_doc::AsDocument;
 
 /// Pull 命令
 #[derive(Parser, Debug)]
@@ -96,68 +98,148 @@ impl PullCommand {
 
     /// 生成 WAE 文件内容
     #[cfg(feature = "database-mysql")]
-    fn generate_wae_content(db_name: &str, schemas: &std::collections::HashMap<String, wae_database::TableSchema>) -> WaeResult<String> {
-        let mut content = format!("# RBQ Schema for {}\n\n@database(\"mysql.{}\")\nnamespace {};\n\n", db_name, db_name, db_name);
+    pub fn generate_wae_content(db_name: &str, schemas: &std::collections::HashMap<String, wae_database::TableSchema>) -> WaeResult<String> {
+        // 构造 RBQ AST
+        let mut items = Vec::new();
+        
+        // 添加数据库注解和命名空间
+        let namespace_annotations = vec![
+            RbqAnnotation {
+                name: "database".to_string(),
+                args: vec![format!("mysql.{}", db_name)],
+                span: (0..0).into(),
+            },
+        ];
+        
+        let namespace = RbqNamespace {
+            annotations: namespace_annotations,
+            path: db_name.to_string(),
+            span: (0..0).into(),
+        };
+        items.push(RbqItem::Namespace(namespace));
         
         // 生成每个表的定义
         for (table_name, table_schema) in schemas {
-            content.push_str(&format!("class {} {{", table_name));
+            // 构造表的注解
+            let mut table_annotations = vec![
+                RbqAnnotation {
+                    name: "table".to_string(),
+                    args: vec![format!("name = \"{}\"", table_name)],
+                    span: (0..0).into(),
+                },
+            ];
             
-            // 生成列定义
+            // 构造字段定义
+            let mut fields = Vec::new();
             for column in &table_schema.columns {
-                let mut column_def = format!("    {} {},", column.name, Self::column_type_to_rbq(&column.col_type));
+                let mut field_annotations = Vec::new();
                 
                 if column.primary_key {
-                    column_def.push_str(" primary_key");
-                }
-                
-                if column.auto_increment {
-                    column_def.push_str(" auto_increment");
-                }
-                
-                if column.nullable {
-                    column_def.push_str(" T");
+                    field_annotations.push(RbqAnnotation {
+                        name: "key".to_string(),
+                        args: Vec::new(),
+                        span: (0..0).into(),
+                    });
                 }
                 
                 if column.unique {
-                    column_def.push_str(" unique");
+                    field_annotations.push(RbqAnnotation {
+                        name: "unique".to_string(),
+                        args: Vec::new(),
+                        span: (0..0).into(),
+                    });
                 }
                 
-                if let Some(default) = &column.default_value {
-                    column_def.push_str(&format!(" default '{}'", default));
-                }
+                // 构造类型
+                let rbq_type = Self::column_type_to_rbq(&column.col_type);
+                let type_ref = if column.nullable {
+                    RbqType::Optional(
+                        Box::new(RbqType::Named {
+                            path: rbq_type,
+                            generic_args: Vec::new(),
+                            is_physical_ptr: false,
+                            is_optional: false,
+                            span: (0..0).into(),
+                        }),
+                        (0..0).into(),
+                    )
+                } else {
+                    RbqType::Named {
+                        path: rbq_type,
+                        generic_args: Vec::new(),
+                        is_physical_ptr: false,
+                        is_optional: false,
+                        span: (0..0).into(),
+                    }
+                };
                 
-                column_def.push_str(";\n");
-                content.push_str(&column_def);
-            }
-            
-            // 生成外键定义
-            for fk in &table_schema.foreign_keys {
-                content.push_str(&format!("    foreign_key {} references {}({});\n", fk.column, fk.ref_table, fk.ref_column));
+                // 构造默认值
+                let default_value = if let Some(default) = &column.default_value {
+                    Some(RbqExpr {
+                        kind: RbqExprKind::Identifier(default.to_string()),
+                        span: (0..0).into(),
+                    })
+                } else {
+                    None
+                };
+                
+                // 构造字段
+                let field = RbqField {
+                    annotations: field_annotations,
+                    name: column.name.clone(),
+                    type_ref,
+                    default_value,
+                    span: (0..0).into(),
+                };
+                fields.push(field);
             }
             
             // 生成索引定义
             for index in &table_schema.indexes {
                 if !index.name.starts_with("PRIMARY") {
-                    let unique = if index.unique { "unique " } else { "" };
-                    content.push_str(&format!("    {}index {}({});\n", unique, index.name, index.columns.join(", ")));
+                    let annotation_name = if index.unique { "unique" } else { "index" };
+                    let args = vec![format!("[\"{}\"]", index.columns.join(", \""))];
+                    
+                    let index_annotation = RbqAnnotation {
+                        name: annotation_name.to_string(),
+                        args,
+                        span: (0..0).into(),
+                    };
+                    table_annotations.push(index_annotation);
                 }
             }
             
-            content.push_str("}\n\n");
+            // 构造结构体
+            let struct_def = RbqStruct {
+                annotations: table_annotations,
+                name: table_name.clone(),
+                fields,
+                span: (0..0).into(),
+            };
+            items.push(RbqItem::Struct(struct_def));
         }
         
-        Ok(content)
+        // 构造根节点
+        let root = RbqRoot {
+            items,
+            span: (0..0).into(),
+        };
+        
+        // 生成文档
+        let document = root.as_document(&());
+        let wae_content = format!("# RBQ Schema for {}\n\n{}", db_name, document.render());
+        
+        Ok(wae_content)
     }
 
     /// 将 ColumnType 转换为 RBQ 类型
     #[cfg(feature = "database-mysql")]
     fn column_type_to_rbq(col_type: &wae_database::ColumnType) -> String {
         match col_type {
-            wae_database::ColumnType::Integer => "int".to_string(),
-            wae_database::ColumnType::Real => "float".to_string(),
+            wae_database::ColumnType::Integer => "i32".to_string(),
+            wae_database::ColumnType::Real => "f64".to_string(),
             wae_database::ColumnType::Text => "string".to_string(),
-            wae_database::ColumnType::Blob => "binary".to_string(),
+            wae_database::ColumnType::Blob => "bytes".to_string(),
         }
     }
 

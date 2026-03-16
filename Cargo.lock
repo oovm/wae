@@ -3603,6 +3603,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak-macros"
+version = "0.0.6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "oak-mcp"
 version = "0.0.6"
 dependencies = [
@@ -3629,10 +3638,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak-pretty-print"
+version = "0.0.6"
+dependencies = [
+ "oak-core",
+ "oak-macros",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "oak-rbq"
 version = "0.0.6"
 dependencies = [
  "oak-core",
+ "oak-pretty-print",
  "serde",
 ]
 
@@ -7181,6 +7201,7 @@ dependencies = [
  "oak-core",
  "oak-lsp",
  "oak-mcp",
+ "oak-pretty-print",
  "oak-rbq",
  "oak-semantic-search",
  "oak-vfs",
