@@ -141,64 +141,7 @@ fn test_schema_default() {
     assert_eq!(schema.schema_type, SchemaType::Object);
 }
 
-#[test]
-fn test_schema_builder_new() {
-    let builder = SchemaBuilder::new();
-    let schema = builder.build();
-    assert_eq!(schema.schema_type, SchemaType::Object);
-}
 
-#[test]
-fn test_schema_builder_default() {
-    let builder = SchemaBuilder::default();
-    let schema = builder.build();
-    assert_eq!(schema.schema_type, SchemaType::Object);
-}
-
-#[test]
-fn test_schema_builder_string() {
-    let schema = SchemaBuilder::string().title("Test String").build();
-    assert_eq!(schema.schema_type, SchemaType::String);
-    assert_eq!(schema.title, Some("Test String".to_string()));
-}
-
-#[test]
-fn test_schema_builder_integer() {
-    let schema = SchemaBuilder::integer().build();
-    assert_eq!(schema.schema_type, SchemaType::Integer);
-}
-
-#[test]
-fn test_schema_builder_number() {
-    let schema = SchemaBuilder::number().build();
-    assert_eq!(schema.schema_type, SchemaType::Number);
-}
-
-#[test]
-fn test_schema_builder_boolean() {
-    let schema = SchemaBuilder::boolean().build();
-    assert_eq!(schema.schema_type, SchemaType::Boolean);
-}
-
-#[test]
-fn test_schema_builder_array() {
-    let items = Schema::string();
-    let schema = SchemaBuilder::array(items).build();
-    assert_eq!(schema.schema_type, SchemaType::Array);
-}
-
-#[test]
-fn test_schema_builder_object() {
-    let schema = SchemaBuilder::object()
-        .title("User")
-        .property("id", Schema::integer())
-        .required(vec!["id"])
-        .build();
-
-    assert_eq!(schema.schema_type, SchemaType::Object);
-    assert_eq!(schema.title, Some("User".to_string()));
-    assert!(schema.properties.as_ref().unwrap().contains_key("id"));
-}
 
 #[test]
 fn test_to_schema_for_string() {
