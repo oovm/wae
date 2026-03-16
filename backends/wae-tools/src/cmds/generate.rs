@@ -87,39 +87,83 @@ impl GenerateCommand {
             // 提取模型定义
             for (index, item) in root.items.iter().enumerate() {
                 println!("Item {}: {:?}", index, item);
-                if let oak_rbq::ast::RbqItem::Struct(struct_def) = item {
-                    println!("Found model: {}", struct_def.name);
-                    
-                    // 提取表名
-                    let mut table_name = struct_def.name.to_lowercase();
-                    let mut has_table_annotation = false;
-                    for annotation in &struct_def.annotations {
-                        if annotation.name == "table" && !annotation.args.is_empty() {
-                            // 解析 table 注解的参数，格式为 "name = \"table_name\""
-                            let arg = &annotation.args[0];
-                            if let Some(name) = arg.split('"').nth(1) {
-                                table_name = name.to_string();
-                                has_table_annotation = true;
-                                break;
+                match item {
+                    oak_rbq::ast::RbqItem::Struct(struct_def) => {
+                        println!("Found model: {}", struct_def.name);
+                        
+                        // 提取表名
+                        let mut table_name = struct_def.name.to_lowercase();
+                        let mut has_table_annotation = false;
+                        for annotation in &struct_def.annotations {
+                            if annotation.name == "table" && !annotation.args.is_empty() {
+                                // 解析 table 注解的参数，格式为 "name = \"table_name\""
+                                let arg = &annotation.args[0];
+                                if let Some(name) = arg.split('"').nth(1) {
+                                    table_name = name.to_string();
+                                    has_table_annotation = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 如果没有指定表名，使用复数形式
+                        if !has_table_annotation {
+                            table_name = Self::to_plural(&struct_def.name.to_lowercase());
+                        }
+                        println!("  Table name: {}", table_name);
+                        
+                        // 提取字段定义
+                        println!("  Fields:");
+                        for field in &struct_def.fields {
+                            println!("    - {}: {:?}", field.name, field.type_ref);
+                        }
+                        
+                        // 生成 ORM 代码
+                        let entity_code = Self::generate_entity_code(struct_def, &table_name);
+                        entities.push((struct_def.name.clone(), entity_code));
+                    }
+                    oak_rbq::ast::RbqItem::Namespace(ns) => {
+                        println!("Found namespace: {}", ns.path);
+                        // 遍历命名空间内部的项目
+                        for (ns_index, ns_item) in ns.items.iter().enumerate() {
+                            println!("Namespace item {}: {:?}", ns_index, ns_item);
+                            if let oak_rbq::ast::RbqItem::Struct(struct_def) = ns_item {
+                                println!("Found model in namespace: {}", struct_def.name);
+                                
+                                // 提取表名
+                                let mut table_name = struct_def.name.to_lowercase();
+                                let mut has_table_annotation = false;
+                                for annotation in &struct_def.annotations {
+                                    if annotation.name == "table" && !annotation.args.is_empty() {
+                                        // 解析 table 注解的参数，格式为 "name = \"table_name\""
+                                        let arg = &annotation.args[0];
+                                        if let Some(name) = arg.split('"').nth(1) {
+                                            table_name = name.to_string();
+                                            has_table_annotation = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                // 如果没有指定表名，使用复数形式
+                                if !has_table_annotation {
+                                    table_name = Self::to_plural(&struct_def.name.to_lowercase());
+                                }
+                                println!("  Table name: {}", table_name);
+                                
+                                // 提取字段定义
+                                println!("  Fields:");
+                                for field in &struct_def.fields {
+                                    println!("    - {}: {:?}", field.name, field.type_ref);
+                                }
+                                
+                                // 生成 ORM 代码
+                                let entity_code = Self::generate_entity_code(struct_def, &table_name);
+                                entities.push((struct_def.name.clone(), entity_code));
                             }
                         }
                     }
-                    
-                    // 如果没有指定表名，使用复数形式
-                    if !has_table_annotation {
-                        table_name = Self::to_plural(&struct_def.name.to_lowercase());
-                    }
-                    println!("  Table name: {}", table_name);
-                    
-                    // 提取字段定义
-                    println!("  Fields:");
-                    for field in &struct_def.fields {
-                        println!("    - {}: {:?}", field.name, field.type_ref);
-                    }
-                    
-                    // 生成 ORM 代码
-                    let entity_code = Self::generate_entity_code(struct_def, &table_name);
-                    entities.push((struct_def.name.clone(), entity_code));
+                    _ => {}
                 }
             }
             
