@@ -7213,6 +7213,7 @@ dependencies = [
  "wae-database",
  "wae-tools",
  "wae-types",
+ "we-trust",
  "yyds-gateway",
 ]
 
@@ -7413,6 +7414,7 @@ dependencies = [
 name = "we-trust"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "bytes",
  "crc32fast",
  "futures",
