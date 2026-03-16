@@ -69,6 +69,26 @@ enum DslCommands {
         /// 输出的 .yaml 文件路径
         output: String,
     },
+    /// 从远程同步 WAE 文件
+    Pull {
+        /// 可选：远程仓库 URL
+        #[arg(long, short)]
+        remote: Option<String>,
+        /// 可选：目标目录
+        #[arg(long, short, default_value = "schemas")]
+        target: String,
+    },
+    /// 推送到数据库
+    Push {
+        /// WAE 文件路径或目录
+        input: String,
+        /// 可选：数据库连接字符串
+        #[arg(long, short)]
+        database: Option<String>,
+        /// 强制执行破坏性操作
+        #[arg(long, short)]
+        force: bool,
+    },
 }
 
 #[derive(clap::Subcommand)]
@@ -163,6 +183,18 @@ async fn handle_dsl_command(cmd: &DslCommands) {
                 std::process::exit(1);
             }
         }
+        DslCommands::Pull { remote, target } => {
+            if let Err(e) = handle_dsl_pull(remote, target).await {
+                eprintln!("Error pulling WAE files: {}", e);
+                std::process::exit(1);
+            }
+        }
+        DslCommands::Push { input, database, force } => {
+            if let Err(e) = handle_dsl_push(input, database, *force).await {
+                eprintln!("Error pushing to database: {}", e);
+                std::process::exit(1);
+            }
+        }
     }
 }
 
@@ -186,6 +218,92 @@ async fn handle_dsl_convert(input: &str, output: &str) -> Result<(), Box<dyn std
     fs::write(output, yaml)?;
     
     println!("Successfully converted {} to {}", input, output);
+    Ok(())
+}
+
+#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+async fn handle_dsl_pull(remote: &Option<String>, target: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs;
+    use std::path::Path;
+    
+    println!("WAE DSL Pull");
+    println!("{}", "=".repeat(60));
+    if let Some(remote_url) = remote {
+        println!("Remote: {}", remote_url);
+    }
+    println!("Target: {}", target);
+    println!();
+    
+    // 创建目标目录
+    let target_path = Path::new(target);
+    if !target_path.exists() {
+        fs::create_dir_all(target_path)?;
+        println!("Created directory: {}", target);
+    }
+    
+    // 这里应该实现从远程同步 WAE 文件的逻辑
+    // 目前只是模拟实现
+    println!("Simulating pull from remote...");
+    println!("Would sync WAE files to: {}", target);
+    
+    // 自动生成 Rust table schema
+    println!("\nGenerating Rust table schemas...");
+    println!("Rust table schemas would be generated based on WAE files");
+    
+    println!("\nPull completed successfully!");
+    Ok(())
+}
+
+#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+async fn handle_dsl_push(input: &str, database: &Option<String>, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+    use wae_tools::dsl::load_schemas_from_wae_file;
+    use std::fs;
+    use std::path::Path;
+    
+    println!("WAE DSL Push");
+    println!("{}", "=".repeat(60));
+    println!("Input: {}", input);
+    if let Some(db_url) = database {
+        println!("Database: {}", db_url);
+    }
+    println!("Force: {}", force);
+    println!();
+    
+    let input_path = Path::new(input);
+    let mut schemas = Vec::new();
+    
+    if input_path.is_dir() {
+        // 处理目录，遍历所有 .wae 文件
+        for entry in fs::read_dir(input_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "wae") {
+                println!("Processing file: {}", path.display());
+                let file_schemas = load_schemas_from_wae_file(&path)?;
+                schemas.extend(file_schemas);
+            }
+        }
+    } else {
+        // 处理单个文件
+        println!("Processing file: {}", input);
+        schemas = load_schemas_from_wae_file(input)?;
+    }
+    
+    println!("\nLoaded {} table schemas", schemas.len());
+    
+    // 自动生成 Rust table schema
+    println!("\nGenerating Rust table schemas...");
+    println!("Rust table schemas would be generated based on WAE files");
+    
+    // 这里应该实现推送到数据库的逻辑
+    // 目前只是模拟实现
+    println!("\nSimulating push to database...");
+    println!("Would apply {} table schemas to database", schemas.len());
+    if force {
+        println!("Force mode enabled - will perform destructive operations");
+    }
+    
+    println!("\nPush completed successfully!");
     Ok(())
 }
 

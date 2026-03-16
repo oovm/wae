@@ -2,8 +2,10 @@
 //!
 //! 提供从 schemas.yaml 到数据库的同步功能。
 
+use std::path::Path;
 use wae_database::{DatabaseType, DatabaseSchema, SchemaConfig, TableSchema, load_schema_config_from_yaml_file};
 use wae_types::{WaeError, WaeResult};
+use crate::dsl::load_schemas_from_wae_file;
 
 /// 迁移操作类型
 #[derive(Debug, Clone)]
@@ -231,6 +233,60 @@ impl SchemaSynchronizer {
     pub fn from_yaml_file(path: impl AsRef<std::path::Path>) -> WaeResult<Self> {
         let config = load_schema_config_from_yaml_file(path)
             .map_err(|e| wae_types::WaeError::internal(format!("Failed to load schema config: {}", e)))?;
+        Ok(Self { config })
+    }
+
+    /// 从 WAE 文件创建同步器
+    pub fn from_wae_file(path: impl AsRef<Path>) -> WaeResult<Self> {
+        let schemas = load_schemas_from_wae_file(path)
+            .map_err(|e| wae_types::WaeError::internal(format!("Failed to load WAE file: {}", e)))?;
+        
+        // 创建默认数据库配置
+        let database = DatabaseSchema {
+            name: "default".to_string(),
+            r#type: DatabaseType::Sqlite,
+            url: None,
+            schemas,
+        };
+        
+        let config = SchemaConfig {
+            databases: vec![database],
+            default_database: Some("default".to_string()),
+        };
+        
+        Ok(Self { config })
+    }
+
+    /// 从 WAE 目录创建同步器
+    pub fn from_wae_directory(path: impl AsRef<Path>) -> WaeResult<Self> {
+        use std::fs;
+        
+        let mut all_schemas = Vec::new();
+        
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let file_path = entry.path();
+            
+            if file_path.is_file() && file_path.extension().map_or(false, |ext| ext == "wae") {
+                let schemas = load_schemas_from_wae_file(&file_path)
+                    .map_err(|e| wae_types::WaeError::internal(format!("Failed to load WAE file {}: {}", file_path.display(), e)))?;
+                all_schemas.extend(schemas);
+            }
+        }
+        
+        // 创建默认数据库配置
+        let database = DatabaseSchema {
+            name: "default".to_string(),
+            r#type: DatabaseType::Sqlite,
+            url: None,
+            schemas: all_schemas,
+        };
+        
+        let config = SchemaConfig {
+            databases: vec![database],
+            default_database: Some("default".to_string()),
+        };
+        
         Ok(Self { config })
     }
 

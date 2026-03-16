@@ -1,6 +1,6 @@
 # 大文件拆分项目 - 实现计划
 
-## [ ] Task 1: 分析 wae-queue/src/lib.rs 的结构
+## [x] Task 1: 分析 wae-queue/src/lib.rs 的结构
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -11,7 +11,7 @@
   - `human-judgement` TR-1.1: 分析报告包含文件结构分析和拆分方案
 - **Notes**: 需考虑模块间的依赖关系
 
-## [ ] Task 2: 拆分 wae-queue/src/lib.rs
+## [/] Task 2: 拆分 wae-queue/src/lib.rs
 - **Priority**: P0
 - **Depends On**: Task 1
 - **Description**:
