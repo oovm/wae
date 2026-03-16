@@ -19,7 +19,8 @@ sha1 = { workspace = true }
 sha2 = { workspace = true }
 bcrypt = { workspace = true }
 argon2 = { workspace = true }
-rand = { workspace = true }
+rand = { version = "0.8.5", features = ["std"] }
+rand_core = { version = "0.6.4" }
 hex = { workspace = true }
 
 [dev-dependencies]

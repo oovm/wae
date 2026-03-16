@@ -5,7 +5,7 @@ use crate::{
     error::{CryptoError, CryptoResult},
     hmac::{HmacAlgorithm, hmac_sign},
 };
-use rand::Rng;
+use rand::{Rng, RngCore};
 
 /// TOTP 算法
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,7 +38,7 @@ impl TotpSecret {
     /// 生成新的随机密钥
     pub fn generate(length: usize) -> CryptoResult<Self> {
         let mut bytes = vec![0u8; length];
-        rand::rng().fill_bytes(&mut bytes);
+        rand::thread_rng().fill_bytes(&mut bytes);
         Self::from_bytes(&bytes)
     }
 
