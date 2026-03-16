@@ -91,4 +91,27 @@
   - 创建相应的模块文件
   - 确保所有public接口保持不变
 - **Acceptance Criteria Addressed**: AC-4
-- **Test Requirements**
+- **Test Requirements**:
+  - `human-judgement` TR-8.1: 拆分后的每个模块文件不超过500行
+  - `human-judgement` TR-8.2: 模块间依赖关系清晰合理
+- **Notes**: 保持文档注释的完整性
+
+## [ ] Task 9: 编译验证
+- **Priority**: P0
+- **Depends On**: Task 2, Task 4, Task 6, Task 8
+- **Description**:
+  - 运行cargo build命令验证代码编译是否通过
+- **Acceptance Criteria Addressed**: AC-5
+- **Test Requirements**:
+  - `programmatic` TR-9.1: cargo build命令执行成功，无错误
+- **Notes**: 需在所有拆分完成后执行
+
+## [ ] Task 10: 测试验证
+- **Priority**: P0
+- **Depends On**: Task 9
+- **Description**:
+  - 运行cargo test命令验证所有测试是否通过
+- **Acceptance Criteria Addressed**: AC-6
+- **Test Requirements**:
+  - `programmatic` TR-10.1: cargo test命令执行成功，所有测试通过
+- **Notes**: 需在编译成功后执行
