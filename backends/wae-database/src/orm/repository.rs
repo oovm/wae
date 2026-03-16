@@ -157,13 +157,13 @@ impl<E: Entity + FromRow> Repository<E> for DbRepository<E> {
     }
 
     async fn delete_by_id(&self, id: E::Id) -> DatabaseResult<u64> {
-        let (sql, params) = QueryBuilder::delete::<E>().where_id(id).build_turso();
-        self.conn.execute_with_turso(&sql, params).await
+        let (sql, params) = QueryBuilder::delete::<E>().where_id(id).build_limbo();
+        self.conn.execute_with_limbo(&sql, params).await
     }
 
     async fn delete_by(&self, condition: Condition) -> DatabaseResult<u64> {
-        let (sql, params) = QueryBuilder::delete::<E>().where_(condition).build_turso();
-        self.conn.execute_with_turso(&sql, params).await
+        let (sql, params) = QueryBuilder::delete::<E>().where_(condition).build_limbo();
+        self.conn.execute_with_limbo(&sql, params).await
     }
 
     async fn count(&self) -> DatabaseResult<u64> {
@@ -174,9 +174,9 @@ impl<E: Entity + FromRow> Repository<E> for DbRepository<E> {
     }
 
     async fn count_by(&self, condition: Condition) -> DatabaseResult<u64> {
-        let (cond_sql, params) = condition.build_turso();
+        let (cond_sql, params) = condition.build_limbo();
         let sql = format!("SELECT COUNT(*) FROM {} WHERE {}", E::table_name(), cond_sql);
-        let rows = self.conn.query_with_turso(&sql, params).await?;
+        let rows = self.conn.query_with_limbo(&sql, params).await?;
         let mut rows = rows;
         if let Some(row) = rows.next().await? { row.get::<i64>(0).map(|n| n as u64) } else { Ok(0) }
     }

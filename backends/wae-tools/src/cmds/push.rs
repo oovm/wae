@@ -66,7 +66,7 @@ impl PushCommand {
             println!("Schema generation functionality temporarily disabled");
         }
 
-        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
+        #[cfg(not(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
         {
             println!("Error: Database features are not enabled. Please enable one of the database features.");
         }

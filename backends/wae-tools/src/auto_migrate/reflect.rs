@@ -23,7 +23,7 @@ impl<'a> SchemaReflector<'a> {
     /// 获取所有表名
     pub async fn get_table_names(&self) -> DatabaseResult<Vec<String>> {
         match self.conn.backend() {
-            DatabaseBackend::Turso => self.get_table_names_turso().await,
+            DatabaseBackend::Limbo => self.get_table_names_limbo().await,
             DatabaseBackend::Postgres => self.get_table_names_postgres().await,
             DatabaseBackend::MySql => self.get_table_names_mysql().await,
         }
@@ -78,7 +78,7 @@ impl<'a> SchemaReflector<'a> {
     /// 获取表的所有外键约束
     pub async fn get_foreign_keys(&self, table_name: &str) -> DatabaseResult<Vec<ForeignKeyDef>> {
         match self.conn.backend() {
-            DatabaseBackend::Turso => self.get_foreign_keys_turso(table_name).await,
+            DatabaseBackend::Limbo => self.get_foreign_keys_limbo(table_name).await,
             DatabaseBackend::Postgres => self.get_foreign_keys_postgres(table_name).await,
             DatabaseBackend::MySql => self.get_foreign_keys_mysql(table_name).await,
         }
@@ -87,7 +87,7 @@ impl<'a> SchemaReflector<'a> {
     /// 获取表的所有列
     pub async fn get_columns(&self, table_name: &str) -> DatabaseResult<Vec<ColumnDef>> {
         match self.conn.backend() {
-            DatabaseBackend::Turso => self.get_columns_turso(table_name).await,
+            DatabaseBackend::Limbo => self.get_columns_limbo(table_name).await,
             DatabaseBackend::Postgres => self.get_columns_postgres(table_name).await,
             DatabaseBackend::MySql => self.get_columns_mysql(table_name).await,
         }
@@ -199,7 +199,7 @@ impl<'a> SchemaReflector<'a> {
     /// 获取表的所有索引
     pub async fn get_indexes(&self, table_name: &str) -> DatabaseResult<Vec<IndexDef>> {
         match self.conn.backend() {
-            DatabaseBackend::Turso => self.get_indexes_turso(table_name).await,
+            DatabaseBackend::Limbo => self.get_indexes_limbo(table_name).await,
             DatabaseBackend::Postgres => self.get_indexes_postgres(table_name).await,
             DatabaseBackend::MySql => self.get_indexes_mysql(table_name).await,
         }
@@ -305,7 +305,7 @@ impl<'a> SchemaReflector<'a> {
     /// 检查表是否存在
     pub async fn table_exists(&self, table_name: &str) -> DatabaseResult<bool> {
         match self.conn.backend() {
-            DatabaseBackend::Turso => self.table_exists_turso(table_name).await,
+            DatabaseBackend::Limbo => self.table_exists_limbo(table_name).await,
             DatabaseBackend::Postgres => self.table_exists_postgres(table_name).await,
             DatabaseBackend::MySql => self.table_exists_mysql(table_name).await,
         }

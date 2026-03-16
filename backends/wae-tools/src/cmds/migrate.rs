@@ -61,7 +61,7 @@ impl MigrateCommand {
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             MigrateCommand::Sync { schema, execute, force } => {
-                #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+                #[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
                 {
                     use super::super::schema_sync::SchemaSynchronizer;
 
@@ -80,7 +80,7 @@ impl MigrateCommand {
                         println!("   Preview generation is complete. SQL can be manually applied.");
                     }
                 }
-                #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
+                #[cfg(not(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
                 {
                     println!("Error: Database features are not enabled. Please enable one of the database features.");
                 }

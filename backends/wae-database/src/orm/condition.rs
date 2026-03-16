@@ -7,7 +7,7 @@ use wae_types::Value;
 #[cfg(feature = "limbo")]
 use crate::types::from_wae_value;
 #[cfg(feature = "limbo")]
-use turso::Value as TursoValue;
+use limbo::Value as LimboValue;
 
 #[cfg(feature = "mysql")]
 use crate::types::from_wae_to_mysql;
@@ -173,8 +173,8 @@ impl Condition {
     }
 
     #[cfg(feature = "limbo")]
-    /// 构建 SQL 和参数 (内部使用 turso::Value)
-    pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
+    /// 构建 SQL 和参数 (内部使用 limbo::Value)
+    pub(crate) fn build_limbo(&self) -> (String, Vec<LimboValue>) {
         match self {
             Condition::Eq { column, value } => (format!("{} = ?", column), vec![from_wae_value(value.clone())]),
             Condition::Ne { column, value } => (format!("{} != ?", column), vec![from_wae_value(value.clone())]),
@@ -182,11 +182,11 @@ impl Condition {
             Condition::Gte { column, value } => (format!("{} >= ?", column), vec![from_wae_value(value.clone())]),
             Condition::Lt { column, value } => (format!("{} < ?", column), vec![from_wae_value(value.clone())]),
             Condition::Lte { column, value } => (format!("{} <= ?", column), vec![from_wae_value(value.clone())]),
-            Condition::Like { column, pattern } => (format!("{} LIKE ?", column), vec![TursoValue::Text(pattern.clone())]),
+            Condition::Like { column, pattern } => (format!("{} LIKE ?", column), vec![LimboValue::Text(pattern.clone())]),
             Condition::In { column, values } => {
                 let placeholders: Vec<&str> = values.iter().map(|_| "?").collect();
-                let turso_values: Vec<TursoValue> = values.iter().map(|v| from_wae_value(v.clone())).collect();
-                (format!("{} IN ({})", column, placeholders.join(", ")), turso_values)
+                let limbo_values: Vec<LimboValue> = values.iter().map(|v| from_wae_value(v.clone())).collect();
+                (format!("{} IN ({})", column, placeholders.join(", ")), limbo_values)
             }
             Condition::IsNull { column } => (format!("{} IS NULL", column), vec![]),
             Condition::IsNotNull { column } => (format!("{} IS NOT NULL", column), vec![]),
@@ -194,7 +194,7 @@ impl Condition {
                 let mut sql_parts = Vec::new();
                 let mut all_params = Vec::new();
                 for cond in conditions {
-                    let (sql, params) = cond.build_turso();
+                    let (sql, params) = cond.build_limbo();
                     sql_parts.push(format!("({})", sql));
                     all_params.extend(params);
                 }
@@ -204,19 +204,19 @@ impl Condition {
                 let mut sql_parts = Vec::new();
                 let mut all_params = Vec::new();
                 for cond in conditions {
-                    let (sql, params) = cond.build_turso();
+                    let (sql, params) = cond.build_limbo();
                     sql_parts.push(format!("({})", sql));
                     all_params.extend(params);
                 }
                 (sql_parts.join(" OR "), all_params)
             }
             Condition::Not(cond) => {
-                let (sql, params) = cond.build_turso();
+                let (sql, params) = cond.build_limbo();
                 (format!("NOT ({})", sql), params)
             }
             Condition::Raw { sql, params } => {
-                let turso_params: Vec<TursoValue> = params.iter().map(|v| from_wae_value(v.clone())).collect();
-                (sql.clone(), turso_params)
+                let limbo_params: Vec<LimboValue> = params.iter().map(|v| from_wae_value(v.clone())).collect();
+                (sql.clone(), limbo_params)
             }
         }
     }

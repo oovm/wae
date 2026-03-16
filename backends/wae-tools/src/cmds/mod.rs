@@ -17,7 +17,7 @@ use wae_types::WaeResult;
 #[derive(clap::Subcommand)]
 pub enum Commands {
     /// 数据库迁移相关命令
-    #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+    #[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
     Migrate {
         #[command(subcommand)]
         subcommand: MigrateCommand,
@@ -40,7 +40,7 @@ pub struct Arguements {}
 impl Commands {
     pub async fn run(&self, _args: &Arguements) -> WaeResult<()> {
         match self {
-            #[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+            #[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
             Commands::Migrate { subcommand } => {
                 if let Err(e) = subcommand.run().await {
                     eprintln!("Error: {}", e);

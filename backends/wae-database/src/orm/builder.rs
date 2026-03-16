@@ -12,7 +12,7 @@ use wae_types::Value;
 #[cfg(feature = "limbo")]
 use crate::types::from_wae_value;
 #[cfg(feature = "limbo")]
-use turso::Value as TursoValue;
+use limbo::Value as LimboValue;
 
 #[cfg(feature = "mysql")]
 use crate::types::from_wae_to_mysql;
@@ -164,14 +164,14 @@ impl<E: Entity> SelectBuilder<E> {
 
     #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
-    pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
+    pub(crate) fn build_limbo(&self) -> (String, Vec<LimboValue>) {
         let columns = if self.columns.is_empty() { "*".to_string() } else { self.columns.join(", ") };
 
         let mut sql = format!("SELECT {} FROM {}", columns, E::table_name());
         let mut params = Vec::new();
 
         for join in &self.joins {
-            let (on_sql, on_params) = join.on.build_turso();
+            let (on_sql, on_params) = join.on.build_limbo();
             let join_type_str = match join.join_type {
                 JoinType::Inner => "INNER JOIN",
                 JoinType::Left => "LEFT JOIN",
@@ -185,12 +185,12 @@ impl<E: Entity> SelectBuilder<E> {
         if !self.conditions.is_empty() {
             let where_conditions = self.conditions.to_vec();
             if where_conditions.len() == 1 {
-                let (cond_sql, cond_params) = where_conditions[0].build_turso();
+                let (cond_sql, cond_params) = where_conditions[0].build_limbo();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
             }
             else {
-                let (cond_sql, cond_params) = Condition::and(where_conditions).build_turso();
+                let (cond_sql, cond_params) = Condition::and(where_conditions).build_limbo();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
             }
@@ -203,12 +203,12 @@ impl<E: Entity> SelectBuilder<E> {
         if !self.having.is_empty() {
             let having_conditions = self.having.to_vec();
             if having_conditions.len() == 1 {
-                let (cond_sql, cond_params) = having_conditions[0].build_turso();
+                let (cond_sql, cond_params) = having_conditions[0].build_limbo();
                 sql.push_str(&format!(" HAVING {}", cond_sql));
                 params.extend(cond_params);
             }
             else {
-                let (cond_sql, cond_params) = Condition::and(having_conditions).build_turso();
+                let (cond_sql, cond_params) = Condition::and(having_conditions).build_limbo();
                 sql.push_str(&format!(" HAVING {}", cond_sql));
                 params.extend(cond_params);
             }
@@ -473,10 +473,10 @@ impl<E: Entity> InsertBuilder<E> {
 
     #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
-    pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
+    pub(crate) fn build_limbo(&self) -> (String, Vec<LimboValue>) {
         let columns: Vec<&str> = self.data.iter().map(|(col, _)| *col).collect();
         let placeholders: Vec<&str> = self.data.iter().map(|_| "?").collect();
-        let params: Vec<TursoValue> = self.data.iter().map(|(_, val)| from_wae_value(val.clone())).collect();
+        let params: Vec<LimboValue> = self.data.iter().map(|(_, val)| from_wae_value(val.clone())).collect();
 
         let sql = format!("INSERT INTO {} ({}) VALUES ({})", E::table_name(), columns.join(", "), placeholders.join(", "));
 
@@ -541,21 +541,21 @@ impl<E: Entity> UpdateBuilder<E> {
 
     #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
-    pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
+    pub(crate) fn build_limbo(&self) -> (String, Vec<LimboValue>) {
         let set_parts: Vec<String> = self.data.iter().map(|(col, _)| format!("{} = ?", col)).collect();
-        let mut params: Vec<TursoValue> = self.data.iter().map(|(_, val)| from_wae_value(val.clone())).collect();
+        let mut params: Vec<LimboValue> = self.data.iter().map(|(_, val)| from_wae_value(val.clone())).collect();
 
         let mut sql = format!("UPDATE {} SET {}", E::table_name(), set_parts.join(", "));
 
         if !self.conditions.is_empty() {
             let where_conditions = self.conditions.to_vec();
             if where_conditions.len() == 1 {
-                let (cond_sql, cond_params) = where_conditions[0].build_turso();
+                let (cond_sql, cond_params) = where_conditions[0].build_limbo();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
             }
             else {
-                let (cond_sql, cond_params) = Condition::and(where_conditions).build_turso();
+                let (cond_sql, cond_params) = Condition::and(where_conditions).build_limbo();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
             }
@@ -615,19 +615,19 @@ impl<E: Entity> DeleteBuilder<E> {
 
     #[cfg(feature = "limbo")]
     /// 构建 SQL 和参数 (内部使用)
-    pub(crate) fn build_turso(&self) -> (String, Vec<TursoValue>) {
+    pub(crate) fn build_limbo(&self) -> (String, Vec<LimboValue>) {
         let mut sql = format!("DELETE FROM {}", E::table_name());
         let mut params = Vec::new();
 
         if !self.conditions.is_empty() {
             let where_conditions = self.conditions.to_vec();
             if where_conditions.len() == 1 {
-                let (cond_sql, cond_params) = where_conditions[0].build_turso();
+                let (cond_sql, cond_params) = where_conditions[0].build_limbo();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
             }
             else {
-                let (cond_sql, cond_params) = Condition::and(where_conditions).build_turso();
+                let (cond_sql, cond_params) = Condition::and(where_conditions).build_limbo();
                 sql.push_str(&format!(" WHERE {}", cond_sql));
                 params.extend(cond_params);
             }

@@ -2,7 +2,7 @@
 //!
 //! 提供数据库 schema 版本管理和迁移能力。
 
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+#[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
 mod inner {
 
     use chrono::{DateTime, Utc};
@@ -689,5 +689,5 @@ CREATE TABLE IF NOT EXISTS _migrations (
     }
 }
 
-#[cfg(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+#[cfg(any(feature = "database-limbo", feature = "database-postgres", feature = "database-mysql"))]
 pub use inner::*;
