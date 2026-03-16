@@ -59,7 +59,7 @@
   - `human-judgement` TR-5.1: 分析报告包含文件结构分析和拆分方案
 - **Notes**: 需考虑模块间的依赖关系
 
-## [ ] Task 6: 拆分 wae-testing/src/environment.rs
+## [/] Task 6: 拆分 wae-testing/src/environment.rs
 - **Priority**: P1
 - **Depends On**: Task 5
 - **Description**:

@@ -11,23 +11,45 @@ use std::{
 
 /// 测试容器错误类型
 #[allow(dead_code)]
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum ContainerError {
     /// Docker 命令执行失败
-    #[error("Docker command failed: {0}")]
     CommandFailed(String),
 
     /// 容器启动超时
-    #[error("Container startup timeout")]
     Timeout,
 
     /// 容器未找到
-    #[error("Container not found: {0}")]
     NotFound(String),
 
     /// IO 错误
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(std::io::Error),
+}
+
+impl std::error::Error for ContainerError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ContainerError::Io(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for ContainerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ContainerError::CommandFailed(msg) => write!(f, "Docker command failed: {}", msg),
+            ContainerError::Timeout => write!(f, "Container startup timeout"),
+            ContainerError::NotFound(name) => write!(f, "Container not found: {}", name),
+            ContainerError::Io(err) => write!(f, "IO error: {}", err),
+        }
+    }
+}
+
+impl From<std::io::Error> for ContainerError {
+    fn from(err: std::io::Error) -> Self {
+        ContainerError::Io(err)
+    }
 }
 
 /// 测试容器结果类型

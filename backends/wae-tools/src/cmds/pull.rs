@@ -41,10 +41,10 @@ impl PullCommand {
             if let Some(name) = Self::extract_db_name(remote_url) {
                 name
             } else {
-                "authentication"
+                "authentication".to_string()
             }
         } else {
-            "authentication"
+            "authentication".to_string()
         };
         
         // 生成 WAE 文件路径
@@ -82,7 +82,7 @@ impl PullCommand {
                 println!("No WAE files found to generate Rust schemas");
             }
         }
-        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql"))]
+        #[cfg(not(any(feature = "database-turso", feature = "database-postgres", feature = "database-mysql")))]
         {
             println!("Error: Database features are not enabled. Please enable one of the database features.");
         }

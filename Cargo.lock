@@ -7167,8 +7167,8 @@ dependencies = [
  "criterion",
  "hex",
  "hmac",
- "rand 0.8.5",
- "rand_core 0.6.4",
+ "rand 0.10.0",
+ "rand_core 0.10.0",
  "sha1",
  "sha2",
  "wae-types",
@@ -7276,19 +7276,6 @@ dependencies = [
  "tracing",
  "uuid",
  "wae-session",
- "wae-types",
-]
-
-[[package]]
-name = "wae-integration-tests"
-version = "0.0.1"
-dependencies = [
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "wae-config",
- "wae-testing",
  "wae-types",
 ]
 
@@ -7528,7 +7515,6 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "thiserror",
  "tokio",
  "tokio-test",
  "url",
