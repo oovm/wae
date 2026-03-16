@@ -27,9 +27,8 @@ impl PullCommand {
         println!("Target: {}", self.target);
         println!();
 
-        // 创建目标目录和 schemas 子目录
-        let target_path = Path::new(&self.target);
-        let schemas_dir = target_path.join("schemas");
+        // 创建目标目录
+        let schemas_dir = Path::new(&self.target);
         if !schemas_dir.exists() {
             fs::create_dir_all(&schemas_dir)?;
             println!("Created directory: {}", schemas_dir.display());

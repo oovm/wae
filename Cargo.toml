@@ -93,7 +93,7 @@ webpki-roots = "1.0.6"
 tokio-tungstenite = "0.28.0"
 hickory-resolver = { version = "0.25.2", features = ["system-config"] }
 jsonwebtoken = "10.3.0"
-turso = { version = "0.5.1", default-features = false }
+limbo = { version = "0.0.22", default-features = false }
 tokio-postgres = { version = "0.7.16" }
 deadpool-postgres = { version = "0.14.1" }
 mysql_async = { version = "0.36.1" }

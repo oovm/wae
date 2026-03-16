@@ -6,6 +6,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::fmt;
 
+/// WAE 结果类型
+pub type WaeResult<T> = Result<T, WaeError>;
+
+/// 中心化错误类型
+///
+/// 包含错误类型标识，支持国际化。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WaeError {
+    /// 错误类型
+    pub kind: Box<WaeErrorKind>,
+}
+
+
 /// 错误分类
 ///
 /// 用于将错误映射到 HTTP 状态码等场景。
@@ -1013,15 +1026,6 @@ impl fmt::Display for WaeErrorKind {
     }
 }
 
-/// 中心化错误类型
-///
-/// 包含错误类型标识，支持国际化。
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WaeError {
-    /// 错误类型
-    pub kind: Box<WaeErrorKind>,
-}
-
 impl WaeError {
     /// 创建新的错误
     pub fn new(kind: WaeErrorKind) -> Self {
@@ -1350,5 +1354,3 @@ impl From<serde_json::Error> for WaeError {
     }
 }
 
-/// WAE 结果类型
-pub type WaeResult<T> = Result<T, WaeError>;

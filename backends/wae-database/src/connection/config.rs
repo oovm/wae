@@ -1,7 +1,7 @@
 //! 数据库配置模块
 
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "turso")]
+#[cfg(feature = "limbo")]
 use std::path::PathBuf;
 use std::time::Duration;
 use wae_types::{WaeError, WaeResult};
@@ -151,9 +151,9 @@ impl PoolConfig {
 /// 数据库配置枚举
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DatabaseConfig {
-    /// Turso 配置
-    #[cfg(feature = "turso")]
-    Turso {
+    /// Limbo 配置
+    #[cfg(feature = "limbo")]
+    Limbo {
         /// 数据库文件路径，为 None 时使用内存数据库
         path: Option<PathBuf>,
     },
@@ -176,16 +176,16 @@ pub enum DatabaseConfig {
 }
 
 impl DatabaseConfig {
-    /// 创建 Turso 内存数据库配置
-    #[cfg(feature = "turso")]
-    pub fn turso_in_memory() -> Self {
-        Self::Turso { path: None }
+    /// 创建 Limbo 内存数据库配置
+    #[cfg(feature = "limbo")]
+    pub fn limbo_in_memory() -> Self {
+        Self::Limbo { path: None }
     }
 
-    /// 创建 Turso 文件数据库配置
-    #[cfg(feature = "turso")]
-    pub fn turso_file<P: Into<PathBuf>>(path: P) -> Self {
-        Self::Turso { path: Some(path.into()) }
+    /// 创建 Limbo 文件数据库配置
+    #[cfg(feature = "limbo")]
+    pub fn limbo_file<P: Into<PathBuf>>(path: P) -> Self {
+        Self::Limbo { path: Some(path.into()) }
     }
 
     /// 创建 PostgreSQL 配置

@@ -17,7 +17,7 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 once_cell = { workspace = true }
 tokio = { workspace = true }
-turso = { workspace = true, optional = true }
+limbo = { workspace = true, optional = true }
 tokio-postgres = { workspace = true, optional = true }
 deadpool-postgres = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
@@ -27,7 +27,7 @@ tower = { workspace = true }
 pin-project-lite = { workspace = true }
 
 [features]
-default = ["turso"]
-turso = ["dep:turso"]
+default = ["limbo"]
+limbo = ["dep:limbo"]
 postgres = ["dep:tokio-postgres", "dep:deadpool-postgres"]
 mysql = ["dep:mysql_async"]

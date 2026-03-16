@@ -6,8 +6,8 @@ use async_trait::async_trait;
 /// 数据库后端类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DatabaseBackend {
-    /// Turso (SQLite) backend
-    Turso,
+    /// Limbo (SQLite) backend
+    Limbo,
     /// PostgreSQL backend
     Postgres,
     /// MySQL backend
@@ -44,15 +44,15 @@ pub trait DatabaseConnection: Send + Sync {
     /// 回滚当前事务
     async fn rollback(&self) -> DatabaseResult<()>;
 
-    #[cfg(feature = "turso")]
-    /// 执行带参数的查询 (内部使用 turso::Value)
-    async fn query_with_turso(&self, _sql: &str, _params: Vec<turso::Value>) -> DatabaseResult<DatabaseRows> {
-        unimplemented!("query_with_turso is only implemented for Turso connections")
+    #[cfg(feature = "limbo")]
+    /// 执行带参数的查询 (内部使用 limbo::Value)
+    async fn query_with_limbo(&self, _sql: &str, _params: Vec<limbo::Value>) -> DatabaseResult<DatabaseRows> {
+        unimplemented!("query_with_limbo is only implemented for Limbo connections")
     }
 
-    #[cfg(feature = "turso")]
-    /// 执行带参数的语句 (内部使用 turso::Value)
-    async fn execute_with_turso(&self, _sql: &str, _params: Vec<turso::Value>) -> DatabaseResult<u64> {
-        unimplemented!("execute_with_turso is only implemented for Turso connections")
+    #[cfg(feature = "limbo")]
+    /// 执行带参数的语句 (内部使用 limbo::Value)
+    async fn execute_with_limbo(&self, _sql: &str, _params: Vec<limbo::Value>) -> DatabaseResult<u64> {
+        unimplemented!("execute_with_limbo is only implemented for Limbo connections")
     }
 }

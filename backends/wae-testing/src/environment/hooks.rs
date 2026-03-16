@@ -1,6 +1,6 @@
 //! 测试生命周期钩子模块
 
-use wae_types::{WaeError, WaeResult as TestingResult};
+use wae_types::{WaeResult as TestingResult};
 
 /// 测试生命周期钩子 trait
 ///

@@ -5,15 +5,15 @@ use crate::connection::{config::DatabaseResult, value_impl::FromDatabaseValue};
 use mysql_async::Row as MySqlRow;
 #[cfg(feature = "postgres")]
 use tokio_postgres::Row as PostgresRow;
-#[cfg(feature = "turso")]
-use turso::Row;
+#[cfg(feature = "limbo")]
+use limbo::Row;
 use wae_types::{WaeError, WaeErrorKind};
 
 /// 查询结果行
 pub enum DatabaseRow {
-    /// Turso 数据库行
-    #[cfg(feature = "turso")]
-    Turso(Row),
+    /// Limbo 数据库行
+    #[cfg(feature = "limbo")]
+    Limbo(Row),
     /// PostgreSQL 数据库行
     #[cfg(feature = "postgres")]
     Postgres(PostgresRow),

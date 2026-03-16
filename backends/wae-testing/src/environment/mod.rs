@@ -39,7 +39,7 @@ pub struct TestEnv {
     cleanup_handlers: Arc<RwLock<Vec<Box<dyn Fn() + Send + Sync>>>>,
     /// 异步清理函数列表
     #[allow(clippy::type_complexity)]
-    async_cleanup_handlers: Arc<RwLock<Vec<Box<dyn Fn() -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>>>,
+    async_cleanup_handlers: Arc<RwLock<Vec<Box<dyn Fn() -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>>>>,
     /// 存储的数据
     storage: Arc<RwLock<std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync>>>>,
     /// 测试服务配置
@@ -392,4 +392,222 @@ impl TestEnv {
     ///
     /// # Examples
     ///
+    /// ```
+    /// use wae_testing::TestEnv;
     ///
+    /// let env = TestEnv::default_env();
+    /// env.on_cleanup(|| println!("Cleaning up!"));
+    /// ```
+    pub fn on_cleanup<F>(&self, handler: F)
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
+        self.cleanup_handlers.write().push(Box::new(handler));
+    }
+
+    /// 注册异步清理函数
+    ///
+    /// 添加一个异步清理函数，在测试环境清理时异步执行。
+    pub fn on_cleanup_async<F, Fut>(&self, handler: F)
+    where
+        F: Fn() -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        self.async_cleanup_handlers.write().push(Box::new(move || Box::pin(handler())));
+    }
+
+    /// 存储数据
+    ///
+    /// 在测试环境中存储任意类型的数据。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use wae_testing::TestEnv;
+    ///
+    /// let env = TestEnv::default_env();
+    /// env.set("test_key", "test_value");
+    /// ```
+    pub fn set<T: 'static + Send + Sync>(&self, key: &str, value: T) {
+        self.storage.write().insert(key.to_string(), Box::new(value));
+    }
+
+    /// 获取数据
+    ///
+    /// 从测试环境中获取之前存储的数据。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use wae_testing::TestEnv;
+    ///
+    /// let env = TestEnv::default_env();
+    /// env.set("test_key", "test_value".to_string());
+    /// let value: Option<String> = env.get("test_key");
+    /// assert_eq!(value, Some("test_value".to_string()));
+    /// ```
+    pub fn get<T: 'static + Clone>(&self, key: &str) -> Option<T> {
+        let storage = self.storage.read();
+        storage.get(key).and_then(|v| v.downcast_ref::<T>().cloned())
+    }
+
+    /// 移除数据
+    ///
+    /// 从测试环境中移除并返回之前存储的数据。
+    pub fn remove<T: 'static>(&self, key: &str) -> Option<T> {
+        let mut storage = self.storage.write();
+        storage.remove(key).and_then(|v| v.downcast::<T>().ok()).map(|v| *v)
+    }
+
+    /// 检查是否存在指定键的数据
+    pub fn has(&self, key: &str) -> bool {
+        self.storage.read().contains_key(key)
+    }
+
+    /// 获取配置
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use wae_testing::TestEnv;
+    ///
+    /// let env = TestEnv::default_env();
+    /// let config = env.config();
+    /// assert_eq!(config.name, "test");
+    /// ```
+    pub fn config(&self) -> &TestEnvConfig {
+        &self.config
+    }
+
+    /// 添加测试服务配置
+    ///
+    /// 向测试环境中添加一个服务配置，用于多服务集成测试。
+    pub fn add_service(&self, service_config: TestServiceConfig) {
+        self.services.write().insert(service_config.name.clone(), service_config);
+    }
+
+    /// 获取测试服务配置
+    ///
+    /// 根据服务名称获取服务配置。
+    pub fn get_service(&self, name: &str) -> Option<TestServiceConfig> {
+        self.services.read().get(name).cloned()
+    }
+
+    /// 获取所有启用的服务
+    ///
+    /// 返回所有已启用的服务配置列表。
+    pub fn enabled_services(&self) -> Vec<TestServiceConfig> {
+        self.services.read().values().filter(|s| s.enabled).cloned().collect()
+    }
+
+    /// 使用 fixture 运行测试
+    ///
+    /// 自动管理测试环境的初始化和清理，执行测试函数。
+    ///
+    /// # Errors
+    ///
+    /// 如果环境初始化、测试执行或清理失败，将返回 [`WaeError`] 错误。
+    pub async fn with_fixture<F, R>(&self, fixture: F) -> TestingResult<R>
+    where
+        F: FnOnce() -> TestingResult<R>,
+    {
+        self.setup()?;
+
+        let result = fixture();
+
+        self.teardown()?;
+
+        result
+    }
+
+    /// 运行异步测试
+    ///
+    /// 自动管理测试环境的初始化和清理，执行异步测试函数。
+    ///
+    /// # Errors
+    ///
+    /// 如果环境初始化、测试执行或清理失败，将返回 [`WaeError`] 错误。
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use wae_testing::TestEnv;
+    ///
+    /// let env = TestEnv::default_env();
+    /// env.run_test(|| async { Ok(()) }).await.unwrap();
+    /// ```
+    pub async fn run_test<F, Fut>(&self, test: F) -> TestingResult<()>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = TestingResult<()>>,
+    {
+        self.setup()?;
+
+        let result = test().await;
+
+        self.teardown()?;
+
+        result
+    }
+
+    /// 运行带异步生命周期的测试
+    ///
+    /// 使用异步初始化和清理运行测试，适合需要异步操作的测试场景。
+    ///
+    /// # Errors
+    ///
+    /// 如果环境初始化、测试执行或清理失败，将返回 [`WaeError`] 错误。
+    pub async fn run_test_async<F, Fut>(&self, test: F) -> TestingResult<()>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = TestingResult<()>>,
+    {
+        self.setup_async().await?;
+
+        let result = test().await;
+
+        self.teardown_async().await?;
+
+        result
+    }
+}
+
+impl Drop for TestEnv {
+    fn drop(&mut self) {
+        let state = self.state.read().clone();
+        if state == TestEnvState::Initialized {
+            let _ = self.teardown();
+        }
+    }
+}
+
+/// 创建测试环境
+///
+/// 便捷函数，创建一个默认配置的测试环境。
+///
+/// # Examples
+///
+/// ```
+/// use wae_testing::create_test_env;
+///
+/// let env = create_test_env();
+/// ```
+pub fn create_test_env() -> TestEnv {
+    TestEnv::default_env()
+}
+
+/// 使用配置创建测试环境
+///
+/// 便捷函数，使用指定配置创建测试环境。
+///
+/// # Examples
+///
+/// ```
+/// use wae_testing::{TestEnvConfig, create_test_env_with_config};
+///
+/// let config = TestEnvConfig::default();
+/// let env = create_test_env_with_config(config);
+/// ```
+pub fn create_test_env_with_config(config: TestEnvConfig) -> TestEnv {
+    TestEnv::new(config)
+}
