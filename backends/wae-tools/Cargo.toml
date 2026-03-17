@@ -32,10 +32,10 @@ oak-vfs = { workspace = true }
 oak-semantic-search = { workspace = true }
 # YYKV we-trust gateway 依赖
 yyds-gateway = { workspace = true }
-we-trust = { path = "../../../yykv/protocols/we-trust" }
+we-trust = { workspace = true }
 # Oak RBQ parser 依赖
-oak-rbq = { path = "../../../oaks/examples/oak-rbq", features = ["oak-pretty-print"] }
-oak-pretty-print = { path = "../../../oaks/projects/oak-pretty-print" }
+oak-rbq = { workspace = true }
+oak-pretty-print = { workspace = true }
 
 [features]
 default = []

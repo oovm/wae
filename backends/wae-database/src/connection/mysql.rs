@@ -208,10 +208,6 @@ impl MySqlDatabaseService {
     /// 从配置创建数据库服务
     pub async fn new(config: &DatabaseConfig) -> DatabaseResult<Self> {
         match config {
-            #[cfg(feature = "limbo")]
-            DatabaseConfig::Turso { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: "Use DatabaseService for Turso".to_string(),
-            })),
             #[cfg(feature = "postgres")]
             DatabaseConfig::Postgres { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use PostgresDatabaseService for Postgres".to_string(),

@@ -224,10 +224,6 @@ impl PostgresDatabaseService {
     /// 创建 PostgreSQL 数据库服务实例
     pub async fn new(config: &DatabaseConfig) -> DatabaseResult<Self> {
         match config {
-            #[cfg(feature = "limbo")]
-            DatabaseConfig::Turso { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
-                reason: "Use DatabaseService for Turso".to_string(),
-            })),
             DatabaseConfig::Postgres { connection_string, pool_config } => {
                 let pg_config: Config = connection_string.parse().map_err(|e| {
                     WaeError::database(WaeErrorKind::DatabaseConnectionFailed {

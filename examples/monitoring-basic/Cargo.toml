@@ -6,6 +6,6 @@ edition = "2021"
 description = "WAE Monitoring Basic Example"
 
 [dependencies]
-tokio = { version = "1.0", features = ["full"] }
-wae-monitoring = { path = "../../backends/wae-monitoring" }
-chrono = "0.4"
+tokio = { workspace = true }
+wae-monitoring = { workspace = true }
+chrono = { workspace = true }
