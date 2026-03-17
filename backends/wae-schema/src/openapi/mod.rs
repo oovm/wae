@@ -1,5 +1,7 @@
 //! OpenAPI 相关功能
 
+use serde::{Deserialize, Serialize};
+
 mod components;
 mod paths;
 mod security;

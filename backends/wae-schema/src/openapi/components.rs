@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json;
+use super::{Parameter, SecurityScheme};
 
 /// 组件定义
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
