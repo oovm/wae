@@ -1,13 +1,16 @@
 //! Schema 反射模块
-//! 
+//!
 //! 从数据库读取现有表结构信息。
 
 use std::collections::HashMap;
-use we_trust::schema::{ColumnDef, ColumnType, DatabaseBackend, DatabaseConnection, DatabaseResult, ForeignKeyDef, IndexDef, ReferentialAction, TableSchema, SchemaReflector as WeTrustSchemaReflector};
 use wae_types::WaeResult;
+use we_trust::schema::{
+    ColumnDef, ColumnType, DatabaseBackend, DatabaseConnection, DatabaseResult, ForeignKeyDef, IndexDef, ReferentialAction,
+    SchemaReflector as WeTrustSchemaReflector, TableSchema,
+};
 
 /// Schema 反射器
-/// 
+///
 /// 包装 we-trust 的 SchemaReflector，保持 API 兼容性
 pub struct SchemaReflector<'a> {
     inner: WeTrustSchemaReflector<'a>,

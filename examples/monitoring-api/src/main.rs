@@ -1,11 +1,11 @@
 //! 监控系统 API 示例
-//! 
+//!
 //! 演示如何使用 wae-monitoring 模块和 wae-https 框架创建监控 API。
 
-use std::sync::Arc;
-use http::{Response, StatusCode, header, Method};
+use http::{Method, Response, StatusCode, header};
 use http_body_util::Full;
 use hyper::body::Bytes;
+use std::sync::Arc;
 use tokio;
 use url;
 use wae_https::{HttpsServerBuilder, Router};
@@ -33,7 +33,7 @@ async fn main() {
 
     // 创建路由
     let mut router = Router::new();
-    
+
     // 添加获取最新监控数据的路由
     let monitor_service_clone = monitor_service.clone();
     router.add_route(Method::GET, "/api/monitoring/latest", move |_parts: wae_https::extract::RequestParts| {
@@ -48,12 +48,7 @@ async fn main() {
                         .body(full_body(json))
                         .unwrap()
                 }
-                None => {
-                    Response::builder()
-                        .status(StatusCode::NO_CONTENT)
-                        .body(full_body(Bytes::new()))
-                        .unwrap()
-                }
+                None => Response::builder().status(StatusCode::NO_CONTENT).body(full_body(Bytes::new())).unwrap(),
             }
         });
         response
@@ -65,9 +60,7 @@ async fn main() {
         let service = monitor_service_clone.clone();
         let response = tokio::runtime::Handle::current().block_on(async move {
             let query = parts.uri.query().unwrap_or("");
-            let params: std::collections::HashMap<_, _> = url::form_urlencoded::parse(query.as_bytes())
-                .into_owned()
-                .collect();
+            let params: std::collections::HashMap<_, _> = url::form_urlencoded::parse(query.as_bytes()).into_owned().collect();
 
             let start_time = params.get("start_time").and_then(|s| s.parse::<i64>().ok());
             let end_time = params.get("end_time").and_then(|s| s.parse::<i64>().ok());
@@ -88,10 +81,7 @@ async fn main() {
     let addr = "127.0.0.1:3000".parse().unwrap();
     println!("监控 API 服务器运行在 http://{}", addr);
 
-    let server = HttpsServerBuilder::new()
-        .addr(addr)
-        .router(router)
-        .build();
+    let server = HttpsServerBuilder::new().addr(addr).router(router).build();
 
     server.serve().await.unwrap();
 }

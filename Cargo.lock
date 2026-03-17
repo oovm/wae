@@ -3284,7 +3284,7 @@ dependencies = [
 
 [[package]]
 name = "monitoring-api"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "http",
  "http-body-util",
@@ -3298,7 +3298,7 @@ dependencies = [
 
 [[package]]
 name = "monitoring-basic"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "chrono",
  "tokio",

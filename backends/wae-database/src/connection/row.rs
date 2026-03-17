@@ -1,12 +1,12 @@
 //! 数据库行和结果集模块
 
 use crate::connection::{config::DatabaseResult, value_impl::FromDatabaseValue};
+#[cfg(feature = "limbo")]
+use limbo::Row;
 #[cfg(feature = "mysql")]
 use mysql_async::Row as MySqlRow;
 #[cfg(feature = "postgres")]
 use tokio_postgres::Row as PostgresRow;
-#[cfg(feature = "limbo")]
-use limbo::Row;
 use wae_types::{WaeError, WaeErrorKind};
 
 /// 查询结果行

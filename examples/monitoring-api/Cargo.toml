@@ -1,6 +1,7 @@
 [package]
+publish = false
 name = "monitoring-api"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 description = "WAE Monitoring API Example"
 

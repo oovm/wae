@@ -1,10 +1,10 @@
 //! 监控系统示例
-//! 
+//!
 //! 演示如何使用 wae-monitoring 模块进行系统资源监控和告警。
 
 use std::sync::Arc;
-use wae_monitoring::{MonitorConfig, MonitorService};
 use tokio::time;
+use wae_monitoring::{MonitorConfig, MonitorService};
 
 #[tokio::main]
 async fn main() {
@@ -30,28 +30,34 @@ async fn main() {
         println!("\n最新监控数据:");
         println!("时间戳: {}", resource.timestamp);
         println!("CPU 使用率: {:.2}%", resource.cpu_usage);
-        println!("内存使用: {:.2}% ({} MB / {} MB)", 
-                 resource.memory.usage_percent,
-                 resource.memory.used / 1024 / 1024,
-                 resource.memory.total / 1024 / 1024);
-        println!("网络流量: 接收 {} MB, 发送 {} MB", 
-                 resource.network.bytes_received / 1024 / 1024,
-                 resource.network.bytes_sent / 1024 / 1024);
-        println!("磁盘使用: {:.2}% ({} GB / {} GB)", 
-                 resource.disk.usage_percent,
-                 resource.disk.used / 1024 / 1024 / 1024,
-                 resource.disk.total / 1024 / 1024 / 1024);
+        println!(
+            "内存使用: {:.2}% ({} MB / {} MB)",
+            resource.memory.usage_percent,
+            resource.memory.used / 1024 / 1024,
+            resource.memory.total / 1024 / 1024
+        );
+        println!(
+            "网络流量: 接收 {} MB, 发送 {} MB",
+            resource.network.bytes_received / 1024 / 1024,
+            resource.network.bytes_sent / 1024 / 1024
+        );
+        println!(
+            "磁盘使用: {:.2}% ({} GB / {} GB)",
+            resource.disk.usage_percent,
+            resource.disk.used / 1024 / 1024 / 1024,
+            resource.disk.total / 1024 / 1024 / 1024
+        );
     }
 
     // 获取历史监控数据
     let start_time = Some(chrono::Utc::now().timestamp() - 60);
     let end_time = Some(chrono::Utc::now().timestamp());
-    
+
     let resources = monitor_service.get_resources(start_time, end_time).await;
     println!("\n过去 60 秒的监控数据点数量: {}", resources.len());
 
     println!("\n监控系统示例运行中... 按 Ctrl+C 退出");
-    
+
     // 保持程序运行
     tokio::signal::ctrl_c().await.unwrap();
     println!("\n监控系统示例已退出");

@@ -1,12 +1,12 @@
 //! Pull 命令模块
-//! 
+//!
 //! 提供从远程同步 WAE 文件的功能。
 
 use clap::Parser;
+use oak_pretty_print::to_doc::AsDocument;
+use oak_rbq::ast::*;
 use std::{fs, path::Path};
 use wae_types::WaeResult;
-use oak_rbq::ast::*;
-use oak_pretty_print::to_doc::AsDocument;
 
 /// Pull 命令
 #[derive(Parser, Debug)]
@@ -45,7 +45,8 @@ impl PullCommand {
         let existing_model_mappings = if wae_file_path.exists() {
             println!("Reading existing WAE file...");
             Self::extract_existing_model_mappings(&wae_file_path)?
-        } else {
+        }
+        else {
             std::collections::HashMap::new()
         };
 
@@ -57,16 +58,16 @@ impl PullCommand {
         {
             // 连接数据库
             let conn = Self::connect_to_mysql(&self.remote).await?;
-            
+
             // 创建 SchemaReflector
             let reflector = crate::SchemaReflector::new(&conn);
-            
+
             // 获取所有表的 schema
             let schemas = reflector.get_all_schemas().await?;
-            
+
             // 生成 WAE 文件内容
             let wae_content = Self::generate_wae_content(&db_name, &schemas, &existing_model_mappings)?;
-            
+
             // 写入 WAE 文件
             fs::write(&wae_file_path, wae_content)?;
             println!("Generated WAE file: {}", wae_file_path.display());
@@ -76,8 +77,11 @@ impl PullCommand {
         {
             // 模拟生成 WAE 文件
             println!("Simulating schema extraction...");
-            let wae_content = format!("# RBQ Schema for {}\n\n@database(\"mysql.{}\")\nnamespace {};\n\n// Tables will be generated here\n", db_name, db_name, db_name);
-            
+            let wae_content = format!(
+                "# RBQ Schema for {}\n\n@database(\"mysql.{}\")\nnamespace {};\n\n// Tables will be generated here\n",
+                db_name, db_name, db_name
+            );
+
             // 写入 WAE 文件
             fs::write(&wae_file_path, wae_content)?;
             println!("Generated WAE file: {}", wae_file_path.display());
@@ -88,14 +92,16 @@ impl PullCommand {
     }
 
     /// 提取现有 WAE 文件中的模型名称映射
-    fn extract_existing_model_mappings(wae_file_path: &Path) -> Result<std::collections::HashMap<String, String>, Box<dyn std::error::Error>> {
+    fn extract_existing_model_mappings(
+        wae_file_path: &Path,
+    ) -> Result<std::collections::HashMap<String, String>, Box<dyn std::error::Error>> {
         use oak_rbq::parse;
-        
+
         let content = fs::read_to_string(wae_file_path)?;
         let root = parse(&content)?;
-        
+
         let mut mappings = std::collections::HashMap::new();
-        
+
         for item in &root.items {
             if let RbqItem::Struct(struct_def) = item {
                 // 查找 @table 注解，获取表名
@@ -111,7 +117,7 @@ impl PullCommand {
                 }
             }
         }
-        
+
         Ok(mappings)
     }
 
@@ -120,10 +126,7 @@ impl PullCommand {
     async fn connect_to_mysql(url: &str) -> Result<wae_database::MySqlConnection, Box<dyn std::error::Error>> {
         use wae_database::{DatabaseConfig, MySqlDatabaseService};
         println!("Attempting to connect to MySQL database: {}", url);
-        let config = DatabaseConfig::MySql {
-            connection_string: url.to_string(),
-            pool_config: Default::default(),
-        };
+        let config = DatabaseConfig::MySql { connection_string: url.to_string(), pool_config: Default::default() };
         println!("Creating database service...");
         let service = MySqlDatabaseService::new(&config).await?;
         println!("Service created successfully. Connecting to database...");
@@ -134,58 +137,43 @@ impl PullCommand {
 
     /// 生成 WAE 文件内容
     #[cfg(feature = "database-mysql")]
-    pub fn generate_wae_content(db_name: &str, schemas: &std::collections::HashMap<String, wae_database::TableSchema>, existing_model_mappings: &std::collections::HashMap<String, String>) -> WaeResult<String> {
+    pub fn generate_wae_content(
+        db_name: &str,
+        schemas: &std::collections::HashMap<String, wae_database::TableSchema>,
+        existing_model_mappings: &std::collections::HashMap<String, String>,
+    ) -> WaeResult<String> {
         // 构造 RBQ AST
         let mut items = Vec::new();
-        
+
         // 添加数据库注解和命名空间
-        let namespace_annotations = vec![
-            RbqAnnotation {
-                name: "database".to_string(),
-                args: vec![format!("mysql.{}", db_name)],
-                span: (0..0).into(),
-            },
-        ];
-        
-        let namespace = RbqNamespace {
-            annotations: namespace_annotations,
-            path: db_name.to_string(),
-            span: (0..0).into(),
-        };
+        let namespace_annotations =
+            vec![RbqAnnotation { name: "database".to_string(), args: vec![format!("mysql.{}", db_name)], span: (0..0).into() }];
+
+        let namespace = RbqNamespace { annotations: namespace_annotations, path: db_name.to_string(), span: (0..0).into() };
         items.push(RbqItem::Namespace(namespace));
-        
+
         // 生成每个表的定义
         for (table_name, table_schema) in schemas {
             // 构造表的注解
-            let mut table_annotations = vec![
-                RbqAnnotation {
-                    name: "table".to_string(),
-                    args: vec![format!("name = \"{}\"", table_name)],
-                    span: (0..0).into(),
-                },
-            ];
-            
+            let mut table_annotations = vec![RbqAnnotation {
+                name: "table".to_string(),
+                args: vec![format!("name = \"{}\"", table_name)],
+                span: (0..0).into(),
+            }];
+
             // 构造字段定义
             let mut fields = Vec::new();
             for column in &table_schema.columns {
                 let mut field_annotations = Vec::new();
-                
+
                 if column.primary_key {
-                    field_annotations.push(RbqAnnotation {
-                        name: "key".to_string(),
-                        args: Vec::new(),
-                        span: (0..0).into(),
-                    });
+                    field_annotations.push(RbqAnnotation { name: "key".to_string(), args: Vec::new(), span: (0..0).into() });
                 }
-                
+
                 if column.unique {
-                    field_annotations.push(RbqAnnotation {
-                        name: "unique".to_string(),
-                        args: Vec::new(),
-                        span: (0..0).into(),
-                    });
+                    field_annotations.push(RbqAnnotation { name: "unique".to_string(), args: Vec::new(), span: (0..0).into() });
                 }
-                
+
                 // 构造类型
                 let rbq_type = Self::column_type_to_rbq(&column.col_type);
                 let type_ref = if column.nullable {
@@ -199,7 +187,8 @@ impl PullCommand {
                         }),
                         (0..0).into(),
                     )
-                } else {
+                }
+                else {
                     RbqType::Named {
                         path: rbq_type,
                         generic_args: Vec::new(),
@@ -208,17 +197,15 @@ impl PullCommand {
                         span: (0..0).into(),
                     }
                 };
-                
+
                 // 构造默认值
                 let default_value = if let Some(default) = &column.default_value {
-                    Some(RbqExpr {
-                        kind: RbqExprKind::Identifier(default.to_string()),
-                        span: (0..0).into(),
-                    })
-                } else {
+                    Some(RbqExpr { kind: RbqExprKind::Identifier(default.to_string()), span: (0..0).into() })
+                }
+                else {
                     None
                 };
-                
+
                 // 构造字段
                 let field = RbqField {
                     annotations: field_annotations,
@@ -229,48 +216,37 @@ impl PullCommand {
                 };
                 fields.push(field);
             }
-            
+
             // 生成索引定义
             for index in &table_schema.indexes {
                 if !index.name.starts_with("PRIMARY") {
                     let annotation_name = if index.unique { "unique" } else { "index" };
                     let args = vec![format!("[\"{}\"]", index.columns.join(", \""))];
-                    
-                    let index_annotation = RbqAnnotation {
-                        name: annotation_name.to_string(),
-                        args,
-                        span: (0..0).into(),
-                    };
+
+                    let index_annotation = RbqAnnotation { name: annotation_name.to_string(), args, span: (0..0).into() };
                     table_annotations.push(index_annotation);
                 }
             }
-            
+
             // 构造结构体
             // 优先使用现有的模型名称映射，否则生成新的
             let model_name = if let Some(existing_name) = existing_model_mappings.get(table_name) {
                 existing_name.clone()
-            } else {
+            }
+            else {
                 Self::table_name_to_model_name(table_name)
             };
-            let struct_def = RbqStruct {
-                annotations: table_annotations,
-                name: model_name,
-                fields,
-                span: (0..0).into(),
-            };
+            let struct_def = RbqStruct { annotations: table_annotations, name: model_name, fields, span: (0..0).into() };
             items.push(RbqItem::Struct(struct_def));
         }
-        
+
         // 构造根节点
-        let root = RbqRoot {
-            items,
-            span: (0..0).into(),
-        };
-        
+        let root = RbqRoot { items, span: (0..0).into() };
+
         // 生成文档
         let document = root.as_document(&());
         let wae_content = format!("# RBQ Schema for {}\n\n{}", db_name, document.render());
-        
+
         Ok(wae_content)
     }
 
@@ -307,18 +283,20 @@ impl PullCommand {
     fn table_name_to_model_name(table_name: &str) -> String {
         let mut result = String::new();
         let mut capitalize_next = true;
-        
+
         for c in table_name.chars() {
             if c == '_' {
                 capitalize_next = true;
-            } else if capitalize_next {
+            }
+            else if capitalize_next {
                 result.push(c.to_ascii_uppercase());
                 capitalize_next = false;
-            } else {
+            }
+            else {
                 result.push(c);
             }
         }
-        
+
         result
     }
 }

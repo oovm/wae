@@ -1,11 +1,13 @@
 //! 测试环境管理模块
-//! 
+//!
 //! 提供完整的测试生命周期管理、多服务集成测试支持和容器化测试环境。
 
 use parking_lot::RwLock;
-use std::future::Future;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::{
+    future::Future,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use wae_types::{WaeError, WaeErrorKind, WaeResult as TestingResult};
 
 mod builder;

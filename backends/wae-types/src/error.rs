@@ -18,7 +18,6 @@ pub struct WaeError {
     pub kind: Box<WaeErrorKind>,
 }
 
-
 /// 错误分类
 ///
 /// 用于将错误映射到 HTTP 状态码等场景。
@@ -1353,4 +1352,3 @@ impl From<serde_json::Error> for WaeError {
         Self::json_error(err.to_string())
     }
 }
-

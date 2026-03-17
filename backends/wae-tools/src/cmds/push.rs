@@ -1,5 +1,5 @@
 //! Push 命令模块
-//! 
+//!
 //! 提供将 WAE 文件推送到数据库的功能。
 
 use clap::Parser;
@@ -88,21 +88,18 @@ impl PushCommand {
             println!("Using database connection string: {}", db_url);
 
             // 创建数据库配置
-            let config = DatabaseConfig::MySql {
-                connection_string: db_url,
-                pool_config: Default::default(),
-            };
+            let config = DatabaseConfig::MySql { connection_string: db_url, pool_config: Default::default() };
 
             // 创建数据库服务
             match MySqlDatabaseService::new(&config).await {
                 Ok(service) => {
                     println!("Successfully created database service!");
-                    
+
                     // 获取数据库连接
                     match service.connect().await {
                         Ok(_conn) => {
                             println!("Successfully connected to database!");
-                            
+
                             // 这里可以添加数据库初始化逻辑
                             // 例如创建表结构等
                             println!("Initializing database schema...");

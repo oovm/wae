@@ -24,12 +24,12 @@ pub use connection::{DatabaseService, LimboConnection};
 pub use connection::{MySqlConnection, MySqlDatabaseService};
 #[cfg(feature = "postgres")]
 pub use connection::{PostgresConnection, PostgresDatabaseService};
+#[cfg(feature = "limbo")]
+pub use extract::LimboConnectionExtractor;
 #[cfg(feature = "mysql")]
 pub use extract::MySqlConnectionExtractor;
 #[cfg(feature = "postgres")]
 pub use extract::PostgresConnectionExtractor;
-#[cfg(feature = "limbo")]
-pub use extract::LimboConnectionExtractor;
 #[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 pub use extract::{DatabaseConnectionExtractor, DatabaseRejection};
 #[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
@@ -40,8 +40,8 @@ pub use orm::DbRepository;
 pub use orm::MySqlDbRepository;
 #[cfg(any(feature = "limbo", feature = "postgres", feature = "mysql"))]
 pub use orm::{
-    BelongsTo, Condition, DeleteBuilder, Entity, FromRow, HasMany, Join, JoinType, ManyToMany, QueryBuilder,
-    SelectBuilder, ToRow, UpdateBuilder,
+    BelongsTo, Condition, DeleteBuilder, Entity, FromRow, HasMany, Join, JoinType, ManyToMany, QueryBuilder, SelectBuilder,
+    ToRow, UpdateBuilder,
 };
 
 #[cfg(any(feature = "limbo", feature = "postgres"))]
