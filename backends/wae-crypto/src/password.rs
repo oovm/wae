@@ -4,8 +4,6 @@ use crate::error::{CryptoError, CryptoResult};
 use argon2::{
     Argon2, PasswordHash, PasswordHasher as Argon2PasswordHasher, PasswordVerifier, Version, password_hash::SaltString,
 };
-use rand::rngs::thread::ThreadRng;
-use rand::thread_rng;
 use zeroize::Zeroize;
 
 /// 密码哈希算法
@@ -95,7 +93,8 @@ impl PasswordHasher {
 
     /// 使用 argon2 哈希密码
     fn hash_argon2(&self, password: &[u8]) -> CryptoResult<String> {
-        let mut rng = thread_rng();
+        use argon2::password_hash::rand_core::OsRng;
+        let mut rng = OsRng;
         let salt = SaltString::generate(&mut rng);
         let argon2 = Argon2::new(
             argon2::Algorithm::Argon2id,

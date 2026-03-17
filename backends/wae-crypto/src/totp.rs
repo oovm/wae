@@ -5,8 +5,6 @@ use crate::{
     error::{CryptoError, CryptoResult},
     hmac::{HmacAlgorithm, hmac_sign},
 };
-use rand::Rng;
-use rand_core::RngCore;
 
 /// TOTP 算法
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,8 +36,10 @@ pub struct TotpSecret {
 impl TotpSecret {
     /// 生成新的随机密钥
     pub fn generate(length: usize) -> CryptoResult<Self> {
+        use argon2::password_hash::rand_core::{OsRng, RngCore};
+        let mut rng = OsRng;
         let mut bytes = vec![0u8; length];
-        rand::thread_rng().fill_bytes(&mut bytes);
+        rng.fill_bytes(&mut bytes);
         Self::from_bytes(&bytes)
     }
 

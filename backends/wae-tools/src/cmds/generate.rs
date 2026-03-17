@@ -11,7 +11,7 @@ pub struct GenerateCommand {
     #[clap(long, short = 's', default_value = "schemas")]
     schemas: String,
     /// 输出目录路径
-    #[clap(long, short = 'o', default_value = "src/entity")]
+    #[clap(long, short = 'o', default_value = "src/entities")]
     out: String,
 }
 
@@ -104,7 +104,7 @@ impl GenerateCommand {
                         println!("Found model: {}", struct_def.name);
                         
                         // 提取表名
-                        let mut table_name = struct_def.name.to_lowercase();
+                        let mut table_name = Self::to_snake_case(&struct_def.name);
                         let mut has_table_annotation = false;
                         for annotation in &struct_def.annotations {
                             if annotation.name == "table" && !annotation.args.is_empty() {
@@ -117,11 +117,6 @@ impl GenerateCommand {
                                 }
                             }
                         }
-                        
-                        // 如果没有指定表名，使用复数形式
-                        if !has_table_annotation {
-                            table_name = Self::to_plural(&struct_def.name.to_lowercase());
-                        }
                         println!("  Table name: {}", table_name);
                         
                         // 提取字段定义
@@ -132,7 +127,7 @@ impl GenerateCommand {
                         
                         // 生成 ORM 代码
                         let entity_code = Self::generate_entity_code(struct_def, &table_name);
-                        entities.push((struct_def.name.clone(), entity_code));
+                        entities.push((table_name, struct_def.name.clone(), entity_code));
                     }
                     oak_rbq::ast::RbqItem::Namespace(ns) => {
                         println!("Found namespace: {}", ns.path);
@@ -143,7 +138,7 @@ impl GenerateCommand {
                                 println!("Found model in namespace: {}", struct_def.name);
                                 
                                 // 提取表名
-                                let mut table_name = struct_def.name.to_lowercase();
+                                let mut table_name = Self::to_snake_case(&struct_def.name);
                                 let mut has_table_annotation = false;
                                 for annotation in &struct_def.annotations {
                                     if annotation.name == "table" && !annotation.args.is_empty() {
@@ -156,11 +151,6 @@ impl GenerateCommand {
                                         }
                                     }
                                 }
-                                
-                                // 如果没有指定表名，使用复数形式
-                                if !has_table_annotation {
-                                    table_name = Self::to_plural(&struct_def.name.to_lowercase());
-                                }
                                 println!("  Table name: {}", table_name);
                                 
                                 // 提取字段定义
@@ -171,7 +161,7 @@ impl GenerateCommand {
                                 
                                 // 生成 ORM 代码
                                 let entity_code = Self::generate_entity_code(struct_def, &table_name);
-                                entities.push((struct_def.name.clone(), entity_code));
+                                entities.push((table_name, struct_def.name.clone(), entity_code));
                             }
                         }
                     }
@@ -187,8 +177,9 @@ impl GenerateCommand {
         }
         
         // 输出 ORM 代码到文件
-        for (entity_name, code) in &entities {
-            let file_name = entity_name.to_lowercase();
+        for (table_name, _, code) in &entities {
+            // 转换表名为有效的 Rust 模块名
+            let file_name = table_name.replace('_', "_").to_lowercase();
             let file_path = out_path.join(format!("{}.rs", file_name));
             fs::write(&file_path, code)?;
             println!("Generated file: {}", file_path.display());
@@ -292,7 +283,7 @@ impl GenerateCommand {
     }
 
     /// 生成 mod.rs 文件内容
-    fn generate_mod_file(entities: Vec<(String, String)>) -> String {
+    fn generate_mod_file(entities: Vec<(String, String, String)>) -> String {
         use std::fmt::Write;
         
         let mut output = String::new();
@@ -309,16 +300,16 @@ impl GenerateCommand {
         writeln!(output).unwrap();
         
         // 生成模块声明
-        for (entity_name, _) in &entities {
-            let module_name = entity_name.to_lowercase();
+        for (table_name, _, _) in &entities {
+            let module_name = table_name.replace('_', "_").to_lowercase();
             writeln!(output, "pub mod {};", module_name).unwrap();
         }
         writeln!(output).unwrap();
         
         // 生成导出声明
-        for (entity_name, _) in &entities {
-            let module_name = entity_name.to_lowercase();
-            writeln!(output, "pub use {}::Entity as {};", module_name, entity_name).unwrap();
+        for (table_name, struct_name, _) in &entities {
+            let module_name = table_name.replace('_', "_").to_lowercase();
+            writeln!(output, "pub use {}::Entity as {};", module_name, struct_name).unwrap();
         }
         writeln!(output).unwrap();
         
@@ -383,58 +374,24 @@ impl GenerateCommand {
         "id" // 默认为 id
     }
 
-    /// 将单词转换为复数形式
-    fn to_plural(word: &str) -> String {
-        // 特殊情况
-        let exceptions = vec![
-            ("child", "children"),
-            ("foot", "feet"),
-            ("goose", "geese"),
-            ("man", "men"),
-            ("mouse", "mice"),
-            ("person", "people"),
-            ("tooth", "teeth"),
-            ("woman", "women"),
-        ];
+    /// 将驼峰命名转换为蛇形命名
+    fn to_snake_case(name: &str) -> String {
+        let mut result = String::new();
+        let mut chars = name.chars();
         
-        for (singular, plural) in exceptions {
-            if word == singular {
-                return plural.to_string();
+        if let Some(first_char) = chars.next() {
+            result.push(first_char.to_lowercase().next().unwrap());
+        }
+        
+        for c in chars {
+            if c.is_uppercase() {
+                result.push('_');
+                result.push(c.to_lowercase().next().unwrap());
+            } else {
+                result.push(c);
             }
         }
         
-        // 以 s, x, ch, sh 结尾的词，加 es
-        if word.ends_with("s") || word.ends_with("x") || word.ends_with("ch") || word.ends_with("sh") {
-            return format!("{}es", word);
-        }
-        
-        // 以辅音字母加 y 结尾的词，将 y 改为 i 再加 es
-        if word.ends_with("y") {
-            let chars: Vec<char> = word.chars().collect();
-            if chars.len() > 1 {
-                let second_last_char = chars[chars.len() - 2];
-                if !second_last_char.is_ascii_uppercase() && !second_last_char.is_ascii_lowercase() {
-                    // 不是字母，直接加 s
-                    return format!("{}s", word);
-                }
-                if !"aeiouAEIOU".contains(second_last_char) {
-                    // 辅音字母加 y，将 y 改为 i 再加 es
-                    let stem = &word[..word.len() - 1];
-                    return format!("{}ies", stem);
-                }
-            }
-        }
-        
-        // 以 f 或 fe 结尾的词，将 f 或 fe 改为 v 再加 es
-        if word.ends_with("f") {
-            let stem = &word[..word.len() - 1];
-            return format!("{}ves", stem);
-        } else if word.ends_with("fe") {
-            let stem = &word[..word.len() - 2];
-            return format!("{}ves", stem);
-        }
-        
-        // 一般情况，直接加 s
-        format!("{}s", word)
+        result
     }
 }
