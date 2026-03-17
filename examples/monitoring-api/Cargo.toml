@@ -1,0 +1,15 @@
+[package]
+name = "monitoring-api"
+version = "0.1.0"
+edition = "2021"
+description = "WAE Monitoring API Example"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+wae-monitoring = { path = "../../backends/wae-monitoring" }
+wae-https = { path = "../../backends/wae-https" }
+serde_json = "1.0"
+url = "2.5"
+http = "1.4"
+hyper = "1.8"
+http-body-util = "0.1"

@@ -11,6 +11,8 @@ members = [
     "examples/cache-basic",
     "examples/observability-basic",
     "examples/error-handling",
+    "examples/monitoring-basic",
+    "examples/monitoring-api",
 ]
 default-members = [
     "backends/wae-server",

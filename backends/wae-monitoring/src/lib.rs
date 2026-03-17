@@ -1,7 +1,7 @@
-//! WAE Monitoring - 告警服务抽象层
-//!
-//! 提供统一的告警能力抽象，支持多种告警后端。
-//!
+//! WAE Monitoring - 监控和告警服务
+//! 
+//! 提供统一的监控和告警能力，支持系统资源监控、异常告警和数据可视化。
+//! 
 //! 深度融合 tokio 运行时，所有 API 都是异步优先设计。
 //! 支持 AlertManager 和 PagerDuty 两种主流告警平台。
 
@@ -9,6 +9,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::Duration;
+use systemstat::{Platform, System};
+use tokio::sync::RwLock;
+use tokio::time;
 use wae_types::WaeError;
 
 /// 告警操作结果类型
@@ -450,4 +454,284 @@ pub fn alertmanager_service(config: alertmanager::AlertManagerConfig) -> AlertRe
 pub fn pagerduty_service(config: pagerduty::PagerDutyConfig) -> AlertResult<AlertService> {
     let backend = pagerduty::PagerDutyBackend::new(config)?;
     Ok(AlertService::new(Box::new(backend)))
+}
+
+/// 系统资源监控数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemResource {
+    /// 时间戳
+    pub timestamp: i64,
+    /// CPU 使用率
+    pub cpu_usage: f32,
+    /// 内存使用情况
+    pub memory: MemoryUsage,
+    /// 网络流量
+    pub network: NetworkUsage,
+    /// 磁盘使用情况
+    pub disk: DiskUsage,
+}
+
+/// 内存使用情况
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryUsage {
+    /// 总内存（字节）
+    pub total: u64,
+    /// 已使用内存（字节）
+    pub used: u64,
+    /// 使用率（百分比）
+    pub usage_percent: f32,
+}
+
+/// 网络流量
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkUsage {
+    /// 接收字节数
+    pub bytes_received: u64,
+    /// 发送字节数
+    pub bytes_sent: u64,
+}
+
+/// 磁盘使用情况
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiskUsage {
+    /// 总空间（字节）
+    pub total: u64,
+    /// 已使用空间（字节）
+    pub used: u64,
+    /// 使用率（百分比）
+    pub usage_percent: f32,
+}
+
+/// 监控配置
+#[derive(Debug, Clone)]
+pub struct MonitorConfig {
+    /// 数据采集间隔
+    pub collection_interval: Duration,
+    /// 数据保留时间
+    pub retention_time: Duration,
+    /// 告警阈值配置
+    pub alert_thresholds: AlertThresholds,
+}
+
+/// 告警阈值配置
+#[derive(Debug, Clone)]
+pub struct AlertThresholds {
+    /// CPU 使用率阈值（百分比）
+    pub cpu_threshold: f32,
+    /// 内存使用率阈值（百分比）
+    pub memory_threshold: f32,
+    /// 磁盘使用率阈值（百分比）
+    pub disk_threshold: f32,
+}
+
+impl Default for MonitorConfig {
+    fn default() -> Self {
+        Self {
+            collection_interval: Duration::from_secs(5),
+            retention_time: Duration::from_hours(24),
+            alert_thresholds: AlertThresholds {
+                cpu_threshold: 80.0,
+                memory_threshold: 85.0,
+                disk_threshold: 90.0,
+            },
+        }
+    }
+}
+
+/// 监控服务
+pub struct MonitorService {
+    config: MonitorConfig,
+    resources: RwLock<Vec<SystemResource>>,
+    alert_service: Option<AlertService>,
+    system: System,
+}
+
+impl MonitorService {
+    /// 创建新的监控服务
+    pub fn new(config: MonitorConfig, alert_service: Option<AlertService>) -> Self {
+        Self {
+            config,
+            resources: RwLock::new(Vec::new()),
+            alert_service,
+            system: System::new(),
+        }
+    }
+
+    /// 开始监控
+    pub async fn start(&self) {
+        let interval = self.config.collection_interval;
+        let mut interval = time::interval(interval);
+
+        loop {
+            interval.tick().await;
+            if let Err(e) = self.collect_and_store().await {
+                tracing::error!("Failed to collect system resources: {:?}", e);
+            }
+        }
+    }
+
+    /// 采集并存储系统资源数据
+    async fn collect_and_store(&self) -> AlertResult<()> {
+        let resource = self.collect_resources().await?;
+        
+        // 存储数据
+        let mut resources = self.resources.write().await;
+        resources.push(resource.clone());
+        
+        // 清理过期数据
+        self.cleanup_old_data(&mut resources).await;
+        
+        // 检查告警
+        self.check_alerts(&resource).await;
+        
+        Ok(())
+    }
+
+    /// 采集系统资源数据
+    async fn collect_resources(&self) -> AlertResult<SystemResource> {
+        let sys = &self.system;
+        let timestamp = chrono::Utc::now().timestamp();
+
+        // 采集 CPU 使用率
+        let cpu_usage = match sys.cpu_load_aggregate() {
+            Ok(cpu) => {
+                std::thread::sleep(Duration::from_millis(100));
+                match cpu.done() {
+                    Ok(load) => (load.user + load.system) * 100.0,
+                    Err(_) => 0.0,
+                }
+            }
+            Err(_) => 0.0,
+        };
+
+        // 采集内存使用情况
+        let memory = match sys.memory() {
+            Ok(mem) => MemoryUsage {
+                total: mem.total.as_u64(),
+                used: mem.total.as_u64() - mem.free.as_u64(),
+                usage_percent: ((mem.total.as_u64() - mem.free.as_u64()) as f32 / mem.total.as_u64() as f32) * 100.0,
+            },
+            Err(_) => MemoryUsage { total: 0, used: 0, usage_percent: 0.0 },
+        };
+
+        // 采集网络流量
+        let network = match sys.networks() {
+            Ok(networks) => {
+                let mut bytes_received = 0;
+                let mut bytes_sent = 0;
+                
+                for (name, _) in networks {
+                    if let Ok(data) = sys.network_stats(&name) {
+                        bytes_received += data.rx_bytes.as_u64();
+                        bytes_sent += data.tx_bytes.as_u64();
+                    }
+                }
+                
+                NetworkUsage { bytes_received, bytes_sent }
+            }
+            Err(_) => NetworkUsage { bytes_received: 0, bytes_sent: 0 },
+        };
+
+        // 采集磁盘使用情况
+        let disk = match sys.mounts() {
+            Ok(mounts) => {
+                let mut total = 0;
+                let mut used = 0;
+                
+                for mount in mounts {
+                    total += mount.total.as_u64();
+                    used += mount.total.as_u64() - mount.free.as_u64();
+                }
+                
+                let usage_percent = if total > 0 {
+                    (used as f32 / total as f32) * 100.0
+                } else {
+                    0.0
+                };
+                
+                DiskUsage { total, used, usage_percent }
+            }
+            Err(_) => DiskUsage { total: 0, used: 0, usage_percent: 0.0 },
+        };
+
+        Ok(SystemResource {
+            timestamp,
+            cpu_usage,
+            memory,
+            network,
+            disk,
+        })
+    }
+
+    /// 清理过期数据
+    async fn cleanup_old_data(&self, resources: &mut Vec<SystemResource>) {
+        let cutoff_time = chrono::Utc::now().timestamp() - self.config.retention_time.as_secs() as i64;
+        resources.retain(|r| r.timestamp >= cutoff_time);
+    }
+
+    /// 检查告警
+    async fn check_alerts(&self, resource: &SystemResource) {
+        if let Some(alert_service) = &self.alert_service {
+            let thresholds = &self.config.alert_thresholds;
+            
+            // 检查 CPU 告警
+            if resource.cpu_usage > thresholds.cpu_threshold {
+                let alert = Alert::new(
+                    "high_cpu_usage".to_string(),
+                    AlertSeverity::Warning
+                ).with_label("resource", "cpu")
+                 .with_annotation("usage", format!("{:.2}%", resource.cpu_usage))
+                 .with_annotation("threshold", format!("{:.2}%", thresholds.cpu_threshold));
+                
+                if let Err(e) = alert_service.send_alert(alert).await {
+                    tracing::error!("Failed to send CPU alert: {:?}", e);
+                }
+            }
+            
+            // 检查内存告警
+            if resource.memory.usage_percent > thresholds.memory_threshold {
+                let alert = Alert::new(
+                    "high_memory_usage".to_string(),
+                    AlertSeverity::Warning
+                ).with_label("resource", "memory")
+                 .with_annotation("usage", format!("{:.2}%", resource.memory.usage_percent))
+                 .with_annotation("threshold", format!("{:.2}%", thresholds.memory_threshold));
+                
+                if let Err(e) = alert_service.send_alert(alert).await {
+                    tracing::error!("Failed to send memory alert: {:?}", e);
+                }
+            }
+            
+            // 检查磁盘告警
+            if resource.disk.usage_percent > thresholds.disk_threshold {
+                let alert = Alert::new(
+                    "high_disk_usage".to_string(),
+                    AlertSeverity::Warning
+                ).with_label("resource", "disk")
+                 .with_annotation("usage", format!("{:.2}%", resource.disk.usage_percent))
+                 .with_annotation("threshold", format!("{:.2}%", thresholds.disk_threshold));
+                
+                if let Err(e) = alert_service.send_alert(alert).await {
+                    tracing::error!("Failed to send disk alert: {:?}", e);
+                }
+            }
+        }
+    }
+
+    /// 获取监控数据
+    pub async fn get_resources(&self, start_time: Option<i64>, end_time: Option<i64>) -> Vec<SystemResource> {
+        let resources = self.resources.read().await;
+        
+        resources.iter().filter(|r| {
+            let after_start = start_time.map(|t| r.timestamp >= t).unwrap_or(true);
+            let before_end = end_time.map(|t| r.timestamp <= t).unwrap_or(true);
+            after_start && before_end
+        }).cloned().collect()
+    }
+
+    /// 获取最新的监控数据
+    pub async fn get_latest_resource(&self) -> Option<SystemResource> {
+        let resources = self.resources.read().await;
+        resources.last().cloned()
+    }
 }
