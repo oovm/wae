@@ -29,35 +29,6 @@ keywords = ["async", "tokio", "microservice", "http", "cloud"]
 categories = ["asynchronous", "web-programming", "network-programming"]
 
 [workspace.dependencies]
-wae-server = { path = "backends/wae-server", version = "0.0.2" }
-wae-ai = { path = "backends/wae-ai", version = "0.0.2" }
-wae-authentication = { path = "backends/wae-authentication", version = "0.0.2" }
-wae-cache = { path = "backends/wae-cache", version = "0.0.2" }
-wae-config = { path = "backends/wae-config", version = "0.0.2" }
-wae-database = { path = "backends/wae-database", version = "0.0.2" }
-wae-distributed = { path = "backends/wae-distributed", version = "0.0.2" }
-wae-effect = { path = "backends/wae-effect", version = "0.0.2" }
-wae-email = { path = "backends/wae-email", version = "0.0.2" }
-wae-event = { path = "backends/wae-event", version = "0.0.2" }
-wae-https = { path = "backends/wae-https", version = "0.0.2" }
-wae-macros = { path = "backends/wae-macros", version = "0.0.2" }
-wae-queue = { path = "backends/wae-queue", version = "0.0.2" }
-wae-request = { path = "backends/wae-request", version = "0.0.2" }
-wae-resilience = { path = "backends/wae-resilience", version = "0.0.2" }
-wae-scheduler = { path = "backends/wae-scheduler", version = "0.0.2" }
-wae-schema = { path = "backends/wae-schema", version = "0.0.2" }
-wae-service = { path = "backends/wae-service", version = "0.0.2" }
-wae-session = { path = "backends/wae-session", version = "0.0.2" }
-wae-storage = { path = "backends/wae-storage", version = "0.0.2" }
-wae-testing = { path = "backends/wae-testing", version = "0.0.2" }
-wae-tools = { path = "backends/wae-tools", version = "0.0.2" }
-wae-types = { path = "backends/wae-types", version = "0.0.2" }
-wae-websocket = { path = "backends/wae-websocket", version = "0.0.2" }
-wae-observability = { path = "backends/wae-observability", version = "0.0.2" }
-wae-search = { path = "backends/wae-search", version = "0.0.2" }
-wae-monitoring = { path = "backends/wae-monitoring", version = "0.0.2" }
-wae-crypto = { path = "backends/wae-crypto", version = "0.0.2" }
-
 tokio = { version = "1.50.0", features = ["full"] }
 elasticsearch = "8.11.0"
 opensearch = "2.3.0"
@@ -139,15 +110,45 @@ serde_urlencoded = "0.7.1"
 tempfile = "3.0.0"
 systemstat = "0.2.3"
 
+
+wae-server = { path = "backends/wae-server", version = "0.0.2" }
+wae-ai = { path = "backends/wae-ai", version = "0.0.2" }
+wae-authentication = { path = "backends/wae-authentication", version = "0.0.2" }
+wae-cache = { path = "backends/wae-cache", version = "0.0.2" }
+wae-config = { path = "backends/wae-config", version = "0.0.2" }
+wae-database = { path = "backends/wae-database", version = "0.0.2" }
+wae-distributed = { path = "backends/wae-distributed", version = "0.0.2" }
+wae-effect = { path = "backends/wae-effect", version = "0.0.2" }
+wae-email = { path = "backends/wae-email", version = "0.0.2" }
+wae-event = { path = "backends/wae-event", version = "0.0.2" }
+wae-https = { path = "backends/wae-https", version = "0.0.2" }
+wae-macros = { path = "backends/wae-macros", version = "0.0.2" }
+wae-queue = { path = "backends/wae-queue", version = "0.0.2" }
+wae-request = { path = "backends/wae-request", version = "0.0.2" }
+wae-resilience = { path = "backends/wae-resilience", version = "0.0.2" }
+wae-scheduler = { path = "backends/wae-scheduler", version = "0.0.2" }
+wae-schema = { path = "backends/wae-schema", version = "0.0.2" }
+wae-service = { path = "backends/wae-service", version = "0.0.2" }
+wae-session = { path = "backends/wae-session", version = "0.0.2" }
+wae-storage = { path = "backends/wae-storage", version = "0.0.2" }
+wae-testing = { path = "backends/wae-testing", version = "0.0.2" }
+wae-tools = { path = "backends/wae-tools", version = "0.0.2" }
+wae-types = { path = "backends/wae-types", version = "0.0.2" }
+wae-websocket = { path = "backends/wae-websocket", version = "0.0.2" }
+wae-observability = { path = "backends/wae-observability", version = "0.0.2" }
+wae-search = { path = "backends/wae-search", version = "0.0.2" }
+wae-monitoring = { path = "backends/wae-monitoring", version = "0.0.2" }
+wae-crypto = { path = "backends/wae-crypto", version = "0.0.2" }
+# Oak parsers
+oak-rbq = { path = "../oaks/examples/oak-rbq", version = "0.0.7", features = ["oak-pretty-print"] }
+oak-core = { path = "../oaks/projects/oak-core", version = "0.0.7" }
+oak-lsp = { path = "../oaks/projects/oak-lsp", version = "0.0.7" }
+oak-mcp = { path = "../oaks/projects/oak-mcp", version = "0.0.7" }
+oak-vfs = { path = "../oaks/projects/oak-vfs", version = "0.0.7" }
+oak-semantic-search = { path = "../oaks/projects/oak-semantic-search", version = "0.0.7" }
+oak-pretty-print = { path = "../oaks/projects/oak-pretty-print", version = "0.0.7" }
+we-trust = { path = "../yykv/protocols/we-trust", version = "0.0.0" }
 yyds-gateway = { path = "../yykv/servers/yyds-gateway", version = "0.0.0" }
-we-trust = { path = "../yykv/protocols/we-trust" }
-oak-rbq = { path = "../oaks/examples/oak-rbq", features = ["oak-pretty-print"] }
-oak-core = { path = "../oaks/projects/oak-core" }
-oak-lsp = { path = "../oaks/projects/oak-lsp" }
-oak-mcp = { path = "../oaks/projects/oak-mcp" }
-oak-vfs = { path = "../oaks/projects/oak-vfs" }
-oak-semantic-search = { path = "../oaks/projects/oak-semantic-search" }
-oak-pretty-print = { path = "../oaks/projects/oak-pretty-print" }
 
 [profile.release]
 lto = true
