@@ -20,7 +20,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/oovm/wae"
@@ -29,34 +29,34 @@ keywords = ["async", "tokio", "microservice", "http", "cloud"]
 categories = ["asynchronous", "web-programming", "network-programming"]
 
 [workspace.dependencies]
-wae-server = { path = "backends/wae-server", version = "0.0.1" }
-wae-ai = { path = "backends/wae-ai", version = "0.0.1" }
-wae-authentication = { path = "backends/wae-authentication", version = "0.0.1" }
-wae-cache = { path = "backends/wae-cache", version = "0.0.1" }
-wae-config = { path = "backends/wae-config", version = "0.0.1" }
-wae-database = { path = "backends/wae-database", version = "0.0.1" }
-wae-distributed = { path = "backends/wae-distributed", version = "0.0.1" }
-wae-effect = { path = "backends/wae-effect", version = "0.0.1" }
-wae-email = { path = "backends/wae-email", version = "0.0.1" }
-wae-event = { path = "backends/wae-event", version = "0.0.1" }
-wae-https = { path = "backends/wae-https", version = "0.0.1" }
-wae-macros = { path = "backends/wae-macros", version = "0.0.1" }
-wae-queue = { path = "backends/wae-queue", version = "0.0.1" }
-wae-request = { path = "backends/wae-request", version = "0.0.1" }
-wae-resilience = { path = "backends/wae-resilience", version = "0.0.1" }
-wae-scheduler = { path = "backends/wae-scheduler", version = "0.0.1" }
-wae-schema = { path = "backends/wae-schema", version = "0.0.1" }
-wae-service = { path = "backends/wae-service", version = "0.0.1" }
-wae-session = { path = "backends/wae-session", version = "0.0.1" }
-wae-storage = { path = "backends/wae-storage", version = "0.0.1" }
-wae-testing = { path = "backends/wae-testing", version = "0.0.1" }
-wae-tools = { path = "backends/wae-tools", version = "0.0.1" }
-wae-types = { path = "backends/wae-types", version = "0.0.1" }
-wae-websocket = { path = "backends/wae-websocket", version = "0.0.1" }
-wae-observability = { path = "backends/wae-observability", version = "0.0.1" }
-wae-search = { path = "backends/wae-search", version = "0.0.1" }
-wae-monitoring = { path = "backends/wae-monitoring", version = "0.0.1" }
-wae-crypto = { path = "backends/wae-crypto", version = "0.0.1" }
+wae-server = { path = "backends/wae-server", version = "0.0.2" }
+wae-ai = { path = "backends/wae-ai", version = "0.0.2" }
+wae-authentication = { path = "backends/wae-authentication", version = "0.0.2" }
+wae-cache = { path = "backends/wae-cache", version = "0.0.2" }
+wae-config = { path = "backends/wae-config", version = "0.0.2" }
+wae-database = { path = "backends/wae-database", version = "0.0.2" }
+wae-distributed = { path = "backends/wae-distributed", version = "0.0.2" }
+wae-effect = { path = "backends/wae-effect", version = "0.0.2" }
+wae-email = { path = "backends/wae-email", version = "0.0.2" }
+wae-event = { path = "backends/wae-event", version = "0.0.2" }
+wae-https = { path = "backends/wae-https", version = "0.0.2" }
+wae-macros = { path = "backends/wae-macros", version = "0.0.2" }
+wae-queue = { path = "backends/wae-queue", version = "0.0.2" }
+wae-request = { path = "backends/wae-request", version = "0.0.2" }
+wae-resilience = { path = "backends/wae-resilience", version = "0.0.2" }
+wae-scheduler = { path = "backends/wae-scheduler", version = "0.0.2" }
+wae-schema = { path = "backends/wae-schema", version = "0.0.2" }
+wae-service = { path = "backends/wae-service", version = "0.0.2" }
+wae-session = { path = "backends/wae-session", version = "0.0.2" }
+wae-storage = { path = "backends/wae-storage", version = "0.0.2" }
+wae-testing = { path = "backends/wae-testing", version = "0.0.2" }
+wae-tools = { path = "backends/wae-tools", version = "0.0.2" }
+wae-types = { path = "backends/wae-types", version = "0.0.2" }
+wae-websocket = { path = "backends/wae-websocket", version = "0.0.2" }
+wae-observability = { path = "backends/wae-observability", version = "0.0.2" }
+wae-search = { path = "backends/wae-search", version = "0.0.2" }
+wae-monitoring = { path = "backends/wae-monitoring", version = "0.0.2" }
+wae-crypto = { path = "backends/wae-crypto", version = "0.0.2" }
 
 tokio = { version = "1.50.0", features = ["full"] }
 elasticsearch = "8.11.0"

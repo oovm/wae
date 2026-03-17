@@ -260,6 +260,9 @@ impl PostgresDatabaseService {
             DatabaseConfig::MySql { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
                 reason: "Use MySqlDatabaseService for MySQL".to_string(),
             })),
+            DatabaseConfig::Limbo { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: "Use LimboDatabaseService for Limbo".to_string(),
+            })),
         }
     }
 

@@ -234,7 +234,10 @@ impl MySqlDatabaseService {
                 let metrics = Arc::new(AtomicMySqlPoolMetrics::new());
 
                 Ok(Self { pool, metrics, pool_config: pool_config.clone() })
-            }
+            },
+            DatabaseConfig::Limbo { .. } => Err(WaeError::database(WaeErrorKind::DatabaseConnectionFailed {
+                reason: "Use LimboDatabaseService for Limbo".to_string(),
+            })),
         }
     }
 

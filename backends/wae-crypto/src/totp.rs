@@ -36,7 +36,8 @@ pub struct TotpSecret {
 impl TotpSecret {
     /// 生成新的随机密钥
     pub fn generate(length: usize) -> CryptoResult<Self> {
-        use argon2::password_hash::rand_core::{OsRng, RngCore};
+        use rand::rngs::OsRng;
+        use rand::RngCore;
         let mut rng = OsRng;
         let mut bytes = vec![0u8; length];
         rng.fill_bytes(&mut bytes);

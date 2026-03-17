@@ -93,7 +93,7 @@ impl PasswordHasher {
 
     /// 使用 argon2 哈希密码
     fn hash_argon2(&self, password: &[u8]) -> CryptoResult<String> {
-        use argon2::password_hash::rand_core::OsRng;
+        use rand::rngs::OsRng;
         let mut rng = OsRng;
         let salt = SaltString::generate(&mut rng);
         let argon2 = Argon2::new(
