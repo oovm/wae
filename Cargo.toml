@@ -147,6 +147,7 @@ oak-mcp = { path = "../oaks/projects/oak-mcp", version = "0.0.7" }
 oak-vfs = { path = "../oaks/projects/oak-vfs", version = "0.0.7" }
 oak-semantic-search = { path = "../oaks/projects/oak-semantic-search", version = "0.0.7" }
 oak-pretty-print = { path = "../oaks/projects/oak-pretty-print", version = "0.0.7" }
+
 we-trust = { path = "../yykv/protocols/we-trust", version = "0.0.0" }
 yyds-gateway = { path = "../yykv/servers/yyds-gateway", version = "0.0.0" }
 
