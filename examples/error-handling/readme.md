@@ -13,7 +13,7 @@
 ## 快速开始
 
 ```bash
-cd e:\灵之镜有限公司\wae\examples\error-handling
+cd e:\\wae\examples\error-handling
 cargo run
 ```
 

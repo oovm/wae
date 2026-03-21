@@ -140,16 +140,16 @@ wae-search = { path = "backends/wae-search", version = "0.0.2" }
 wae-monitoring = { path = "backends/wae-monitoring", version = "0.0.2" }
 wae-crypto = { path = "backends/wae-crypto", version = "0.0.2" }
 # Oak parsers
-oak-rbq = { path = "../oaks/examples/oak-rbq", version = "0.0.7", features = ["oak-pretty-print"] }
-oak-core = { path = "../oaks/projects/oak-core", version = "0.0.7" }
-oak-lsp = { path = "../oaks/projects/oak-lsp", version = "0.0.7" }
-oak-mcp = { path = "../oaks/projects/oak-mcp", version = "0.0.7" }
-oak-vfs = { path = "../oaks/projects/oak-vfs", version = "0.0.7" }
-oak-semantic-search = { path = "../oaks/projects/oak-semantic-search", version = "0.0.7" }
-oak-pretty-print = { path = "../oaks/projects/oak-pretty-print", version = "0.0.7" }
+oak-rbq = { path = "../oaks/examples/oak-rbq", version = "0.0.8", features = ["oak-pretty-print"] }
+oak-core = { path = "../oaks/projects/oak-core", version = "0.0.8" }
+oak-lsp = { path = "../oaks/projects/oak-lsp", version = "0.0.8" }
+oak-mcp = { path = "../oaks/projects/oak-mcp", version = "0.0.8" }
+oak-vfs = { path = "../oaks/projects/oak-vfs", version = "0.0.8" }
+oak-semantic-search = { path = "../oaks/projects/oak-semantic-search", version = "0.0.8" }
+oak-pretty-print = { path = "../oaks/projects/oak-pretty-print", version = "0.0.8" }
 
-we-trust = { path = "../yykv/protocols/we-trust", version = "0.0.0" }
-yyds-gateway = { path = "../yykv/servers/yyds-gateway", version = "0.0.0" }
+we-trust = { path = "../yykv/backends/protocols/we-trust", version = "0.0.1" }
+yyds-gateway = { path = "../yykv/backends/distributed/yyds-gateway", version = "0.0.1" }
 
 [profile.release]
 lto = true
