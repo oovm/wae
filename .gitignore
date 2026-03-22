@@ -12,6 +12,7 @@ time-travel.*
 # Rust
 target/
 Cargo.lock
+.cargo/config.toml
 
 # Node
 node_modules/

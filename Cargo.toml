@@ -149,9 +149,9 @@ oak-vfs = { git = "https://github.com/ygg-lang/oaks.git", branch = "dev", versio
 oak-semantic-search = { git = "https://github.com/ygg-lang/oaks.git", branch = "dev", version = "0.0.9" }
 oak-pretty-print = { git = "https://github.com/ygg-lang/oaks.git", branch = "dev", version = "0.0.9" }
 
-itools-config = { path = "../iTools/compilers/itools-config", version = "0.0.1" }
-we-trust = { path = "../yykv/backends/protocols/we-trust", version = "0.0.1" }
-yyds-gateway = { path = "../yykv/backends/distributed/yyds-gateway", version = "0.0.1" }
+itools-config = { git = "https://github.com/oovm/iTools.git", branch = "dev", version = "0.0.1" }
+we-trust = { git = "https://github.com/yy-database/yyds.git", branch = "dev", version = "0.0.1" }
+yyds-gateway = { git = "https://github.com/yy-database/yyds.git", branch = "dev", version = "0.0.1" }
 
 [profile.release]
 lto = true

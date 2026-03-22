@@ -3,6 +3,7 @@ name = "wae-effect"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-effect"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-effect"
 description = "WAE Effect - 代数效应依赖注入，声明式依赖获取"

@@ -3,6 +3,7 @@ name = "wae-crypto"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-crypto"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-crypto"
 description = "WAE Crypto - 统一加密抽象模块"

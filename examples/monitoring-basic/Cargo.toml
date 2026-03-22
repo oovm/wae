@@ -1,9 +1,11 @@
 [package]
 publish = false
 name = "monitoring-basic"
-version = "0.0.1"
-edition = "2021"
+version = { workspace = true }
+edition = { workspace = true }
 description = "WAE Monitoring Basic Example"
+authors = ["WAE Team"]
+license = { workspace = true }
 
 [dependencies]
 tokio = { workspace = true }
