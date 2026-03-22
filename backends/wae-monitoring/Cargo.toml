@@ -3,6 +3,7 @@ name = "wae-monitoring"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-monitoring"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-monitoring"
 description = "WAE Monitoring - 告警服务抽象层，支持 AlertManager 和 PagerDuty"

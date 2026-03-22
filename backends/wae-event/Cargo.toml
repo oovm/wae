@@ -3,6 +3,7 @@ name = "wae-event"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-event"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-event"
 description = "WAE Event - 事件驱动模块，支持发布订阅模式"

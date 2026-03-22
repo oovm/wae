@@ -2,7 +2,7 @@
 name = "error-handling"
 version = { workspace = true }
 edition = { workspace = true }
-authors = ["WAE Team"]
+authors = { workspace = true }
 license = { workspace = true }
 publish = false
 

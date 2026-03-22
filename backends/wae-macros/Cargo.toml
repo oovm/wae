@@ -3,6 +3,7 @@ name = "wae-macros"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-macros"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-macros"
 description = "WAE Macros - 过程宏支持，提供派生宏和属性宏"

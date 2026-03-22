@@ -4,7 +4,7 @@ name = "monitoring-api"
 version = { workspace = true }
 edition = { workspace = true }
 description = "WAE Monitoring API Example"
-authors = ["WAE Team"]
+authors = { workspace = true }
 license = { workspace = true }
 
 [dependencies]

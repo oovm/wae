@@ -3,6 +3,7 @@ name = "wae-https"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-https"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-https"
 description = "WAE HTTPS - HTTP/HTTPS 服务核心模块，构建器模式、中间件、统一响应"
