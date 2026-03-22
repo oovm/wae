@@ -12,7 +12,7 @@ documentation = "https://docs.rs/wae-config"
 
 [dependencies]
 wae-types = { workspace = true }
-itools-config = { path = "../../../iTools/compilers/itools-config" }
+itools-config = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

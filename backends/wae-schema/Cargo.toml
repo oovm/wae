@@ -20,3 +20,9 @@ wae-types = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, optional = true }
 serde_yaml = { workspace = true, optional = true }
+itools-schema = { path = "../../../iTools/compilers/itools-schema", features = ["json"] }
+
+[features]
+default = ["json"]
+yaml = ["dep:serde_yaml", "itools-schema/yaml"]
+json = ["dep:serde_json"]

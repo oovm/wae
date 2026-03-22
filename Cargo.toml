@@ -23,6 +23,7 @@ default-members = [
 version = "0.0.2"
 edition = "2024"
 license = "MIT"
+authors = ["WAE Team <team@wae.dev>"]
 repository = "https://github.com/oovm/wae"
 homepage = "https://github.com/oovm/wae"
 keywords = ["async", "tokio", "microservice", "http", "cloud"]
@@ -148,6 +149,7 @@ oak-vfs = { path = "../oaks/projects/oak-vfs", version = "0.0.8" }
 oak-semantic-search = { path = "../oaks/projects/oak-semantic-search", version = "0.0.8" }
 oak-pretty-print = { path = "../oaks/projects/oak-pretty-print", version = "0.0.8" }
 
+itools-config = { path = "../iTools/compilers/itools-config, version = "0.0.1" }
 we-trust = { path = "../yykv/backends/protocols/we-trust", version = "0.0.1" }
 yyds-gateway = { path = "../yykv/backends/distributed/yyds-gateway", version = "0.0.1" }
 

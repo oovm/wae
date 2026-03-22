@@ -3,6 +3,7 @@ name = "wae-ai"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-ai"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-ai"
 description = "WAE AI - AI 服务抽象层，支持腾讯混元、火山引擎等"

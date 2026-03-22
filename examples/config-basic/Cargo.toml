@@ -1,7 +1,9 @@
 [package]
 name = "config-basic"
-version = "0.0.0"
-edition = "2021"
+version = { workspace = true }
+edition = { workspace = true }
+authors = ["WAE Team"]
+license = { workspace = true }
 publish = false
 
 [dependencies]
