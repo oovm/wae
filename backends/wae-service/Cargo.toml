@@ -3,6 +3,7 @@ name = "wae-service"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-service"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-service"
 description = "WAE Service - 服务发现与注册，负载均衡策略"

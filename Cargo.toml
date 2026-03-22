@@ -32,6 +32,8 @@ categories = ["asynchronous", "web-programming", "network-programming"]
 [workspace.dependencies]
 tokio = { version = "1.50.0", features = ["full"] }
 elasticsearch = "8.11.0"
+itools-config = { path = "../iTools/compilers/itools-config" }
+itools-schema = { path = "../iTools/compilers/itools-schema" }
 opensearch = "2.3.0"
 matchit = "0.9"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -149,7 +151,6 @@ oak-vfs = { git = "https://github.com/ygg-lang/oaks.git", branch = "dev", versio
 oak-semantic-search = { git = "https://github.com/ygg-lang/oaks.git", branch = "dev", version = "0.0.9" }
 oak-pretty-print = { git = "https://github.com/ygg-lang/oaks.git", branch = "dev", version = "0.0.9" }
 
-itools-config = { git = "https://github.com/oovm/iTools.git", branch = "dev", version = "0.0.1" }
 we-trust = { git = "https://github.com/yy-database/yyds.git", branch = "dev", version = "0.0.1" }
 yyds-gateway = { git = "https://github.com/yy-database/yyds.git", branch = "dev", version = "0.0.1" }
 

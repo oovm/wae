@@ -3,6 +3,7 @@ name = "wae-websocket"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-websocket"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-websocket"
 description = "WAE WebSocket - WebSocket 服务，支持 tokio-tungstenite"

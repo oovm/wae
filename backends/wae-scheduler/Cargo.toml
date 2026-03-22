@@ -3,6 +3,7 @@ name = "wae-scheduler"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-scheduler"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-scheduler"
 description = "WAE Scheduler - 任务调度器，支持 Cron、定时任务、延迟任务"

@@ -3,6 +3,7 @@ name = "wae-request"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-request"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-request"
 description = "WAE Request - HTTP 客户端封装，支持 TLS"

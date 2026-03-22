@@ -3,6 +3,7 @@ name = "wae-session"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
 repository = "https://github.com/oovm/wae/tree/main/backends/wae-session"
 homepage = "https://github.com/oovm/wae/tree/main/backends/wae-session"
 description = "WAE Session - 会话管理，支持内存存储"
