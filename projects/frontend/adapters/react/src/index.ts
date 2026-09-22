@@ -1,16 +1,28 @@
+import {
+    createContext,
+    createElement,
+    useContext,
+    type ReactNode,
+} from "react";
 import type { WaeClient } from "@wae/client";
+
+const WaeContext = createContext<WaeClient | null>(null);
 
 export type WaeProviderProps = {
     client: WaeClient;
-    children?: unknown;
+    children?: ReactNode;
 };
 
-export function WaeProvider(_props: WaeProviderProps): null {
-    return null;
+export function WaeProvider(props: WaeProviderProps) {
+    return createElement(WaeContext.Provider, { value: props.client }, props.children);
 }
 
 export function useWae(): WaeClient {
-    throw new Error("useWae: wire to React context in real implementation");
+    const client = useContext(WaeContext);
+    if (!client) {
+        throw new Error("useWae() 需要包裹在 <WaeProvider client={…}> 内");
+    }
+    return client;
 }
 
 /** 供 defineConfig({ frontend: { adapter: react() } }) 使用 */

@@ -33,8 +33,9 @@
         }
     },
     "devDependencies": {
-        "typescript": "catalog:",
-        "react": "^19.0.0"
+        "@types/react": "^19.0.0",
+        "react": "^19.0.0",
+        "typescript": "catalog:"
     },
     "repository": {
         "type": "git",
