@@ -58,51 +58,37 @@ WAE 是一个由 **Rust host** 驱动、以 **TypeScript** 为应用层的 WebVi
 - **桌面 WebView**：`target: "desktop"` + 对应 `@wae/wae-win32-*` / `darwin-*` / `linux-*` + Rust host；原生二进制尚未打进 npm。
 - **移动壳**：`@wae/wae-android-arm64` / `@wae/wae-ios-arm64` + host；同样为占位。
 
-## 十分钟能验证什么（诚实路径）
+## 十分钟能验证什么
 
-CLI（`wae create` / `wae dev` 等）目前只打印骨架提示，**不能**生成可跑应用。今天可验证的是**库 API**：
-
-```bash
-pnpm add @wae/client@0.0.0 @wae/server@0.0.0
-```
-
-```ts
-import { createClient } from "@wae/client";
-import { createServer, route } from "@wae/server";
-
-const app = createServer({
-  routes: [
-    route("GET", "/hello", (ctx) => ctx.json({ ok: true })),
-  ],
-});
-
-const client = createClient({ server: { baseUrl: "http://127.0.0.1:3000" } });
-// client.server.fetch("/hello") → 需自行把 app.fetch 接到真实 HTTP
-void app;
-void client;
-```
-
-```ts
-import { defineConfig } from "@wae/wae";
-
-export default defineConfig({
-  frontend: { framework: "react", entry: "./src/main.ts" },
-  server: { entry: "./server/index.ts", adapter: "node" },
-  target: "web",
-});
-```
-
-期望：类型检查通过；`createServer` 的 `app.fetch(new Request("http://x/hello"))` 可返回 JSON（无需起进程）。
-
-贡献者在本仓库：
+### A. `wae run`（Vue / React 页）
 
 ```bash
 pnpm install
+pnpm --filter @wae/wae run build
+pnpm --filter @wae-example/integration-vue-app exec wae run --port 5173
+# 另开终端：
+pnpm --filter @wae-example/integration-react-app exec wae run --port 5174
+```
+
+浏览器打开终端打印的 Local URL，应看到标题与「ping client」按钮。
+
+### B. 库 API（无需进程）
+
+```ts
+import { createServer, route } from "@wae/server";
+const app = createServer({
+  routes: [route("GET", "/hello", (ctx) => ctx.json({ ok: true }))],
+});
+await app.fetch(new Request("http://x/hello")); // → JSON
+```
+
+```bash
 pnpm run check:boundary
 pnpm run check:ts
 pnpm exec wae help
 ```
 
+`wae create` / `build` / `generate` 等仍是骨架。
 ## 请求如何流动
 
 **浏览器 ↔ 远程 server（HTTP）**
@@ -143,7 +129,6 @@ createServer → adaptFetch / createCloudflareApp
 | Rust host | [`host`](projects/host/readme.md) |
 | 平台包 | [`platform`](projects/platform/readme.md) |
 | 可对照示例 | [`examples`](projects/examples/readme.md) |
-| 历史隔离代码 | [`_quarantine`](projects/tooling/_quarantine/readme.md)（勿当正式用法） |
 
 ## 仓库检查与发布
 
@@ -153,4 +138,4 @@ pnpm run fmt:check
 pnpm run publish:dry
 ```
 
-`0.0.0` 发布范围：产品面、通信、后端适配、框架 adapter、全部 `@wae/wae-*`。不发布 examples 与 quarantine。
+`0.0.0` 发布范围：产品面、通信、后端适配、框架 adapter、全部 `@wae/wae-*`。不发布 examples。

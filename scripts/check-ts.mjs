@@ -10,12 +10,7 @@ const tsc = path.join(root, "node_modules/typescript/bin/tsc");
 function collect(dir, out = []) {
     if (!fs.existsSync(dir)) return out;
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (
-            ent.name === "node_modules" ||
-            ent.name === "dist" ||
-            ent.name === "templates" ||
-            ent.name === "_quarantine"
-        ) {
+        if (ent.name === "node_modules" || ent.name === "dist" || ent.name === "templates") {
             continue;
         }
         const p = path.join(dir, ent.name);

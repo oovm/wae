@@ -16,7 +16,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EXECUTE = process.argv.includes("--execute");
 const EXPECTED_VERSION = "0.0.0";
 
-/** 产品面 + 通信/后端/适配 + `@wae/wae` 必挂的 platform 壳；不含 examples / quarantine */
+/** 产品面 + 通信/后端/适配 + `@wae/wae` 必挂的 platform 壳；不含 examples */
 const PUBLISH_FILTERS = [
     "@wae/types",
     "@wae/core",

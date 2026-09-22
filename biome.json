@@ -14,7 +14,6 @@
             "!**/dist",
             "!**/documentation/dist",
             "!**/documentation/.vitepress",
-            "!**/tooling/_quarantine",
             "!**/*.d.ts",
             "!**/*.js.map"
         ]

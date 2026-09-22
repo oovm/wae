@@ -39,7 +39,7 @@ function deps(rel) {
 function walkFiles(dir, pred, out = []) {
     if (!fs.existsSync(dir)) return out;
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (["node_modules", "dist", "target", "_quarantine"].includes(ent.name)) continue;
+        if (["node_modules", "dist", "target"].includes(ent.name)) continue;
         const p = path.join(dir, ent.name);
         if (ent.isDirectory()) walkFiles(p, pred, out);
         else if (pred(p)) out.push(p);
