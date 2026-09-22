@@ -1,0 +1,24 @@
+{
+    "name": "@wae-example/integration-react-app",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "check": "tsc -p tsconfig.json --noEmit",
+        "run:wae": "wae run --port 5174",
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@wae/adapter-react": "workspace:*",
+        "@wae/client": "workspace:*",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@vitejs/plugin-react": "^5.0.0",
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:",
+        "vite": "catalog:"
+    }
+}

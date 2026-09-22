@@ -2,7 +2,7 @@
 
 这些示例说明 **WAE 怎么组合**，不是按框架名分桶。框架只出现在 `integration/`。
 
-**总体现状（0.0.0）**：有 `package.json` 的示例大多只有 `src/main.ts` 构造 API + `pnpm run check`。没有可打开的 localhost 页面，CLI `wae create` / `wae dev` 仍是骨架。把各示例 README 里的「路径」当作目标语义；把 `check`（`tsc --noEmit`）当作今天能跑的验收。
+**总体现状（0.0.0）**：多数示例仍是 API 构造 + `pnpm run check`。**可打开页面**的路径：`integration/vue-app` · `integration/react-app`（`pnpm exec wae run`）。`wae create` / `build` 等仍是骨架。
 
 `minimal/protocol-only` 与 `minimal/bridge-only`、以及 `backend/rust/*` **没有**示例包工程：前者是文档指引，后者仅 README。
 
@@ -21,7 +21,8 @@
 | Node / Deno / Cloudflare / 纯 fetch / WS 后端 | [`backend/typescript/*`](backend/typescript/node/readme.md) |
 | Rust 服务占位 | [`backend/rust/*`](backend/rust/http/readme.md)（仅文档） |
 | 桌面壳 / 移动壳 / IPC / FS / 窗口 | [`native/*`](native/ipc/readme.md) |
-| Vue / React / Svelte / Solid | [`integration/*`](integration/vue/readme.md) |
+| Vue / React / Svelte / Solid 注入边界 | [`integration/vue`](integration/vue/readme.md) 等 |
+| **可 `wae run` 的 Vue / React 页** | [`integration/vue-app`](integration/vue-app/) · [`integration/react-app`](integration/react-app/) |
 
 ## 推荐顺序
 
@@ -48,5 +49,3 @@ minimal/       单能力边界
 # 仓库根：对所有带 package.json 的示例跑 tsc
 pnpm --filter "./projects/examples/**" run check
 ```
-
-历史「按框架分拓扑」的旧示例在 [`../tooling/_quarantine`](../tooling/_quarantine/readme.md)，**不要**当官方路径。

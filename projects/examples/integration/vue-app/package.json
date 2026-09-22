@@ -1,0 +1,22 @@
+{
+    "name": "@wae-example/integration-vue-app",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "check": "tsc -p tsconfig.json --noEmit",
+        "run:wae": "wae run --port 5173",
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@wae/adapter-vue": "workspace:*",
+        "@wae/client": "workspace:*",
+        "vue": "^3.5.0"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^6.0.0",
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:",
+        "vite": "catalog:",
+        "vue-tsc": "^2.2.0"
+    }
+}

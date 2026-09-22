@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "lib": ["ES2022", "DOM"],
+        "noEmit": true,
+        "jsx": "preserve"
+    },
+    "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.d.ts", "wae.config.ts", "vite.config.ts"]
+}
