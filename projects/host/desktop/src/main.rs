@@ -12,6 +12,9 @@ use wry::WebViewBuilder;
 #[derive(Debug)]
 enum UserEvent {
     Close,
+    DragWindow,
+    Minimize,
+    Maximize,
 }
 
 fn main() {
@@ -33,42 +36,44 @@ fn main() {
     }
 
     let window = builder.build(&event_loop).expect("创建窗口失败");
-    // WebView 与窗口同寿；IPC 需持有窗口引用。
     let window = std::rc::Rc::new(window);
-    let window_for_ipc = window.clone();
     let proxy_for_ipc = proxy.clone();
 
     let _webview = WebViewBuilder::new()
         .with_url(&url)
         .with_ipc_handler(move |req| {
+            // 窗控必须投递到事件循环线程（wry 官方 custom_titlebar 做法）。
             let body = req.body();
-            match body.as_str() {
-                "window:minimize" => window_for_ipc.set_minimized(true),
-                "window:maximize" => {
-                    window_for_ipc.set_maximized(!window_for_ipc.is_maximized());
-                }
-                "window:close" => {
-                    let _ = proxy_for_ipc.send_event(UserEvent::Close);
-                }
-                // 自绘标题栏拖拽：须在鼠标左键按下路径上同步触发。
-                "window:drag" => {
-                    let _ = window_for_ipc.drag_window();
-                }
-                _ => {}
+            let ev = match body.as_str() {
+                "window:minimize" | "minimize" => Some(UserEvent::Minimize),
+                "window:maximize" | "maximize" => Some(UserEvent::Maximize),
+                "window:close" | "close" => Some(UserEvent::Close),
+                "window:drag" | "drag_window" => Some(UserEvent::DragWindow),
+                _ => None,
+            };
+            if let Some(ev) = ev {
+                let _ = proxy_for_ipc.send_event(ev);
             }
         })
         .build(&*window)
         .expect("创建 WebView 失败（Windows 需已安装 WebView2 Runtime）");
 
-    eprintln!(
-        "[wae-desktop] loaded {url} undecorated={undecorated} title={title}"
-    );
+    eprintln!("[wae-desktop] loaded {url} undecorated={undecorated} title={title}");
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
         match event {
             Event::UserEvent(UserEvent::Close) => {
                 *control_flow = ControlFlow::Exit;
+            }
+            Event::UserEvent(UserEvent::DragWindow) => {
+                let _ = window.drag_window();
+            }
+            Event::UserEvent(UserEvent::Minimize) => {
+                window.set_minimized(true);
+            }
+            Event::UserEvent(UserEvent::Maximize) => {
+                window.set_maximized(!window.is_maximized());
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
