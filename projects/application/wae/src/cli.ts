@@ -14,8 +14,8 @@ const HELP = `WAE CLI
   wae test
   wae generate [types]
 
-当前已接线: run / dev（web：Vite；默认打开浏览器，可用 --no-open 关闭）
-默认工具链: Vite · TypeScript · Rust/Cargo · wasm-bindgen
+当前已接线: run / dev（web 默认 Vite，可换；默认打开浏览器，可用 --no-open 关闭）
+常用工具链: Vite（可换）· TypeScript · Rust/Cargo · wasm-bindgen
 `;
 
 export async function runCli(argv: string[]): Promise<void> {

@@ -26,6 +26,7 @@ WAE 是一个由 **Rust host** 驱动、以 **TypeScript** 为应用层的 WebVi
 |------|--------|----------|
 | **client** | 前端运行时：`createClient`、HTTP/action、session、bridge | 不是 UI 框架 |
 | **adapter** | 把已有 `WaeClient` 接到 Vue/React/Svelte/Solid | 不是第二套 runtime |
+| **bundler** | 默认 Vite（`wae run` 代启）；可设 `custom` 换 Webpack 等 | 不是 WAE 内核；可换 |
 | **server** | 平台无关 `fetch` 应用与路由 | 不是 Node 进程本身 |
 | **serverless** | 把 server 适配成 `(request, env, ctx) => Response` | 不是具体云厂商 API |
 | **server-\*** | 绑定 Node / Deno / Cloudflare | 不可互相假设文件系统/定时器 |
@@ -47,6 +48,15 @@ WAE 是一个由 **Rust host** 驱动、以 **TypeScript** 为应用层的 WebVi
 | `@wae/wae-*` | 一般**不要**手装；装 `@wae/wae` 时作为 `optionalDependencies` 按平台拉取 |
 
 不要安装：`@wae/ui`、`@wae/adapter-vanilla`（不存在且不会回来）。
+
+## 与 Vite
+
+**常用 Vite，可换**（接近 Tauri 模板习惯，而不是把 Vite 写进 WAE 内核）。
+
+- 默认：`frontend.bundler: "vite"` → `wae run` 代启 Vite（`vite` 为 optional peer）。
+- 换工具链：`frontend.bundler: "custom"` + `frontend.devUrl`，自行用 Webpack / Rspack 等。
+
+详见 [`@wae/wae`](projects/application/wae/readme.md)。
 
 ## 按目标怎么选
 

@@ -10,6 +10,10 @@
 |------|-----|------|
 | [`wae/`](wae/readme.md) | `@wae/wae` | 唯一 CLI（`wae`）与 `defineConfig` |
 
+## 与前端工具链
+
+**常用 Vite，可换。** `frontend.bundler` 默认 `"vite"`（`wae run` 代启）；设为 `"custom"` 时自行选用其它 bundler，并用 `frontend.devUrl` 标明开发地址。细节见 [`wae/readme.md`](wae/readme.md)。
+
 ## 配置如何影响各层
 
 ```ts
@@ -19,6 +23,7 @@ export default defineConfig({
   frontend: {
     framework: "react", // vue | react | svelte | solid | none
     entry: "./src/main.ts",
+    bundler: "vite", // 或 "custom" + devUrl
   },
   server: {
     entry: "./server/index.ts",
@@ -33,6 +38,7 @@ export default defineConfig({
 ```
 
 - `frontend.framework`：选 adapter；`none` = 只用 `@wae/client`。
+- `frontend.bundler`：默认 Vite；`custom` 表示不代启 bundler。
 - `server.adapter`：选 `@wae/server-*`，不改变 `@wae/server` 的 handler 写法。
 - `target`：浏览器 / 桌面壳 / 移动壳；决定是否依赖对应 `@wae/wae-*` 与 Rust host。
 - `platform.client`：具体客户端平台 id（与 `@wae/wae-*` 的 `wae.platform` 对齐）。
@@ -41,8 +47,8 @@ export default defineConfig({
 
 安装 `@wae/wae` 后二进制为 `wae`。命令面：`create`、`dev`、`build`、`preview`、`run`、`check`、`test`、`generate`。
 
-**0.0.0**：除 `help` 外均为骨架（打印提示，不接 Vite / 平台包）。没有 `wae init`；脚手架命令名是 `create`。
+**已接线**：`run` / `dev`（web 默认 Vite）。**尚未接线**：`create` / `build` / `preview` / `check` / `test` / `generate`。没有 `wae init`；脚手架命令名是 `create`。
 
-出错时：先确认配置文件是否被 `defineConfig` 规范化、包是否装齐、目标平台 optional 依赖是否因 `os`/`cpu` 被跳过。
+出错时：先确认配置是否被 `defineConfig` 规范化、Vite（或自选 bundler）是否就绪、目标平台 optional 是否因 `os`/`cpu` 被跳过。
 
 详见 [`wae/readme.md`](wae/readme.md)。

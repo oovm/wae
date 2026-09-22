@@ -16,6 +16,13 @@ export type ServerAdapterId = "node" | "deno" | "cloudflare" | "bun";
 
 export type FrontendFramework = "vue" | "react" | "svelte" | "solid" | "none";
 
+/**
+ * 前端打包 / 开发服务器工具链。
+ * - `vite`：常用默认；`wae run`（web）会代启 Vite。
+ * - `custom`：自备 Webpack / Rspack / Parcel 等；`wae` 不代启 bundler。
+ */
+export type FrontendBundler = "vite" | "custom";
+
 export type RuntimeTarget = "web" | "desktop" | "mobile";
 
 export type FrontendAdapterFactory = {
@@ -29,6 +36,13 @@ export type WaeConfig = {
         /** 可选：adapter 工厂（如 react()），不把包名写进 API */
         adapter?: FrontendAdapterFactory;
         entry?: string;
+        /**
+         * 前端工具链。默认 `vite`（与 Tauri 类似：常用 Vite，但可换）。
+         * `custom` 时请自行启动 bundler，并用 `devUrl` 告知开发地址。
+         */
+        bundler?: FrontendBundler;
+        /** `bundler: "custom"` 时的开发服务器 URL（例如 http://127.0.0.1:3000） */
+        devUrl?: string;
     };
     server?: {
         entry?: string;
@@ -52,6 +66,8 @@ export function defineConfig(config: WaeConfig): WaeConfig {
             framework: config.frontend?.framework ?? "none",
             adapter: config.frontend?.adapter,
             entry: config.frontend?.entry,
+            bundler: config.frontend?.bundler ?? "vite",
+            devUrl: config.frontend?.devUrl,
         },
         server: config.server,
         target: config.target ?? "web",
