@@ -39,6 +39,7 @@
         "x64"
     ],
     "devDependencies": {
+        "@types/node": "^22.0.0",
         "typescript": "catalog:"
     }
 }

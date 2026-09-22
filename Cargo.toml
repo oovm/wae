@@ -2,11 +2,13 @@
 resolver = "2"
 members = [
     "projects/host/bridge",
+    "projects/host/desktop",
     "projects/communication/schema",
 ]
 default-members = [
     "projects/communication/schema",
     "projects/host/bridge",
+    "projects/host/desktop",
 ]
 
 [workspace.package]

@@ -1,0 +1,18 @@
+[package]
+name = "wae-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "WAE 桌面 WebView 宿主（开发期加载 frontend URL）"
+publish = false
+
+[[bin]]
+name = "wae-desktop"
+path = "src/main.rs"
+
+[dependencies]
+tao = "0.34"
+wry = "0.53"
