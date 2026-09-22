@@ -1,6 +1,6 @@
 # `@wae/wae`
 
-唯一项目 CLI 与 `defineConfig`。编排 Vite / Cargo / 平台包的入口，**不**内置 TSX 编译器，也**不**把 Rust runtime 塞进前端。
+唯一项目 CLI 与 `defineConfig`。编排 Vite / Cargo / 平台包，**不**内置 TSX 编译器，也**不**把 Rust runtime 塞进前端。
 
 ## 安装
 
@@ -14,24 +14,40 @@ pnpm add -D @wae/wae@0.0.0
 
 ```text
 wae create <name>
-wae dev [--platform <id>]
+wae dev [--platform <id>] [--port <n>] [--host <addr>]
 wae build [--platform <id>]
 wae preview
-wae run [--platform <id>]
+wae run [--platform <id>] [--port <n>] [--host <addr>]
 wae check
 wae test
 wae generate [types]
 wae help
 ```
 
-**现状（0.0.0）**：除 help 外只打印骨架提示，未接线真实工具链。没有 `wae init`。
+### 已接线：`run` / `dev`
+
+在工程根（含 `wae.config.ts`）执行：
+
+```bash
+pnpm exec wae run
+# 或
+pnpm exec wae run --platform web --port 5173
+```
+
+行为：
+
+1. 用 esbuild 加载 `wae.config.*`（经 `defineConfig` 规范化）。
+2. `platform` / `target` 解析为客户端平台 id（默认 `web`）。
+3. **`web`**：启动 Vite 开发服务器。若存在 `vite.config.*` 则沿用；否则按 `frontend.framework` 注入 `@vitejs/plugin-vue` / `@vitejs/plugin-react` 等。
+4. **其它平台**：调用对应 `@wae/wae-*` 的 `platform.run()`（0.0.0 多为空实现）。
+
+`dev` 与 `run` 当前同一实现。`create` / `build` / `preview` / `check` / `test` / `generate` 尚未接线。
 
 仓库内调试：
 
 ```bash
-pnpm exec wae help
-# 或
-pnpm run wae -- help
+pnpm --filter @wae/wae run build
+pnpm --filter @wae-example/integration-vue-app exec wae run --port 5173
 ```
 
 ## `defineConfig`
@@ -41,50 +57,33 @@ import { defineConfig } from "@wae/wae";
 
 export default defineConfig({
   frontend: {
-    framework: "none", // vue | react | svelte | solid | none
-    // adapter: react(), // 来自 @wae/adapter-react 默认导出
+    framework: "vue", // vue | react | svelte | solid | none
+    // adapter: vue(),
     entry: "./src/main.ts",
   },
   server: {
     entry: "./server/index.ts",
-    adapter: "cloudflare", // node | deno | cloudflare | bun
+    adapter: "node",
   },
-  target: "web", // web | desktop | mobile
+  target: "web",
   platform: {
     client: "web",
-    server: "cloudflare",
+    server: "node",
   },
 });
 ```
 
-规范化行为：`framework` 默认 `"none"`，`target` 默认 `"web"`。
-
-| 字段 | 影响 |
-|------|------|
-| `frontend.*` | 前端入口与 adapter 选择 |
-| `server.*` | 服务端入口与 runtime adapter |
-| `target` | 是否走桌面/移动壳路径 |
-| `platform.client` | 对应 `@wae/wae-*` 的 platform id |
-
-模板见 `templates/app/`（`wae create` 接线后使用）。
-
-## 开发 vs 生产（目标语义）
-
-| 模式 | 目标行为 | 现状 |
-|------|----------|------|
-| `dev` | 热更新 + 平台调试壳 | 骨架 |
-| `build` | 产出前端静态资源 + 平台产物 | 骨架 |
-| `preview` / `run` | 本地预览 / 按平台运行 | 骨架 |
+规范化：`framework` 默认 `"none"`，`target` 默认 `"web"`。
 
 ## 失败时查什么
 
-1. 命令是否在 help 列表中。
-2. `defineConfig` 字段类型是否合法。
-3. 目标平台 optional 是否因 `os`/`cpu` 未安装。
-4. 是否误期望 CLI 已生成完整工程（当前不会）。
+1. 当前目录是否有 `wae.config.ts`。
+2. `web` 时是否已安装 `vite`（以及对应框架的 Vite 插件）。
+3. 是否缺少 `index.html`（Vite 根入口）。
+4. 非 web 平台 optional 依赖是否因 `os`/`cpu` 未安装。
 
 ## 相关
 
-- 应用区说明：[`../readme.md`](../readme.md)
-- 客户端：[`../../frontend/runtime/readme.md`](../../frontend/runtime/readme.md)
+- 应用区：[`../readme.md`](../readme.md)
+- 可跑示例：[`vue-app`](../../examples/integration/vue-app/) · [`react-app`](../../examples/integration/react-app/)
 - 平台：[`../../platform/readme.md`](../../platform/readme.md)

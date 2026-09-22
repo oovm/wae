@@ -23,6 +23,9 @@
         "check": "tsc -p tsconfig.json --noEmit",
         "prepublishOnly": "tsc -p tsconfig.json"
     },
+    "dependencies": {
+        "esbuild": "^0.25.0"
+    },
     "peerDependencies": {
         "vite": "^7.0.0"
     },
@@ -30,6 +33,11 @@
         "vite": {
             "optional": true
         }
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "typescript": "catalog:",
+        "vite": "catalog:"
     },
     "license": "MIT",
     "repository": {
