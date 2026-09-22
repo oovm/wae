@@ -17,7 +17,9 @@
         "examples": "pnpm --filter \"./projects/examples/**\" run build",
         "wae": "pnpm --filter @wae/wae exec node ./bin/wae.mjs",
         "fmt": "node scripts/format.mjs",
-        "fmt:check": "node scripts/format.mjs --check"
+        "fmt:check": "node scripts/format.mjs --check",
+        "publish:dry": "node scripts/publish.mjs",
+        "publish:npm": "node scripts/publish.mjs --execute"
     },
     "devDependencies": {
         "@biomejs/biome": "2.5.14",

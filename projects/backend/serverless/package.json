@@ -1,29 +1,37 @@
 {
     "name": "@wae/serverless",
-    "version": "0.1.0",
+    "version": "0.0.0",
     "description": "WAE server 统一运行时适配层（Fetch / lifecycle / bindings 抽象）",
     "type": "module",
-    "main": "./src/index.ts",
-    "types": "./src/index.ts",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
-            "types": "./src/index.ts",
-            "import": "./src/index.ts",
-            "default": "./src/index.ts"
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
         }
     },
     "files": [
-        "dist",
-        "src"
+        "dist"
     ],
     "scripts": {
         "build": "tsc -p tsconfig.json",
-        "check": "tsc -p tsconfig.json --noEmit"
+        "check": "tsc -p tsconfig.json --noEmit",
+        "prepublishOnly": "tsc -p tsconfig.json"
     },
     "dependencies": {
         "@wae/server": "workspace:*",
         "@wae/types": "workspace:*",
         "@wae/protocol": "workspace:*"
     },
-    "license": "MIT"
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/oovm/wae.git"
+    },
+    "homepage": "https://github.com/oovm/wae",
+    "publishConfig": {
+        "access": "public"
+    }
 }

@@ -26,6 +26,37 @@ importers:
       vite:
         specifier: ^7.0.0
         version: 7.3.6
+    optionalDependencies:
+      '@wae/wae-android-arm64':
+        specifier: workspace:*
+        version: link:../../platform/mobile/android/wae-android-arm64
+      '@wae/wae-darwin-arm64':
+        specifier: workspace:*
+        version: link:../../platform/desktop/darwin/wae-darwin-arm64
+      '@wae/wae-darwin-x64':
+        specifier: workspace:*
+        version: link:../../platform/desktop/darwin/wae-darwin-x64
+      '@wae/wae-ios-arm64':
+        specifier: workspace:*
+        version: link:../../platform/mobile/ios/wae-ios-arm64
+      '@wae/wae-linux-arm64':
+        specifier: workspace:*
+        version: link:../../platform/desktop/linux/wae-linux-arm64
+      '@wae/wae-linux-x64':
+        specifier: workspace:*
+        version: link:../../platform/desktop/linux/wae-linux-x64
+      '@wae/wae-unknown-wasm32':
+        specifier: workspace:*
+        version: link:../../platform/wasm
+      '@wae/wae-web':
+        specifier: workspace:*
+        version: link:../../platform/web
+      '@wae/wae-win32-arm64':
+        specifier: workspace:*
+        version: link:../../platform/desktop/windows/wae-win32-arm64
+      '@wae/wae-win32-x64':
+        specifier: workspace:*
+        version: link:../../platform/desktop/windows/wae-win32-x64
 
   projects/backend/adapters/cloudflare:
     dependencies:
@@ -614,25 +645,65 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  projects/platform/desktop/darwin/wae-darwin-arm64: {}
+  projects/platform/desktop/darwin/wae-darwin-arm64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/desktop/darwin/wae-darwin-x64: {}
+  projects/platform/desktop/darwin/wae-darwin-x64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/desktop/linux/wae-linux-arm64: {}
+  projects/platform/desktop/linux/wae-linux-arm64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/desktop/linux/wae-linux-x64: {}
+  projects/platform/desktop/linux/wae-linux-x64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/desktop/windows/wae-win32-arm64: {}
+  projects/platform/desktop/windows/wae-win32-arm64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/desktop/windows/wae-win32-x64: {}
+  projects/platform/desktop/windows/wae-win32-x64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/mobile/android/wae-android-arm64: {}
+  projects/platform/mobile/android/wae-android-arm64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/mobile/ios/wae-ios-arm64: {}
+  projects/platform/mobile/ios/wae-ios-arm64:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/wasm: {}
+  projects/platform/wasm:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
-  projects/platform/web: {}
+  projects/platform/web:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
 packages:
 

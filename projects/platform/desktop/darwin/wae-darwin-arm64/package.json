@@ -1,6 +1,6 @@
 {
     "name": "@wae/wae-darwin-arm64",
-    "version": "0.1.0",
+    "version": "0.0.0",
     "description": "macOS arm64 native host + embedded WASM",
     "type": "module",
     "main": "./dist/index.js",
@@ -8,19 +8,37 @@
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
         }
     },
     "files": [
-        "dist",
-        "src"
+        "dist"
     ],
     "scripts": {
         "build": "tsc -p tsconfig.json",
-        "check": "tsc -p tsconfig.json --noEmit"
+        "check": "tsc -p tsconfig.json --noEmit",
+        "prepublishOnly": "tsc -p tsconfig.json"
     },
     "license": "MIT",
     "wae": {
         "platform": "darwin-arm64"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/oovm/wae.git"
+    },
+    "homepage": "https://github.com/oovm/wae",
+    "publishConfig": {
+        "access": "public"
+    },
+    "os": [
+        "darwin"
+    ],
+    "cpu": [
+        "arm64"
+    ],
+    "devDependencies": {
+        "typescript": "catalog:"
     }
 }

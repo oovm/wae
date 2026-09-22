@@ -1,22 +1,24 @@
 {
     "name": "@wae/protocol",
-    "version": "0.1.0",
+    "version": "0.0.0",
     "description": "WAE 协议 TypeScript runtime（编解码 / envelope）",
     "type": "module",
-    "main": "./src/index.ts",
-    "types": "./src/index.ts",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
-            "types": "./src/index.ts",
-            "import": "./src/index.ts",
-            "default": "./src/index.ts"
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
         }
     },
     "files": [
-        "src"
+        "dist"
     ],
     "scripts": {
-        "check": "tsc -p tsconfig.json --noEmit"
+        "check": "tsc -p tsconfig.json --noEmit",
+        "build": "tsc -p tsconfig.json",
+        "prepublishOnly": "tsc -p tsconfig.json"
     },
     "dependencies": {
         "@wae/types": "workspace:*",
@@ -25,5 +27,13 @@
     "devDependencies": {
         "typescript": "catalog:"
     },
-    "license": "MIT"
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/oovm/wae.git"
+    },
+    "homepage": "https://github.com/oovm/wae",
+    "publishConfig": {
+        "access": "public"
+    }
 }
