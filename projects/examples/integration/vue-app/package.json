@@ -5,6 +5,7 @@
     "scripts": {
         "check": "tsc -p tsconfig.json --noEmit",
         "run:wae": "wae run --port 5173",
+        "run:web": "wae run --platform web --port 5173",
         "build": "vite build"
     },
     "dependencies": {

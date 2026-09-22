@@ -6,7 +6,8 @@ export default defineConfig({
         framework: "vue",
         adapter: vue(),
         entry: "./src/main.ts",
+        bundler: "vite",
     },
-    target: "web",
-    platform: { client: "web" },
+    target: "desktop",
+    platform: { client: "win32-x64" },
 });

@@ -755,6 +755,9 @@ importers:
 
   projects/platform/desktop/windows/wae-win32-x64:
     devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.4
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
