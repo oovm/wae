@@ -20,7 +20,10 @@ function collect(dir, out = []) {
     return out;
 }
 
-const configs = collect(path.join(root, "projects"));
+const configs = [
+    ...collect(path.join(root, "projects/packages")),
+    ...collect(path.join(root, "projects/examples")),
+];
 let failed = 0;
 for (const cfg of configs) {
     const rel = path.relative(root, cfg).replaceAll("\\", "/");

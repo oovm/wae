@@ -45,30 +45,30 @@ const PUBLISH_FILTERS = [
 ];
 
 const PACKAGE_DIRS = [
-    "projects/communication/public-types",
-    "projects/communication/core",
-    "projects/communication/protocol",
-    "projects/frontend/runtime",
-    "projects/backend/server",
-    "projects/backend/serverless",
-    "projects/backend/adapters/node",
-    "projects/backend/adapters/deno",
-    "projects/backend/adapters/cloudflare",
-    "projects/frontend/adapters/vue",
-    "projects/frontend/adapters/react",
-    "projects/frontend/adapters/svelte",
-    "projects/frontend/adapters/solid",
-    "projects/platform/web",
-    "projects/platform/wasm",
-    "projects/platform/desktop/windows/wae-win32-x64",
-    "projects/platform/desktop/windows/wae-win32-arm64",
-    "projects/platform/desktop/darwin/wae-darwin-x64",
-    "projects/platform/desktop/darwin/wae-darwin-arm64",
-    "projects/platform/desktop/linux/wae-linux-x64",
-    "projects/platform/desktop/linux/wae-linux-arm64",
-    "projects/platform/mobile/android/wae-android-arm64",
-    "projects/platform/mobile/ios/wae-ios-arm64",
-    "projects/application/wae",
+    "projects/packages/types",
+    "projects/packages/core",
+    "projects/packages/protocol",
+    "projects/packages/client",
+    "projects/packages/server",
+    "projects/packages/serverless",
+    "projects/packages/server-node",
+    "projects/packages/server-deno",
+    "projects/packages/server-cloudflare",
+    "projects/packages/adapter-vue",
+    "projects/packages/adapter-react",
+    "projects/packages/adapter-svelte",
+    "projects/packages/adapter-solid",
+    "projects/packages/wae-web",
+    "projects/packages/wae-unknown-wasm32",
+    "projects/packages/wae-win32-x64",
+    "projects/packages/wae-win32-arm64",
+    "projects/packages/wae-darwin-x64",
+    "projects/packages/wae-darwin-arm64",
+    "projects/packages/wae-linux-x64",
+    "projects/packages/wae-linux-arm64",
+    "projects/packages/wae-android-arm64",
+    "projects/packages/wae-ios-arm64",
+    "projects/packages/wae",
 ];
 
 const REQUIRED_OPTIONAL_PLATFORMS = [
@@ -129,12 +129,12 @@ for (const rel of PACKAGE_DIRS) {
     if (!j.main?.includes("dist/") && j.main !== "./dist/index.js") {
         fail(`${j.name} main must point to dist`);
     }
-    if (fs.existsSync(path.join(ROOT, "projects/frontend/ui"))) {
-        fail("projects/frontend/ui must not exist");
+    if (fs.existsSync(path.join(ROOT, "projects/packages/ui"))) {
+        fail("projects/packages/ui must not exist");
     }
 }
 
-const waePkg = JSON.parse(fs.readFileSync(path.join(ROOT, "projects/application/wae/package.json"), "utf8"));
+const waePkg = JSON.parse(fs.readFileSync(path.join(ROOT, "projects/packages/wae/package.json"), "utf8"));
 const optional = waePkg.optionalDependencies ?? {};
 for (const name of REQUIRED_OPTIONAL_PLATFORMS) {
     if (!optional[name]) {

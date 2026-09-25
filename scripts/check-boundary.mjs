@@ -4,16 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const AREAS = new Set([
-    "application",
-    "frontend",
-    "backend",
-    "host",
-    "platform",
-    "communication",
-    "tooling",
-    "examples",
-]);
+const PROJECTS_AREAS = new Set(["crates", "packages", "examples"]);
 const EXAMPLE_KINDS = new Set(["frontend", "fullstack", "backend", "native", "integration", "minimal"]);
 const UI_FRAMEWORKS = ["vue", "react", "svelte", "solid-js", "solid"];
 const ADAPTERS = ["vue", "react", "svelte", "solid"];
@@ -47,42 +38,55 @@ function walkFiles(dir, pred, out = []) {
     return out;
 }
 
-const top = fs
+// —— 仓库三分法：projects/crates · projects/packages · projects/examples ——
+for (const area of PROJECTS_AREAS) {
+    if (!fs.existsSync(path.join(ROOT, "projects", area))) {
+        fail(`missing projects/${area}`);
+    }
+}
+
+if (fs.existsSync(path.join(ROOT, "packages"))) {
+    fail("root packages/ forbidden; use projects/packages");
+}
+if (fs.existsSync(path.join(ROOT, "examples"))) {
+    fail("root examples/ forbidden; use projects/examples");
+}
+
+const projectsTop = fs
     .readdirSync(path.join(ROOT, "projects"), { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
-for (const name of top) {
-    if (!AREAS.has(name)) fail(`projects/${name} is not a functional area`);
+for (const name of projectsTop) {
+    if (!PROJECTS_AREAS.has(name)) {
+        fail(`projects/${name} forbidden; only crates, packages, examples allowed`);
+    }
 }
-if (top.includes("packages") || top.includes("crates")) {
-    fail("packages/ or crates/ language buckets forbidden");
-}
+
 if (fs.existsSync(path.join(ROOT, "projects/package.json"))) {
     fail("package.json must not sit directly under projects/");
 }
 if (fs.existsSync(path.join(ROOT, "projects/Cargo.toml"))) {
     fail("Cargo.toml must not sit directly under projects/");
 }
-if (fs.existsSync(path.join(ROOT, "projects/frontend/ui"))) {
-    fail("projects/frontend/ui must not exist");
+if (fs.existsSync(path.join(ROOT, "projects/packages/ui"))) {
+    fail("projects/packages/ui must not exist");
 }
-if (fs.existsSync(path.join(ROOT, "projects/frontend/adapters/vanilla"))) {
+if (fs.existsSync(path.join(ROOT, "projects/packages/adapter-vanilla"))) {
     fail("adapter-vanilla must not exist");
 }
 if (fs.existsSync(path.join(ROOT, "projects/examples/rust-types"))) {
-    fail("examples/rust-types must not exist");
+    fail("projects/examples/rust-types must not exist");
 }
 
-// 命名规则：types 仅类型；core/protocol 有 runtime；依赖单向
-const typesRel = "projects/communication/public-types";
-const coreRel = "projects/communication/core";
-const protocolRel = "projects/communication/protocol";
+const typesRel = "projects/packages/types";
+const coreRel = "projects/packages/core";
+const protocolRel = "projects/packages/protocol";
 const typesPkg = readPkg(typesRel);
 const corePkg = readPkg(coreRel);
 const protocolPkg = readPkg(protocolRel);
-if (typesPkg?.name !== "@wae/types") fail("@wae/types missing at communication/public-types");
-if (corePkg?.name !== "@wae/core") fail("@wae/core missing at communication/core");
-if (protocolPkg?.name !== "@wae/protocol") fail("@wae/protocol missing at communication/protocol");
+if (typesPkg?.name !== "@wae/types") fail("@wae/types missing at projects/packages/types");
+if (corePkg?.name !== "@wae/core") fail("@wae/core missing at projects/packages/core");
+if (protocolPkg?.name !== "@wae/protocol") fail("@wae/protocol missing at projects/packages/protocol");
 if (Object.keys(typesPkg.dependencies ?? {}).length > 0) {
     fail("@wae/types must have no runtime dependencies");
 }
@@ -101,8 +105,8 @@ for (const bad of ["@wae/client", "@wae/server", "@wae/ui"]) {
     if (protocolDeps.has(bad)) fail(`@wae/protocol must not depend on ${bad}`);
 }
 
-const clientRel = "projects/frontend/runtime";
-for (const rel of [clientRel, "projects/backend/server"]) {
+const clientRel = "projects/packages/client";
+for (const rel of [clientRel, "projects/packages/server"]) {
     const d = deps(rel);
     for (const need of ["@wae/types", "@wae/core", "@wae/protocol"]) {
         if (!d.has(need)) fail(`${rel} must depend on ${need}`);
@@ -115,7 +119,7 @@ const exTop = fs
     .map((d) => d.name);
 for (const name of exTop) {
     if (!EXAMPLE_KINDS.has(name)) {
-        fail(`examples/${name} is not a purpose kind (got framework-keyed layout?)`);
+        fail(`projects/examples/${name} is not a purpose kind (got framework-keyed layout?)`);
     }
 }
 for (const fw of UI_FRAMEWORKS) {
@@ -156,15 +160,15 @@ for (const file of walkFiles(path.join(ROOT, clientRel, "src"), (p) => /\.(ts|ts
 }
 
 for (const fw of ADAPTERS) {
-    const rel = `projects/frontend/adapters/${fw}`;
+    const rel = `projects/packages/adapter-${fw}`;
     if (!readPkg(rel)) fail(`missing ${rel}`);
     if (!deps(rel).has("@wae/client")) fail(`${fw} adapter must depend on @wae/client`);
 }
-if (readPkg("projects/frontend/adapters/vanilla")) {
+if (readPkg("projects/packages/adapter-vanilla")) {
     fail("@wae/adapter-vanilla package must not exist");
 }
 
-const serverDeps = deps("projects/backend/server");
+const serverDeps = deps("projects/packages/server");
 for (const bad of [
     "@wae/client",
     "@wae/ui",
@@ -178,12 +182,12 @@ for (const bad of [
 }
 
 for (const a of ["node", "deno", "cloudflare"]) {
-    const d = deps(`projects/backend/adapters/${a}`);
+    const d = deps(`projects/packages/server-${a}`);
     if (!d.has("@wae/serverless")) fail(`adapter ${a} must depend on @wae/serverless`);
     if (!d.has("@wae/server")) fail(`adapter ${a} must depend on @wae/server`);
 }
 
-const waeSrc = path.join(ROOT, "projects/application/wae/src/index.ts");
+const waeSrc = path.join(ROOT, "projects/packages/wae/src/index.ts");
 if (fs.existsSync(waeSrc)) {
     const text = fs.readFileSync(waeSrc, "utf8");
     if (!/export function defineConfig/.test(text)) {
