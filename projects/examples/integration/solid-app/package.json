@@ -1,0 +1,22 @@
+{
+    "name": "@wae-example/integration-solid-app",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "check": "tsc -p tsconfig.json --noEmit",
+        "run:wae": "wae run --port 5176",
+        "run:web": "wae run --platform web --port 5176",
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@wae/adapter-solid": "workspace:*",
+        "@wae/client": "workspace:*",
+        "solid-js": "^1.9.0"
+    },
+    "devDependencies": {
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:",
+        "vite": "catalog:",
+        "vite-plugin-solid": "^2.11.0"
+    }
+}

@@ -1,11 +1,11 @@
-import react from "@wae/adapter-react";
+import svelte from "@wae/adapter-svelte";
 import { defineConfig } from "@wae/wae";
 
 export default defineConfig({
     frontend: {
-        framework: "react",
-        adapter: react(),
-        entry: "./src/main.tsx",
+        framework: "svelte",
+        adapter: svelte(),
+        entry: "./src/main.ts",
         bundler: "vite",
     },
     target: "desktop",

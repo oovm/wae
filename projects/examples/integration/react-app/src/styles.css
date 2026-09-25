@@ -1,32 +1,61 @@
-<script setup lang="ts">
-import { useWae } from "@wae/adapter-vue";
-import { ref } from "vue";
-
-const wae = useWae();
-const status = ref("等待 ping…");
-const ticks = ref(0);
-
-function ping() {
-  ticks.value += 1;
-  status.value = `client ok · baseUrl=${wae.server ? "set" : "?"} · #${ticks.value}`;
+:root {
+  --bg0: #0b1018;
+  --bg1: #121a28;
+  --ink: #e6f4ff;
+  --muted: #7f9bb8;
+  --accent: #61dafb;
+  --accent-dim: #2a9fc4;
+  --glow: rgba(97, 218, 251, 0.32);
+  --panel: rgba(18, 28, 42, 0.75);
+  --border: rgba(97, 218, 251, 0.28);
+  --font: "Sora", "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
 }
-</script>
 
-<template>
-  <div class="shell">
-    <header class="brand">
-      <p class="eyebrow">WAE · desktop</p>
-      <h1>Vue</h1>
-      <p class="lede">原生 WebView 壳 + Vite，经 <code>@wae/adapter-vue</code> 注入 client。</p>
-    </header>
-    <section class="stage" aria-live="polite">
-      <p class="status">{{ status }}</p>
-      <button type="button" class="cta" @click="ping">ping client</button>
-    </section>
-  </div>
-</template>
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-<style scoped>
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 85% 65% at 80% 8%, var(--glow), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 10% 90%, rgba(42, 159, 196, 0.22), transparent 50%),
+    linear-gradient(155deg, var(--bg0), var(--bg1) 50%, #080c14);
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--glow);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
 .shell {
   min-height: 100%;
   display: grid;
@@ -50,7 +79,7 @@ function ping() {
   color: var(--muted);
 }
 
-h1 {
+.brand h1 {
   margin: 0;
   font-size: clamp(2.6rem, 8vw, 3.75rem);
   font-weight: 700;
@@ -103,7 +132,7 @@ h1 {
   font-size: 0.95rem;
   padding: 0.7rem 1.4rem;
   border-radius: 999px;
-  color: #06140c;
+  color: #041018;
   background: linear-gradient(135deg, var(--accent), var(--accent-dim));
   transition: transform 0.18s ease, filter 0.18s ease;
 }
@@ -117,4 +146,3 @@ h1 {
 .cta:active {
   transform: translateY(0);
 }
-</style>

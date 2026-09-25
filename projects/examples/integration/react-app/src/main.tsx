@@ -2,24 +2,39 @@ import { createClient } from "@wae/client";
 import { WaeProvider, useWae } from "@wae/adapter-react";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import "./styles.css";
 
 const client = createClient({ server: { baseUrl: "/api" } });
 
 function Panel() {
     const wae = useWae();
-    const [label, setLabel] = useState("WAE + React");
+    const [status, setStatus] = useState("等待 ping…");
+    const [ticks, setTicks] = useState(0);
+
     return (
-        <main style={{ fontFamily: "system-ui", padding: "2rem" }}>
-            <h1>{label}</h1>
-            <button
-                type="button"
-                onClick={() => {
-                    setLabel(`client ok · baseUrl=${wae.server ? "set" : "?"}`);
-                }}
-            >
-                ping client
-            </button>
-        </main>
+        <div className="shell">
+            <header className="brand">
+                <p className="eyebrow">WAE · desktop</p>
+                <h1>React</h1>
+                <p className="lede">
+                    原生 WebView 壳 + Vite，经 <code>@wae/adapter-react</code> 注入 client。
+                </p>
+            </header>
+            <section className="stage" aria-live="polite">
+                <p className="status">{status}</p>
+                <button
+                    type="button"
+                    className="cta"
+                    onClick={() => {
+                        const next = ticks + 1;
+                        setTicks(next);
+                        setStatus(`client ok · baseUrl=${wae.server ? "set" : "?"} · #${next}`);
+                    }}
+                >
+                    ping client
+                </button>
+            </section>
+        </div>
     );
 }
 

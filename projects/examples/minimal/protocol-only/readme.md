@@ -33,7 +33,7 @@ void back;
 ## 关键文件
 
 - 目前仅本 README
-- 实现见 [`@wae/protocol`](../../../communication/protocol/readme.md)
+- 实现见 [`@wae/protocol`](../../packages/protocol/readme.md)
 
 ## 请求 / 事件路径（目标语义）
 
@@ -48,7 +48,7 @@ createRpcRequest / ClientMessage
 ## 练习点
 
 - 对照 `@wae/types` 里 `RpcRequest`、`HostMessage` 字段。
-- 与 [`host/bridge`](../../../host/bridge/readme.md) 的 `handle` 对照：协议是形状，bridge 是投递。
+- 与 [`host/bridge`](../../../crates/wae-bridge/readme.md) 的 `handle` 对照：协议是形状，bridge 是投递。
 - 不要把编解码示例误当成 HTTP `createServer` 路由练习。
 
 ## 与生产应用的差异

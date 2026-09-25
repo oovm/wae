@@ -1,0 +1,57 @@
+:root {
+  --bg0: #140c0a;
+  --bg1: #22140f;
+  --ink: #fff1ea;
+  --muted: #b89286;
+  --accent: #ff3e00;
+  --accent-dim: #c43200;
+  --glow: rgba(255, 62, 0, 0.32);
+  --panel: rgba(40, 20, 14, 0.78);
+  --border: rgba(255, 62, 0, 0.3);
+  --font: "Sora", "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 15%, var(--glow), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 95% 80%, rgba(196, 50, 0, 0.25), transparent 50%),
+    linear-gradient(150deg, var(--bg0), var(--bg1) 50%, #0e0806);
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--glow);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}

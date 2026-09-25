@@ -30,7 +30,7 @@ pnpm --filter @wae-example/integration-vue-app exec wae run --port 5173
 
 - `wae.config.ts` — `target: "desktop"`
 - `src/App.vue` · `src/main.ts`
-- 宿主：`projects/host/desktop`（`wae-desktop`）
+- 宿主：`projects/crates/wae-desktop`（`wae-desktop`）
 
 ## 请求 / 事件路径
 

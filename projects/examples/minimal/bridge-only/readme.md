@@ -35,7 +35,7 @@ void client.native.bridge;
 ## 关键文件
 
 - 本 README
-- [`host/bridge`](../../../host/bridge/readme.md)
+- [`host/bridge`](../../../crates/wae-bridge/readme.md)
 - 有代码的相近示例：[`native/ipc`](../native/ipc/readme.md)
 
 ## 请求 / 事件路径（目标语义）

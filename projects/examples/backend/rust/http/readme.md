@@ -35,7 +35,7 @@ HTTP
 
 ## 练习点
 
-- 读 [`projects/host`](../../../host/readme.md) 与 [`@wae/server`](../../../backend/server/readme.md)，写清二者职责边界。
+- 读 [`projects/crates`](../../../../crates/readme.md) 与 [`@wae/server`](../../../../packages/server/readme.md)，写清二者职责边界。
 - 可 `cargo check -p wae-bridge` 熟悉仓库 Rust 侧，但那是 host，不是本目录服务。
 
 ## 与生产应用的差异

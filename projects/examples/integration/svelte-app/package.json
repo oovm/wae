@@ -1,0 +1,22 @@
+{
+    "name": "@wae-example/integration-svelte-app",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "check": "tsc -p tsconfig.json --noEmit",
+        "run:wae": "wae run --port 5175",
+        "run:web": "wae run --platform web --port 5175",
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@wae/adapter-svelte": "workspace:*",
+        "@wae/client": "workspace:*",
+        "svelte": "^5.0.0"
+    },
+    "devDependencies": {
+        "@sveltejs/vite-plugin-svelte": "^6.0.0",
+        "@wae/wae": "workspace:*",
+        "typescript": "catalog:",
+        "vite": "catalog:"
+    }
+}

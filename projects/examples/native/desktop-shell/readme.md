@@ -49,7 +49,7 @@ pnpm run build   # 当前打印 skeleton，不产出可部署包
 ## 练习点
 
 - 与 `frontend/desktop` 对照：那边可没有 native 标志；这边明确 `hasNativeBridge`。
-- 阅读 `projects/host` 与平台桌面包 README，弄清二进制从哪来。
+- 阅读 `projects/crates` 与 `packages/wae-win32-*` 等平台包 README，弄清二进制从哪来。
 - 不要运行虚构的 `wae open-desktop`。
 
 ## 与生产应用的差异

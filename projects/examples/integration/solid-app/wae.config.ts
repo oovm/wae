@@ -1,10 +1,10 @@
-import react from "@wae/adapter-react";
+import solid from "@wae/adapter-solid";
 import { defineConfig } from "@wae/wae";
 
 export default defineConfig({
     frontend: {
-        framework: "react",
-        adapter: react(),
+        framework: "solid",
+        adapter: solid(),
         entry: "./src/main.tsx",
         bundler: "vite",
     },
