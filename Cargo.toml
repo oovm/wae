@@ -1,14 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "projects/host/bridge",
-    "projects/host/desktop",
-    "projects/communication/schema",
+    "projects/crates/wae-types",
+    "projects/crates/wae-bridge",
+    "projects/crates/wae-desktop",
 ]
 default-members = [
-    "projects/communication/schema",
-    "projects/host/bridge",
-    "projects/host/desktop",
+    "projects/crates/wae-types",
+    "projects/crates/wae-bridge",
+    "projects/crates/wae-desktop",
 ]
 
 [workspace.package]
@@ -25,8 +25,8 @@ categories = ["gui", "web-programming"]
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-wae-types = { path = "projects/communication/schema", version = "0.1.0" }
-wae-bridge = { path = "projects/host/bridge", version = "0.1.0" }
+wae-types = { path = "projects/crates/wae-types", version = "0.1.0" }
+wae-bridge = { path = "projects/crates/wae-bridge", version = "0.1.0" }
 
 [profile.release]
 lto = true

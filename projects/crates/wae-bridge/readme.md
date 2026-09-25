@@ -1,4 +1,4 @@
-# `wae-bridge`（host/bridge）
+# `wae-bridge`
 
 Rust crate：WebView / WASM / native 宿主与前端之间的 **桥**。配合 `@wae/client`、`@wae/protocol` 与 `@wae/wae-*`。
 
@@ -38,5 +38,5 @@ cargo check -p wae-bridge
 
 ## 相关
 
-- [`@wae/protocol`](../../communication/protocol/readme.md)
-- 平台包：[`platform`](../../platform/readme.md)
+- [`@wae/protocol`](../../packages/protocol/readme.md)
+- 平台包：[`packages`](../../packages/readme.md)
