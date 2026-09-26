@@ -1,0 +1,127 @@
+name: Publish native libs
+
+on:
+    workflow_dispatch:
+    release:
+        types: [published]
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+    build-native:
+        name: native (${{ matrix.os }})
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - os: windows-latest
+                      platforms: win32-x64,win32-arm64
+                    - os: macos-latest
+                      platforms: darwin-x64,darwin-arm64
+                    - os: ubuntu-latest
+                      platforms: linux-x64,linux-arm64
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10.28.0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: pnpm
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build platform native addons
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  IFS=',' read -ra PLATS <<< "${{ matrix.platforms }}"
+                  for p in "${PLATS[@]}"; do
+                    echo "=== build $p ==="
+                    node scripts/build-platform-native.mjs --platform "$p"
+                  done
+
+            - name: Upload native artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: native-${{ matrix.os }}
+                  path: projects/packages/wae-*/lib/*.node
+                  if-no-files-found: error
+
+    stage-and-verify:
+        name: Stage and verify native libs
+        needs: build-native
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Download native artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+                  pattern: native-*
+                  merge-multiple: true
+
+            - name: Stage into platform packages
+              run: node scripts/stage-platform-native-artifacts.mjs --from artifacts
+
+            - name: Verify desktop platform libs
+              run: node scripts/verify-platform-native.mjs --skip-mobile
+
+            - name: Upload staged platform lib tree
+              uses: actions/upload-artifact@v4
+              with:
+                  name: platform-native-libs
+                  path: projects/packages/wae-*/lib/*.node
+                  if-no-files-found: error
+
+    publish-npm:
+        name: Publish npm packages
+        needs: stage-and-verify
+        if: github.event_name == 'release'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10.28.0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: pnpm
+                  registry-url: https://registry.npmjs.org
+
+            - name: Download staged native libs
+              uses: actions/download-artifact@v4
+              with:
+                  name: platform-native-libs
+                  path: .
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Verify native libs before publish
+              run: node scripts/verify-platform-native.mjs --skip-mobile
+
+            - name: Publish to npm
+              run: node scripts/publish.mjs --execute
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
