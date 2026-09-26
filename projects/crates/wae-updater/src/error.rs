@@ -13,28 +13,18 @@ pub enum UpdateError {
     #[error("unknown download policy `{0}`")]
     InvalidDownloadPolicy(String),
     #[error("release {tag} has no asset for product `{product}` on target `{triple}`")]
-    MissingAsset {
-        tag: String,
-        product: String,
-        triple: String,
-    },
+    MissingAsset { tag: String, product: String, triple: String },
     #[error("archive extraction failed: {0}")]
     Archive(String),
     #[error("IO error at {path}: {source}")]
-    Io {
-        path: PathBuf,
-        source: std::io::Error,
-    },
+    Io { path: PathBuf, source: std::io::Error },
     #[error("{0}")]
     Other(String),
 }
 
 impl UpdateError {
     pub fn io(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
-        Self::Io {
-            path: path.into(),
-            source,
-        }
+        Self::Io { path: path.into(), source }
     }
 }
 

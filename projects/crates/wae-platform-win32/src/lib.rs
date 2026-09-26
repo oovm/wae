@@ -1,4 +1,4 @@
-﻿//! Windows desktop binding entry.
+//! Windows desktop binding entry.
 
 #![warn(missing_docs)]
 
@@ -13,7 +13,5 @@ pub fn run_desktop(
     _options: wae_platform::DesktopOpenOptions,
     _handler: &mut dyn wae_platform::DesktopIpcHandler,
 ) -> wae_platform::Result<()> {
-    Err(wae_platform::PlatformError::Unsupported(
-        "wae-platform-win32 is only available on Windows targets",
-    ))
+    Err(wae_platform::PlatformError::Unsupported("wae-platform-win32 is only available on Windows targets"))
 }

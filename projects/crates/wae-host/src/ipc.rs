@@ -12,17 +12,11 @@ pub fn parse_window_ipc(body: &str) -> Option<WindowCommand> {
         _ => {
             if let Some(rest) = body.strip_prefix("drag_start:") {
                 let (x, y) = parse_xy(rest)?;
-                return Some(WindowCommand::DragStart {
-                    screen_x: x,
-                    screen_y: y,
-                });
+                return Some(WindowCommand::DragStart { screen_x: x, screen_y: y });
             }
             if let Some(rest) = body.strip_prefix("drag_move:") {
                 let (x, y) = parse_xy(rest)?;
-                return Some(WindowCommand::DragMove {
-                    screen_x: x,
-                    screen_y: y,
-                });
+                return Some(WindowCommand::DragMove { screen_x: x, screen_y: y });
             }
             None
         }
@@ -44,9 +38,7 @@ pub struct HostIpcRouter {
 impl HostIpcRouter {
     /// Create a router with a fresh bridge runtime.
     pub fn new() -> Self {
-        Self {
-            bridge: wae_bridge::WebViewRuntime::new(),
-        }
+        Self { bridge: wae_bridge::WebViewRuntime::new() }
     }
 
     /// Handle one IPC payload from the WebView.

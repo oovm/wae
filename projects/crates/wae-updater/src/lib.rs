@@ -77,10 +77,7 @@ pub struct AppliedUpdate {
 /// Outcome of [`Updater::run`] for the configured [`DownloadPolicy`].
 #[derive(Debug, Clone)]
 pub enum UpdateRunResult {
-    UpToDate {
-        current: Version,
-        channel: ReleaseChannel,
-    },
+    UpToDate { current: Version, channel: ReleaseChannel },
     Checked(UpdateCheck),
     Downloaded(DownloadedUpdate),
     Applied(AppliedUpdate),
@@ -110,28 +107,16 @@ impl Updater {
     }
 
     fn triple(&self) -> String {
-        self.config
-            .target_triple
-            .clone()
-            .unwrap_or_else(|| host_triple().to_string())
+        self.config.target_triple.clone().unwrap_or_else(|| host_triple().to_string())
     }
 
     fn resolve_release(&self, client: &GitHubClient) -> Result<github::GitHubRelease> {
-        let release = if let Some(tag) = self.config.channel.pinned_tag() {
-            client.fetch_tag(tag)?
-        } else {
-            client.fetch_latest()?
-        };
+        let release =
+            if let Some(tag) = self.config.channel.pinned_tag() { client.fetch_tag(tag)? } else { client.fetch_latest()? };
         if release.draft {
-            return Err(UpdateError::Other(format!(
-                "Release {} is a draft",
-                release.tag_name
-            )));
+            return Err(UpdateError::Other(format!("Release {} is a draft", release.tag_name)));
         }
-        if release.prerelease
-            && !self.config.channel.allows_prerelease()
-            && self.config.channel.pinned_tag().is_none()
-        {
+        if release.prerelease && !self.config.channel.allows_prerelease() && self.config.channel.pinned_tag().is_none() {
             return Err(UpdateError::Other(format!(
                 "Latest release {} is prerelease on channel `{}`; switch to beta or pin a tag",
                 release.tag_name,
@@ -155,18 +140,10 @@ impl Updater {
         }
         let triple = self.triple();
         let os_arch = host_os_arch();
-        let asset = pick_product_asset(
-            &self.config.product_name,
-            &triple,
-            &os_arch,
-            &release.assets,
-        )
-        .cloned()
-        .ok_or_else(|| UpdateError::MissingAsset {
-            tag: release.tag_name.clone(),
-            product: self.config.product_name.clone(),
-            triple,
-        })?;
+        let asset =
+            pick_product_asset(&self.config.product_name, &triple, &os_arch, &release.assets).cloned().ok_or_else(|| {
+                UpdateError::MissingAsset { tag: release.tag_name.clone(), product: self.config.product_name.clone(), triple }
+            })?;
         Ok(UpdateCheck {
             current: self.config.current_version.clone(),
             channel: self.config.channel.clone(),
@@ -216,10 +193,7 @@ impl Updater {
     pub fn run(&self) -> Result<UpdateRunResult> {
         let check = self.check_version()?;
         if check.availability.is_none() {
-            return Ok(UpdateRunResult::UpToDate {
-                current: check.current,
-                channel: check.channel,
-            });
+            return Ok(UpdateRunResult::UpToDate { current: check.current, channel: check.channel });
         }
         let package = check.availability.clone().expect("checked above");
         match self.config.download_policy {
@@ -244,11 +218,7 @@ pub fn normalize_release_tag(tag: &str) -> Result<Version> {
 }
 
 fn tempfile_dir(label: &str) -> Result<PathBuf> {
-    let dir = std::env::temp_dir().join(format!(
-        "wae-updater-{}-{}",
-        label,
-        std::process::id()
-    ));
+    let dir = std::env::temp_dir().join(format!("wae-updater-{}-{}", label, std::process::id()));
     std::fs::create_dir_all(&dir).map_err(|e| UpdateError::io(&dir, e))?;
     Ok(dir)
 }

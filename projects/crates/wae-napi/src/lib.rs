@@ -7,15 +7,11 @@ mod updater;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use wae_host::{run_desktop, DesktopIpcOutcome, HostIpcRouter};
+use wae_host::{DesktopIpcOutcome, HostIpcRouter, run_desktop};
 use wae_platform::DesktopOpenOptions;
 
 pub use updater::{
-    apply_product_update,
-    check_product_update,
-    download_product_update,
-    ProductUpdateOptions,
-    ProductUpdateStatus,
+    ProductUpdateOptions, ProductUpdateStatus, apply_product_update, check_product_update, download_product_update,
 };
 
 #[napi(object)]

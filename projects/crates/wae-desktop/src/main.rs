@@ -22,10 +22,7 @@ fn main() {
 }
 
 fn env_flag(name: &str) -> bool {
-    matches!(
-        env::var(name).ok().as_deref(),
-        Some("1") | Some("true") | Some("TRUE") | Some("yes")
-    )
+    matches!(env::var(name).ok().as_deref(), Some("1") | Some("true") | Some("TRUE") | Some("yes"))
 }
 
 fn parse_url() -> Option<String> {

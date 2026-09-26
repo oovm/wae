@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{copy, BufReader};
+use std::io::{BufReader, copy};
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
@@ -7,11 +7,7 @@ use flate2::read::GzDecoder;
 use crate::error::{Result, UpdateError};
 
 pub fn extract_release_archive(archive: &Path, dest: &Path) -> Result<PathBuf> {
-    let name = archive
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
+    let name = archive.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_ascii_lowercase();
     if name.ends_with(".zip") {
         extract_zip(archive, dest)?;
     } else if name.ends_with(".tar.gz") || name.ends_with(".tgz") {
@@ -26,12 +22,9 @@ pub fn extract_release_archive(archive: &Path, dest: &Path) -> Result<PathBuf> {
 
 fn extract_zip(archive: &Path, dest: &Path) -> Result<()> {
     let file = File::open(archive).map_err(|e| UpdateError::io(archive, e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| UpdateError::Archive(format!("zip open: {e}")))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| UpdateError::Archive(format!("zip open: {e}")))?;
     for i in 0..archive.len() {
-        let mut entry = archive
-            .by_index(i)
-            .map_err(|e| UpdateError::Archive(format!("zip entry: {e}")))?;
+        let mut entry = archive.by_index(i).map_err(|e| UpdateError::Archive(format!("zip entry: {e}")))?;
         let outpath = match entry.enclosed_name() {
             Some(path) => dest.join(path),
             None => continue,
@@ -52,22 +45,13 @@ fn extract_zip(archive: &Path, dest: &Path) -> Result<()> {
 fn extract_tar_gz(archive: &Path, dest: &Path) -> Result<()> {
     let file = File::open(archive).map_err(|e| UpdateError::io(archive, e))?;
     let gz = GzDecoder::new(BufReader::new(file));
-    tar::Archive::new(gz)
-        .unpack(dest)
-        .map_err(|e| UpdateError::Archive(format!("tar unpack: {e}")))?;
+    tar::Archive::new(gz).unpack(dest).map_err(|e| UpdateError::Archive(format!("tar unpack: {e}")))?;
     Ok(())
 }
 
 fn is_native_artifact(path: &Path) -> bool {
-    let name = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    name.ends_with(".node")
-        || name.ends_with(".dll")
-        || name.ends_with(".so")
-        || name.ends_with(".dylib")
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_ascii_lowercase();
+    name.ends_with(".node") || name.ends_with(".dll") || name.ends_with(".so") || name.ends_with(".dylib")
 }
 
 fn find_native_artifact(extract_root: &Path) -> Result<PathBuf> {
@@ -76,16 +60,12 @@ fn find_native_artifact(extract_root: &Path) -> Result<PathBuf> {
     if hits.len() == 1 {
         return Ok(hits[0].clone());
     }
-    if let Some(node) = hits.iter().find(|p| {
-        p.extension()
-            .and_then(|e| e.to_str())
-            .is_some_and(|e| e.eq_ignore_ascii_case("node"))
-    }) {
+    if let Some(node) =
+        hits.iter().find(|p| p.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("node")))
+    {
         return Ok(node.clone());
     }
-    Err(UpdateError::Archive(
-        "could not locate a single native addon (.node / .dll / .so / .dylib) in release archive".into(),
-    ))
+    Err(UpdateError::Archive("could not locate a single native addon (.node / .dll / .so / .dylib) in release archive".into()))
 }
 
 fn collect_native_artifacts(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {

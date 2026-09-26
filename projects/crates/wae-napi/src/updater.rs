@@ -5,9 +5,7 @@ use std::path::PathBuf;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use semver::Version;
-use wae_updater::{
-    DownloadPolicy, GitHubReleaseSource, ReleaseChannel, Updater, UpdaterConfig, UpdatePackage,
-};
+use wae_updater::{DownloadPolicy, GitHubReleaseSource, ReleaseChannel, UpdatePackage, Updater, UpdaterConfig};
 
 #[napi(object)]
 pub struct ProductUpdateOptions {
@@ -49,10 +47,7 @@ fn build_updater(options: &ProductUpdateOptions) -> std::result::Result<Updater,
     let channel = if let Some(raw) = options.channel.as_deref().filter(|s| !s.is_empty()) {
         ReleaseChannel::parse(raw).map_err(|e| e.to_string())?
     } else {
-        ReleaseChannel::from_legacy(
-            options.allow_prerelease.unwrap_or(false),
-            options.tag.as_deref(),
-        )
+        ReleaseChannel::from_legacy(options.allow_prerelease.unwrap_or(false), options.tag.as_deref())
     };
     let download_policy = if let Some(raw) = options.download_policy.as_deref().filter(|s| !s.is_empty()) {
         DownloadPolicy::parse(raw).map_err(|e| e.to_string())?
@@ -95,29 +90,16 @@ fn status_from_check(
 #[napi]
 pub fn check_product_update(options: ProductUpdateOptions) -> Result<ProductUpdateStatus> {
     let updater = build_updater(&options).map_err(|e| Error::from_reason(e))?;
-    let check = updater
-        .check_version()
-        .map_err(|e| Error::from_reason(e.to_string()))?;
-    Ok(status_from_check(
-        &options,
-        &updater,
-        check.availability.is_none(),
-        check.availability.as_ref(),
-    ))
+    let check = updater.check_version().map_err(|e| Error::from_reason(e.to_string()))?;
+    Ok(status_from_check(&options, &updater, check.availability.is_none(), check.availability.as_ref()))
 }
 
 #[napi]
 pub fn download_product_update(options: ProductUpdateOptions) -> Result<ProductUpdateStatus> {
     let updater = build_updater(&options).map_err(|e| Error::from_reason(e))?;
-    let check = updater
-        .check_version()
-        .map_err(|e| Error::from_reason(e.to_string()))?;
-    let package = check
-        .availability
-        .ok_or_else(|| Error::from_reason("already up to date"))?;
-    let downloaded = updater
-        .download(&package)
-        .map_err(|e| Error::from_reason(e.to_string()))?;
+    let check = updater.check_version().map_err(|e| Error::from_reason(e.to_string()))?;
+    let package = check.availability.ok_or_else(|| Error::from_reason("already up to date"))?;
+    let downloaded = updater.download(&package).map_err(|e| Error::from_reason(e.to_string()))?;
     let mut status = status_from_check(&options, &updater, false, Some(&package));
     status.staged_native_path = Some(downloaded.staged_native_path.display().to_string());
     Ok(status)
@@ -129,20 +111,11 @@ pub fn apply_product_update(options: ProductUpdateOptions) -> Result<ProductUpda
         return Err(Error::from_reason("native_path is required to apply a product update"));
     }
     let updater = build_updater(&options).map_err(|e| Error::from_reason(e))?;
-    if let Some(staged) = options
-        .staged_native_path
-        .as_deref()
-        .filter(|s| !s.is_empty())
-    {
-        let check = updater
-            .check_version()
-            .map_err(|e| Error::from_reason(e.to_string()))?;
-        let package = check
-            .availability
-            .ok_or_else(|| Error::from_reason("already up to date"))?;
-        let applied = updater
-            .apply_staged(PathBuf::from(staged).as_path(), &package)
-            .map_err(|e| Error::from_reason(e.to_string()))?;
+    if let Some(staged) = options.staged_native_path.as_deref().filter(|s| !s.is_empty()) {
+        let check = updater.check_version().map_err(|e| Error::from_reason(e.to_string()))?;
+        let package = check.availability.ok_or_else(|| Error::from_reason("already up to date"))?;
+        let applied =
+            updater.apply_staged(PathBuf::from(staged).as_path(), &package).map_err(|e| Error::from_reason(e.to_string()))?;
         return Ok(ProductUpdateStatus {
             up_to_date: true,
             current: applied.installed.to_string(),
@@ -156,18 +129,10 @@ pub fn apply_product_update(options: ProductUpdateOptions) -> Result<ProductUpda
         });
     }
 
-    let check = updater
-        .check_version()
-        .map_err(|e| Error::from_reason(e.to_string()))?;
-    let package = check
-        .availability
-        .ok_or_else(|| Error::from_reason("already up to date"))?;
-    let downloaded = updater
-        .download(&package)
-        .map_err(|e| Error::from_reason(e.to_string()))?;
-    let applied = updater
-        .apply(&downloaded)
-        .map_err(|e| Error::from_reason(e.to_string()))?;
+    let check = updater.check_version().map_err(|e| Error::from_reason(e.to_string()))?;
+    let package = check.availability.ok_or_else(|| Error::from_reason("already up to date"))?;
+    let downloaded = updater.download(&package).map_err(|e| Error::from_reason(e.to_string()))?;
+    let applied = updater.apply(&downloaded).map_err(|e| Error::from_reason(e.to_string()))?;
     Ok(ProductUpdateStatus {
         up_to_date: true,
         current: applied.installed.to_string(),

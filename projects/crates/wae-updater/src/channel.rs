@@ -24,11 +24,7 @@ impl ReleaseChannel {
         if let Some(tag) = tag.filter(|t| !t.is_empty()) {
             return ReleaseChannel::Pinned(tag.to_string());
         }
-        if allow_prerelease {
-            ReleaseChannel::Beta
-        } else {
-            ReleaseChannel::Stable
-        }
+        if allow_prerelease { ReleaseChannel::Beta } else { ReleaseChannel::Stable }
     }
 
     pub fn allows_prerelease(&self) -> bool {
@@ -69,9 +65,7 @@ impl DownloadPolicy {
             "downloadifavailable" | "download-if-available" | "silent" | "background" => {
                 Ok(DownloadPolicy::DownloadIfAvailable)
             }
-            "downloadandapply" | "download-and-apply" | "auto" | "full" => {
-                Ok(DownloadPolicy::DownloadAndApply)
-            }
+            "downloadandapply" | "download-and-apply" | "auto" | "full" => Ok(DownloadPolicy::DownloadAndApply),
             other => Err(UpdateError::InvalidDownloadPolicy(other.to_string())),
         }
     }

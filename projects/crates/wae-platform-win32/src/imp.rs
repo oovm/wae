@@ -1,29 +1,27 @@
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-use std::sync::mpsc;
 use std::sync::Mutex;
+use std::sync::mpsc;
 
 use wae_platform::{DesktopIpcHandler, DesktopIpcOutcome, DesktopOpenOptions, PlatformError, Result, WindowCommand};
 use webview2_com::Microsoft::Web::WebView2::Win32::{
-    CreateCoreWebView2EnvironmentWithOptions, ICoreWebView2, ICoreWebView2Controller,
-    ICoreWebView2Environment,
+    CreateCoreWebView2EnvironmentWithOptions, ICoreWebView2, ICoreWebView2Controller, ICoreWebView2Environment,
 };
 use webview2_com::{
     CreateCoreWebView2ControllerCompletedHandler, CreateCoreWebView2EnvironmentCompletedHandler,
     WebMessageReceivedEventHandler, wait_with_pump,
 };
-use windows::core::{PCWSTR, w};
 use windows::Win32::Foundation::{E_POINTER, E_UNEXPECTED, HWND, LPARAM, LRESULT, WPARAM};
-use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetClientRect, GetMessageW,
-    GetWindowLongPtrW, GetWindowRect, IsZoomed, LoadCursorW, PostMessageW, PostQuitMessage,
-    RegisterClassW, SetWindowLongPtrW, SetWindowPos, ShowWindow, TranslateMessage, CS_HREDRAW,
-    CS_VREDRAW, CW_USEDEFAULT, GWLP_USERDATA, IDC_ARROW, MSG, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE,
-    SW_SHOW, WINDOW_EX_STYLE, WM_CLOSE, WM_CREATE, WM_DESTROY, WM_SIZE, WNDCLASSW,
-    WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
+    CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA,
+    GetClientRect, GetMessageW, GetWindowLongPtrW, GetWindowRect, IDC_ARROW, IsZoomed, LoadCursorW, MSG, PostMessageW,
+    PostQuitMessage, RegisterClassW, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, SW_SHOW, SetWindowLongPtrW, SetWindowPos,
+    ShowWindow, TranslateMessage, WINDOW_EX_STYLE, WM_CLOSE, WM_CREATE, WM_DESTROY, WM_SIZE, WNDCLASSW, WS_OVERLAPPEDWINDOW,
+    WS_POPUP, WS_VISIBLE,
 };
+use windows::core::{PCWSTR, w};
 
 type EventRegistrationToken = i64;
 
@@ -117,11 +115,8 @@ impl DesktopState {
                 WindowCommand::DragStart { screen_x, screen_y } => {
                     let mut rect = windows::Win32::Foundation::RECT::default();
                     let _ = GetWindowRect(self.hwnd, &mut rect);
-                    self.drag = DragState {
-                        active: true,
-                        origin_mouse: (screen_x, screen_y),
-                        origin_window: (rect.left, rect.top),
-                    };
+                    self.drag =
+                        DragState { active: true, origin_mouse: (screen_x, screen_y), origin_window: (rect.left, rect.top) };
                 }
                 WindowCommand::DragMove { screen_x, screen_y } => {
                     if !self.drag.active {
@@ -187,18 +182,10 @@ impl DesktopState {
 }
 
 fn encode_wide(value: &str) -> Vec<u16> {
-    OsStr::new(value)
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect()
+    OsStr::new(value).encode_wide().chain(std::iter::once(0)).collect()
 }
 
-unsafe extern "system" fn wnd_proc(
-    hwnd: HWND,
-    msg: u32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
+unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     unsafe {
         if msg == WM_CREATE {
             let create = lparam.0 as *const windows::Win32::UI::WindowsAndMessaging::CREATESTRUCTW;
@@ -244,80 +231,57 @@ fn create_environment() -> Result<ICoreWebView2Environment> {
             PCWSTR::null(),
             PCWSTR::null(),
             None,
-            &CreateCoreWebView2EnvironmentCompletedHandler::create(Box::new(
-                move |error_code, environment| {
-                    error_code?;
-                    tx.send(
-                        environment.ok_or_else(|| windows::core::Error::from(E_POINTER)),
-                    )
+            &CreateCoreWebView2EnvironmentCompletedHandler::create(Box::new(move |error_code, environment| {
+                error_code?;
+                tx.send(environment.ok_or_else(|| windows::core::Error::from(E_POINTER)))
                     .map_err(|_| windows::core::Error::from(E_UNEXPECTED))
-                },
-            )),
+            })),
         )
         .map_err(|e| PlatformError::Message(e.to_string()))?;
     }
-    wait_with_pump(rx)
-        .map_err(|e| PlatformError::Message(format!("{e:?}")))?
-        .map_err(|e| PlatformError::Message(e.to_string()))
+    wait_with_pump(rx).map_err(|e| PlatformError::Message(format!("{e:?}")))?.map_err(|e| PlatformError::Message(e.to_string()))
 }
 
-fn create_controller(
-    hwnd: HWND,
-    environment: &ICoreWebView2Environment,
-) -> Result<ICoreWebView2Controller> {
+fn create_controller(hwnd: HWND, environment: &ICoreWebView2Environment) -> Result<ICoreWebView2Controller> {
     let (tx, rx) = mpsc::channel();
-    let handler = CreateCoreWebView2ControllerCompletedHandler::create(Box::new(
-        move |error_code, controller| {
-            error_code?;
-            tx.send(controller.ok_or_else(|| windows::core::Error::from(E_POINTER)))
-                .map_err(|_| windows::core::Error::from(E_UNEXPECTED))
-        },
-    ));
+    let handler = CreateCoreWebView2ControllerCompletedHandler::create(Box::new(move |error_code, controller| {
+        error_code?;
+        tx.send(controller.ok_or_else(|| windows::core::Error::from(E_POINTER)))
+            .map_err(|_| windows::core::Error::from(E_UNEXPECTED))
+    }));
     unsafe {
-        environment
-            .CreateCoreWebView2Controller(hwnd, &handler)
-            .map_err(|e| PlatformError::Message(e.to_string()))?;
+        environment.CreateCoreWebView2Controller(hwnd, &handler).map_err(|e| PlatformError::Message(e.to_string()))?;
     }
-    wait_with_pump(rx)
-        .map_err(|e| PlatformError::Message(format!("{e:?}")))?
-        .map_err(|e| PlatformError::Message(e.to_string()))
+    wait_with_pump(rx).map_err(|e| PlatformError::Message(format!("{e:?}")))?.map_err(|e| PlatformError::Message(e.to_string()))
 }
 
 fn attach_webview(state: *mut DesktopState, controller: ICoreWebView2Controller) -> Result<()> {
-    let webview = unsafe {
-        controller
-            .CoreWebView2()
-            .map_err(|e| PlatformError::Message(e.to_string()))?
-    };
+    let webview = unsafe { controller.CoreWebView2().map_err(|e| PlatformError::Message(e.to_string()))? };
 
     let state_addr = state as usize;
     let mut token = EventRegistrationToken::default();
-    let message_handler = WebMessageReceivedEventHandler::create(Box::new(
-        move |_, args| {
-            let Some(args) = args else {
-                return Ok(());
-            };
-            let mut message = windows::core::PWSTR::null();
-            unsafe {
-                args.TryGetWebMessageAsString(&mut message)?;
-            }
-            let text = unsafe { message.to_string().unwrap_or_default() };
-            let desktop = unsafe { &*(state_addr as *mut DesktopState) };
-            {
-                let mut guard = desktop.pending_ipc.lock().expect("ipc lock");
-                *guard = Some(text);
-            }
-            unsafe {
-                let _ = PostMessageW(Some(desktop.hwnd), WM_WAE_IPC, WPARAM(0), LPARAM(0));
-            }
-            Ok(())
-        },
-    ));
+    let message_handler = WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
+        let Some(args) = args else {
+            return Ok(());
+        };
+        let mut message = windows::core::PWSTR::null();
+        unsafe {
+            args.TryGetWebMessageAsString(&mut message)?;
+        }
+        let text = unsafe { message.to_string().unwrap_or_default() };
+        let desktop = unsafe { &*(state_addr as *mut DesktopState) };
+        {
+            let mut guard = desktop.pending_ipc.lock().expect("ipc lock");
+            *guard = Some(text);
+        }
+        unsafe {
+            let _ = PostMessageW(Some(desktop.hwnd), WM_WAE_IPC, WPARAM(0), LPARAM(0));
+        }
+        Ok(())
+    }));
 
     unsafe {
-        webview
-            .add_WebMessageReceived(&message_handler, &mut token)
-            .map_err(|e| PlatformError::Message(e.to_string()))?;
+        webview.add_WebMessageReceived(&message_handler, &mut token).map_err(|e| PlatformError::Message(e.to_string()))?;
     }
 
     let desktop = unsafe { &mut *state };
@@ -334,19 +298,14 @@ fn attach_webview(state: *mut DesktopState, controller: ICoreWebView2Controller)
 
     let wide_url = encode_wide(&desktop.options.url.clone());
     unsafe {
-        webview
-            .Navigate(PCWSTR(wide_url.as_ptr()))
-            .map_err(|e| PlatformError::Message(e.to_string()))?;
+        webview.Navigate(PCWSTR(wide_url.as_ptr())).map_err(|e| PlatformError::Message(e.to_string()))?;
     }
 
     Ok(())
 }
 
 /// Run the Win32 + WebView2 desktop shell until the window closes.
-pub fn run_desktop(
-    options: DesktopOpenOptions,
-    handler: Box<dyn DesktopIpcHandler>,
-) -> Result<()> {
+pub fn run_desktop(options: DesktopOpenOptions, handler: Box<dyn DesktopIpcHandler>) -> Result<()> {
     unsafe {
         let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
 
@@ -374,11 +333,7 @@ pub fn run_desktop(
             pending_ipc: Mutex::new(None),
         });
 
-        let style = if box_state.options.undecorated {
-            WS_POPUP | WS_VISIBLE
-        } else {
-            WS_OVERLAPPEDWINDOW | WS_VISIBLE
-        };
+        let style = if box_state.options.undecorated { WS_POPUP | WS_VISIBLE } else { WS_OVERLAPPEDWINDOW | WS_VISIBLE };
 
         let hwnd = CreateWindowExW(
             WINDOW_EX_STYLE(0),

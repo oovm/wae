@@ -4,9 +4,7 @@
 
 mod runtime;
 
-pub use runtime::{
-    PlatformDesktopFactory, PlatformRuntime, PlatformWebView, PlatformWindow,
-};
+pub use runtime::{PlatformDesktopFactory, PlatformRuntime, PlatformWebView, PlatformWindow};
 
 use std::fmt;
 
@@ -19,11 +17,7 @@ pub struct DesktopOpenOptions {
 
 impl DesktopOpenOptions {
     pub fn new(url: impl Into<String>, title: impl Into<String>) -> Self {
-        Self {
-            url: url.into(),
-            title: title.into(),
-            undecorated: false,
-        }
+        Self { url: url.into(), title: title.into(), undecorated: false }
     }
 
     pub fn undecorated(mut self, value: bool) -> Self {

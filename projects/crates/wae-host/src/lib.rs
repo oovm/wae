@@ -4,7 +4,7 @@
 
 mod ipc;
 
-pub use ipc::{parse_window_ipc, HostIpcRouter};
+pub use ipc::{HostIpcRouter, parse_window_ipc};
 pub use wae_platform::DesktopIpcOutcome;
 
 use wae_platform::{DesktopIpcHandler, DesktopOpenOptions, Result};
@@ -21,9 +21,7 @@ impl DesktopIpcHandler for HostSession {
 
 /// Run a desktop shell loading `options.url` in the system WebView.
 pub fn run_desktop(options: DesktopOpenOptions) -> Result<()> {
-    let session = HostSession {
-        router: HostIpcRouter::new(),
-    };
+    let session = HostSession { router: HostIpcRouter::new() };
 
     #[cfg(windows)]
     {
@@ -43,8 +41,6 @@ pub fn run_desktop(options: DesktopOpenOptions) -> Result<()> {
     #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
     {
         let _ = session;
-        Err(wae_platform::PlatformError::Unsupported(
-            "desktop host is not available on this OS",
-        ))
+        Err(wae_platform::PlatformError::Unsupported("desktop host is not available on this OS"))
     }
 }
