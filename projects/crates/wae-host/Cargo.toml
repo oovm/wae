@@ -1,0 +1,27 @@
+[package]
+name = "wae-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "readme.md"
+description = "WAE self-hosted desktop shell orchestration"
+publish = false
+
+[dependencies]
+wae-platform = { workspace = true }
+wae-bridge = { workspace = true }
+wae-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+wae-platform-win32 = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+wae-platform-darwin = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+wae-platform-linux = { workspace = true }

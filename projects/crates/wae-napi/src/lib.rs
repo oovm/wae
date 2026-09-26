@@ -1,0 +1,47 @@
+//! Node-API surface for WAE host (desktop shell + protocol router).
+
+#![warn(missing_docs)]
+#![deny(clippy::all)]
+
+mod self_update;
+
+use napi::bindgen_prelude::*;
+use napi_derive::napi;
+use wae_host::{run_desktop, DesktopIpcOutcome, HostIpcRouter};
+use wae_platform::DesktopOpenOptions;
+
+pub use self_update::{
+    apply_product_update,
+    check_product_update,
+    ProductUpdateOptions,
+    ProductUpdateStatus,
+};
+
+#[napi(object)]
+pub struct OpenDesktopOptions {
+    pub url: String,
+    pub title: Option<String>,
+    pub undecorated: Option<bool>,
+}
+
+#[napi]
+pub fn host_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[napi]
+pub fn handle_client_message(json: String) -> Option<String> {
+    let mut router = HostIpcRouter::new();
+    match router.handle(&json) {
+        DesktopIpcOutcome::ReplyToPage(reply) => Some(reply),
+        _ => None,
+    }
+}
+
+#[napi]
+pub fn open_desktop(options: OpenDesktopOptions) -> Result<()> {
+    let title = options.title.unwrap_or_else(|| "WAE".to_string());
+    let undecorated = options.undecorated.unwrap_or(false);
+    let desktop = DesktopOpenOptions::new(options.url, title).undecorated(undecorated);
+    run_desktop(desktop).map_err(|err| Error::from_reason(err.to_string()))
+}

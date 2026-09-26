@@ -1,16 +1,23 @@
 # crates
 
-Rust 宿主与协议 schema，不进前端 bundle。
+Rust host and protocol schema; not included in the frontend bundle.
 
-| crate | 说明 |
-|-------|------|
-| [`wae-types`](wae-types/readme.md) | 跨端消息与共享类型（schema 源） |
-| [`wae-bridge`](wae-bridge/readme.md) | WebView / native 桥接运行时 |
-| [`wae-desktop`](wae-desktop/readme.md) | 桌面 WebView 壳（开发期加载 frontend URL） |
+| crate                                                | Description                                                       |
+|------------------------------------------------------|-------------------------------------------------------------------|
+| [`wae-types`](wae-types/readme.md)                   | Cross-end messages and shared types (schema source)               |
+| [`wae-bridge`](wae-bridge/readme.md)                 | WebView / native bridge runtime                                   |
+| [`wae-platform`](wae-platform/readme.md)             | Platform-neutral host traits and desktop options                  |
+| [`wae-platform-win32`](wae-platform-win32/readme.md) | Direct WebView2 + Win32 binding (no tao/wry)                      |
+| [`wae-platform-darwin`](wae-platform-darwin/readme.md) | macOS WKWebView + AppKit (skeleton)                             |
+| [`wae-platform-linux`](wae-platform-linux/readme.md) | Linux WebKitGTK + GTK (skeleton)                                  |
+| [`wae-host`](wae-host/readme.md)                     | Self-hosted desktop orchestration                                 |
+| [`wae-napi`](wae-napi/readme.md)                     | Node-API bindings for host (`openDesktop`, `handleClientMessage`) |
+| [`wae-desktop`](wae-desktop/readme.md)               | Desktop dev binary (`--url`)                                      |
+| [`wae-self-update`](wae-self-update/readme.md)       | GitHub Releases self-update for **wae build** products (`.node`)  |
 
-相关 npm 包见 [`../packages`](../packages/readme.md)，示例见 [`../examples`](../examples/readme.md)。
+Related npm packages: [`../packages`](../packages/readme.md). Examples: [`../examples`](../examples/readme.md).
 
 ```bash
 cargo check --workspace
-cargo test -p wae-bridge
+cargo test -p wae-host
 ```

@@ -1,0 +1,25 @@
+[package]
+name = "wae-napi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "readme.md"
+description = "Node-API bindings for WAE self-hosted desktop host"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+napi = { workspace = true }
+napi-derive = { workspace = true }
+semver = { workspace = true }
+wae-host = { workspace = true }
+wae-platform = { workspace = true }
+wae-self-update = { workspace = true }
+
+[build-dependencies]
+napi-build = { workspace = true }

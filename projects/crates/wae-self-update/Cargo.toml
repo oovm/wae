@@ -1,0 +1,25 @@
+[package]
+name = "wae-self-update"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "readme.md"
+description = "GitHub Releases self-update for wae build products (native wae-napi addon)"
+keywords = ["wae", "self-update", "github", "release"]
+categories = ["os", "api-bindings"]
+
+[dependencies]
+semver = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -1,11 +1,13 @@
 # host/desktop
 
-桌面 **WebView 宿主**二进制 `wae-desktop`（crate `wae-desktop`）。
+Desktop **WebView host** binary `wae-desktop` (crate `wae-desktop`).
 
-开发期由 `@wae/wae-win32-*` 等平台包拉起，加载 frontend 的 `devUrl`（通常是 Vite）。
+**Dev-only** helper: started by `@wae/wae-win32-*` during `wae run`, loading frontend `devUrl` (usually Vite). It is **not** the shipped product and has **no** self-update path.
+
+End-user updates go through [`wae-self-update`](../wae-self-update/readme.md) on the **`wae build` product** (native `wae-napi` addon in the app bundle).
 
 ```bash
 cargo run -p wae-desktop -- --url http://127.0.0.1:5173/
 ```
 
-Windows 需要已安装 [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)。
+Windows requires [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) installed.

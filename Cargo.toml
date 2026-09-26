@@ -3,12 +3,26 @@ resolver = "2"
 members = [
     "projects/crates/wae-types",
     "projects/crates/wae-bridge",
+    "projects/crates/wae-platform",
+    "projects/crates/wae-platform-win32",
+    "projects/crates/wae-platform-darwin",
+    "projects/crates/wae-platform-linux",
+    "projects/crates/wae-host",
     "projects/crates/wae-desktop",
+    "projects/crates/wae-napi",
+    "projects/crates/wae-self-update",
 ]
 default-members = [
     "projects/crates/wae-types",
     "projects/crates/wae-bridge",
+    "projects/crates/wae-platform",
+    "projects/crates/wae-platform-win32",
+    "projects/crates/wae-platform-darwin",
+    "projects/crates/wae-platform-linux",
+    "projects/crates/wae-host",
     "projects/crates/wae-desktop",
+    "projects/crates/wae-napi",
+    "projects/crates/wae-self-update",
 ]
 
 [workspace.package]
@@ -25,8 +39,25 @@ categories = ["gui", "web-programming"]
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+semver = "1"
+thiserror = "2"
+reqwest = { version = "0.13.5", default-features = false, features = ["blocking", "json", "rustls"] }
+flate2 = "1"
+tar = "0.4"
+zip = "8.6.0"
+tempfile = "3"
+napi = { version = "3.13.0", default-features = false, features = ["napi4"] }
+napi-derive = "3.6.9"
+napi-build = "2"
 wae-types = { path = "projects/crates/wae-types", version = "0.1.0" }
 wae-bridge = { path = "projects/crates/wae-bridge", version = "0.1.0" }
+wae-platform = { path = "projects/crates/wae-platform", version = "0.1.0" }
+wae-platform-win32 = { path = "projects/crates/wae-platform-win32", version = "0.1.0" }
+wae-platform-darwin = { path = "projects/crates/wae-platform-darwin", version = "0.1.0" }
+wae-platform-linux = { path = "projects/crates/wae-platform-linux", version = "0.1.0" }
+wae-host = { path = "projects/crates/wae-host", version = "0.1.0" }
+wae-napi = { path = "projects/crates/wae-napi", version = "0.1.0" }
+wae-self-update = { path = "projects/crates/wae-self-update", version = "0.1.0" }
 
 [profile.release]
 lto = true

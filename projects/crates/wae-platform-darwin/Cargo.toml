@@ -1,18 +1,14 @@
 [package]
-name = "wae-desktop"
+name = "wae-platform-darwin"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "WAE desktop WebView host binary (loads frontend URL during development)"
+readme = "readme.md"
+description = "WAE desktop host for macOS (direct WKWebView + AppKit; skeleton)"
 publish = false
 
-[[bin]]
-name = "wae-desktop"
-path = "src/main.rs"
-
 [dependencies]
-wae-host = { workspace = true }
 wae-platform = { workspace = true }
