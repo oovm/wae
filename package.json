@@ -19,7 +19,10 @@
         "fmt": "node scripts/format.mjs",
         "fmt:check": "node scripts/format.mjs --check",
         "publish:dry": "node scripts/publish.mjs",
-        "publish:npm": "node scripts/publish.mjs --execute"
+        "publish:npm": "node scripts/publish.mjs --execute",
+        "build:native": "node scripts/build-platform-native.mjs",
+        "verify:native": "node scripts/verify-platform-native.mjs --skip-mobile",
+        "pack:product-native": "node scripts/pack-product-native.mjs"
     },
     "devDependencies": {
         "@biomejs/biome": "2.5.14",

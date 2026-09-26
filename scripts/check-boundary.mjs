@@ -187,6 +187,58 @@ for (const a of ["node", "deno", "cloudflare"]) {
     if (!d.has("@wae/server")) fail(`adapter ${a} must depend on @wae/server`);
 }
 
+const waeRel = "projects/packages/wae";
+const commanderRel = "projects/packages/commander";
+const waePkg = readPkg(waeRel);
+const commanderPkg = readPkg(commanderRel);
+
+if (fs.existsSync(path.join(ROOT, "projects/packages/napi"))) {
+    fail("projects/packages/napi must not exist; native lives in @wae/wae-* lib/");
+}
+
+if (commanderPkg?.name !== "@wae/commander") {
+    fail("@wae/commander missing at projects/packages/commander");
+}
+if (!deps(waeRel).has("@wae/commander")) {
+    fail("@wae/wae must depend on @wae/commander");
+}
+const commanderDeps = deps(commanderRel);
+if (!commanderDeps.has("commander")) {
+    fail("@wae/commander must depend on commander");
+}
+for (const bad of ["@wae/wae", "@wae/napi", "@wae/client", "vite", "esbuild"]) {
+    if (commanderDeps.has(bad)) {
+        fail(`@wae/commander must not depend on ${bad}`);
+    }
+}
+
+const SHELL_PLATFORMS = [
+    "wae-win32-x64",
+    "wae-win32-arm64",
+    "wae-darwin-x64",
+    "wae-darwin-arm64",
+    "wae-linux-x64",
+    "wae-linux-arm64",
+    "wae-android-arm64",
+    "wae-ios-arm64",
+];
+for (const dir of SHELL_PLATFORMS) {
+    const rel = `projects/packages/${dir}`;
+    const pkg = readPkg(rel);
+    if (!pkg) fail(`missing ${rel}`);
+    const files = pkg.files ?? [];
+    if (!files.includes("lib")) fail(`${dir} package.json files must include lib`);
+    const d = deps(rel);
+    if (!d.has("@wae/types")) fail(`${dir} must depend on @wae/types`);
+    if (d.has("@wae/napi")) fail(`${dir} must not depend on @wae/napi`);
+}
+
+for (const rel of [clientRel, "projects/packages/server", waeRel]) {
+    if (deps(rel).has("@wae/napi")) {
+        fail(`${rel} must not depend on @wae/napi`);
+    }
+}
+
 const waeSrc = path.join(ROOT, "projects/packages/wae/src/index.ts");
 if (fs.existsSync(waeSrc)) {
     const text = fs.readFileSync(waeSrc, "utf8");
@@ -196,6 +248,9 @@ if (fs.existsSync(waeSrc)) {
     if (/defineWaeConfig/.test(text)) {
         fail("defineWaeConfig is forbidden; use defineConfig");
     }
+}
+if (waePkg && !fs.existsSync(path.join(ROOT, waeRel, "src/cli.ts"))) {
+    fail("@wae/wae must ship src/cli.ts");
 }
 
 if (process.exitCode) {

@@ -31,7 +31,6 @@ const PUBLISH_FILTERS = [
     "@wae/adapter-react",
     "@wae/adapter-svelte",
     "@wae/adapter-solid",
-    "@wae/wae-web",
     "@wae/wae-unknown-wasm32",
     "@wae/wae-win32-x64",
     "@wae/wae-win32-arm64",
@@ -58,7 +57,6 @@ const PACKAGE_DIRS = [
     "projects/packages/adapter-react",
     "projects/packages/adapter-svelte",
     "projects/packages/adapter-solid",
-    "projects/packages/wae-web",
     "projects/packages/wae-unknown-wasm32",
     "projects/packages/wae-win32-x64",
     "projects/packages/wae-win32-arm64",
@@ -72,7 +70,6 @@ const PACKAGE_DIRS = [
 ];
 
 const REQUIRED_OPTIONAL_PLATFORMS = [
-    "@wae/wae-web",
     "@wae/wae-unknown-wasm32",
     "@wae/wae-win32-x64",
     "@wae/wae-win32-arm64",
@@ -143,6 +140,10 @@ for (const name of REQUIRED_OPTIONAL_PLATFORMS) {
 }
 
 run(pnpmCmd, [...filterArgs(), "run", "build"], "build publish set");
+
+if (EXECUTE) {
+    run(process.execPath, ["scripts/verify-platform-native.mjs", "--skip-mobile"], "verify platform lib/*.node");
+}
 
 const publishArgs = ["publish", "-r", ...filterArgs(), "--access", "public", "--no-git-checks"];
 if (!EXECUTE) {
