@@ -20,6 +20,8 @@ Cargo.lock
 node_modules/
 cache/
 dist/
+*.node
+*.wasm
 *.txt
 *.log
 
