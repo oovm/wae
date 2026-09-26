@@ -1,0 +1,31 @@
+[package]
+name = "wae-builder"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "readme.md"
+description = "Compile, icon staging, and packaging for wae build products"
+keywords = ["wae", "builder", "packaging", "webview"]
+categories = ["development-tools", "gui"]
+
+[lib]
+name = "wae_builder"
+path = "src/lib.rs"
+
+[[bin]]
+name = "wae-builder"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+semver = { workspace = true }
+thiserror = { workspace = true }
+zip = { workspace = true }
+wae-updater = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
