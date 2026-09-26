@@ -25,9 +25,7 @@ export function findConfigPath(cwd: string): string | null {
 export async function loadWaeConfig(cwd: string): Promise<LoadedConfig> {
     const configPath = findConfigPath(cwd);
     if (!configPath) {
-        throw new Error(
-            `未找到 wae.config（尝试过 ${CONFIG_NAMES.join(", ")}）。请在工程根目录添加 wae.config.ts。`,
-        );
+        throw new Error(`未找到 wae.config（尝试过 ${CONFIG_NAMES.join(", ")}）。请在工程根目录添加 wae.config.ts。`);
     }
 
     const ext = path.extname(configPath);
@@ -67,10 +65,7 @@ export async function loadWaeConfig(cwd: string): Promise<LoadedConfig> {
 }
 
 function normalize(mod: unknown): WaeConfig {
-    const raw =
-        mod && typeof mod === "object" && "default" in mod
-            ? (mod as { default: unknown }).default
-            : mod;
+    const raw = mod && typeof mod === "object" && "default" in mod ? (mod as { default: unknown }).default : mod;
     if (!raw || typeof raw !== "object") {
         throw new Error("wae.config 必须 default export 一个配置对象（建议用 defineConfig）");
     }

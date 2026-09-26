@@ -19,9 +19,7 @@ export async function resolveVite(cwd: string) {
         try {
             return await import(fromCwd);
         } catch {
-            throw new Error(
-                "未找到 `vite`。请在工程中安装：pnpm add -D vite@^7，或在仓库根保证 workspace 已安装。",
-            );
+            throw new Error("未找到 `vite`。请在工程中安装：pnpm add -D vite@^7，或在仓库根保证 workspace 已安装。");
         }
     }
 }

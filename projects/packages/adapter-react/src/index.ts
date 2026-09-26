@@ -1,9 +1,4 @@
-import {
-    createContext,
-    createElement,
-    useContext,
-    type ReactNode,
-} from "react";
+import { createContext, createElement, useContext, type ReactNode } from "react";
 import type { WaeClient } from "@wae/client";
 
 const WaeContext = createContext<WaeClient | null>(null);

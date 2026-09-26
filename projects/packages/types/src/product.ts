@@ -14,10 +14,7 @@ export type ClientPlatformId =
 
 export type WaeProductUpdateChannel = "stable" | "beta" | (string & {});
 
-export type WaeProductDownloadPolicy =
-    | "checkOnly"
-    | "downloadIfAvailable"
-    | "downloadAndApply";
+export type WaeProductDownloadPolicy = "checkOnly" | "downloadIfAvailable" | "downloadAndApply";
 
 export type WaeProductUpdateConfig = {
     /** GitHub `owner/repo` for **your app** releases. */

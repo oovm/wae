@@ -16,7 +16,12 @@ type ViteHandle = {
     framework: FrontendFramework;
 };
 
-async function startVite(cwd: string, config: WaeConfig, flags: WaeRunOptions, openBrowser: boolean): Promise<ViteHandle> {
+async function startVite(
+    cwd: string,
+    config: WaeConfig,
+    flags: WaeRunOptions,
+    openBrowser: boolean,
+): Promise<ViteHandle> {
     const vite = await resolveVite(cwd);
     const framework = config.frontend?.framework ?? "none";
     const plugins = hasViteConfig(cwd) ? undefined : await loadFrameworkPlugins(framework, cwd);
@@ -81,9 +86,7 @@ async function runDesktopShell(
         url = vite.url;
         console.log(`[wae] frontend Vite → ${url}`);
     } else if (!url) {
-        throw new Error(
-            'desktop + bundler:"custom" 需要 frontend.devUrl（例如 http://127.0.0.1:5173/）',
-        );
+        throw new Error('desktop + bundler:"custom" 需要 frontend.devUrl（例如 http://127.0.0.1:5173/）');
     }
 
     const pkg = platformPackageName(id);

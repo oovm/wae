@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { getWaeContext } from "@wae/adapter-svelte";
+import { getWaeContext } from "@wae/adapter-svelte";
 
-  const wae = getWaeContext();
-  let status = $state("等待 ping…");
-  let ticks = $state(0);
+const wae = getWaeContext();
+let status = $state("等待 ping…");
+let ticks = $state(0);
 
-  function ping() {
+function ping() {
     ticks += 1;
     status = `client ok · baseUrl=${wae.server ? "set" : "?"} · #${ticks}`;
-  }
+}
 </script>
 
 <section class="stage" aria-live="polite">

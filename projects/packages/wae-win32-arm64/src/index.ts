@@ -64,9 +64,7 @@ function spawnDesktop(url: string, title: string): Promise<void> {
     const here = path.dirname(fileURLToPath(import.meta.url));
     const root = findWorkspaceRoot(here);
     if (!root) {
-        throw new Error(
-            "找不到含 wae-desktop 的 workspace 根。请在 WAE 仓库内开发，或先 cargo build -p wae-desktop。",
-        );
+        throw new Error("找不到含 wae-desktop 的 workspace 根。请在 WAE 仓库内开发，或先 cargo build -p wae-desktop。");
     }
     const { cmd, args, cwd } = resolveDesktopBinary(root);
     const fullArgs = [...args, "--url", url];

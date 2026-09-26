@@ -71,11 +71,7 @@ async function buildFrontend(cwd: string, config: WaeConfig, frontendOut: string
     console.log(`[wae build] frontend → ${path.relative(cwd, frontendOut) || frontendOut}`);
 }
 
-async function ensureNativeAddon(
-    cwd: string,
-    platformId: ClientPlatformId,
-    destPath: string,
-): Promise<void> {
+async function ensureNativeAddon(cwd: string, platformId: ClientPlatformId, destPath: string): Promise<void> {
     const pkg = platformPackageName(platformId);
     const req = createRequire(path.join(cwd, "package.json"));
     let platformRoot: string;
@@ -135,18 +131,10 @@ async function invokePlatformBuild(
     const pkg = platformPackageName(platformId);
     let mod: {
         platform?: {
-            build?: (o: {
-                outDir: string;
-                manifestPath: string;
-                nativePath: string;
-            }) => Promise<void>;
+            build?: (o: { outDir: string; manifestPath: string; nativePath: string }) => Promise<void>;
         };
         default?: {
-            build?: (o: {
-                outDir: string;
-                manifestPath: string;
-                nativePath: string;
-            }) => Promise<void>;
+            build?: (o: { outDir: string; manifestPath: string; nativePath: string }) => Promise<void>;
         };
     };
     try {

@@ -1,57 +1,57 @@
 :root {
-  --bg0: #0e1210;
-  --bg1: #162019;
-  --ink: #e8f0ea;
-  --muted: #8fa396;
-  --accent: #42b883;
-  --accent-dim: #2d8a5e;
-  --glow: rgba(66, 184, 131, 0.35);
-  --panel: rgba(22, 36, 28, 0.72);
-  --border: rgba(66, 184, 131, 0.28);
-  --font: "Sora", "Segoe UI", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --bg0: #0e1210;
+    --bg1: #162019;
+    --ink: #e8f0ea;
+    --muted: #8fa396;
+    --accent: #42b883;
+    --accent-dim: #2d8a5e;
+    --glow: rgba(66, 184, 131, 0.35);
+    --panel: rgba(22, 36, 28, 0.72);
+    --border: rgba(66, 184, 131, 0.28);
+    --font: "Sora", "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
 *,
 *::before,
 *::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html,
 body,
 #app {
-  height: 100%;
-  margin: 0;
+    height: 100%;
+    margin: 0;
 }
 
 body {
-  font-family: var(--font);
-  color: var(--ink);
-  background:
-    radial-gradient(ellipse 90% 70% at 15% 10%, var(--glow), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 90% 85%, rgba(45, 138, 94, 0.2), transparent 50%),
-    linear-gradient(160deg, var(--bg0), var(--bg1) 55%, #0a0e0c);
-  -webkit-font-smoothing: antialiased;
+    font-family: var(--font);
+    color: var(--ink);
+    background:
+        radial-gradient(ellipse 90% 70% at 15% 10%, var(--glow), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 90% 85%, rgba(45, 138, 94, 0.2), transparent 50%),
+        linear-gradient(160deg, var(--bg0), var(--bg1) 55%, #0a0e0c);
+    -webkit-font-smoothing: antialiased;
 }
 
 @keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes pulse-ring {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--glow);
-  }
-  50% {
-    box-shadow: 0 0 0 8px transparent;
-  }
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 var(--glow);
+    }
+    50% {
+        box-shadow: 0 0 0 8px transparent;
+    }
 }

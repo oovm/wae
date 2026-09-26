@@ -27,9 +27,7 @@ function loadNative(): WaeNativeAddon | null {
 async function runDesktop(url: string, title: string, undecorated = false): Promise<void> {
     const native = loadNative();
     if (!native) {
-        throw new Error(
-            `[${PACKAGE_NAME}] lib/android-arm64.node missing. From WAE repo run: pnpm run build:native`,
-        );
+        throw new Error(`[${PACKAGE_NAME}] lib/android-arm64.node missing. From WAE repo run: pnpm run build:native`);
     }
     console.log(`[${PACKAGE_NAME}] openDesktop ${url}`);
     native.openDesktop({ url, title, undecorated });

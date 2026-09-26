@@ -8,10 +8,7 @@ export type OpenDesktopOptions = {
 
 export type ProductUpdateChannel = "stable" | "beta" | (string & {});
 
-export type ProductDownloadPolicy =
-    | "checkOnly"
-    | "downloadIfAvailable"
-    | "downloadAndApply";
+export type ProductDownloadPolicy = "checkOnly" | "downloadIfAvailable" | "downloadAndApply";
 
 export type ProductUpdateOptions = {
     repo: string;

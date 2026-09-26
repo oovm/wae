@@ -1,10 +1,5 @@
 import type { WaeClient } from "@wae/client";
-import {
-    createComponent,
-    createContext,
-    useContext,
-    type ParentProps,
-} from "solid-js";
+import { createComponent, createContext, useContext, type ParentProps } from "solid-js";
 
 const WaeContext = createContext<WaeClient>();
 
