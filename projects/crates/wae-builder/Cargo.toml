@@ -26,6 +26,11 @@ semver = { workspace = true }
 thiserror = { workspace = true }
 zip = { workspace = true }
 wae-updater = { workspace = true }
+image = { workspace = true }
+ico = { workspace = true }
+icns = { workspace = true }
+resvg = { workspace = true }
+usvg = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

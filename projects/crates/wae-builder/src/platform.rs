@@ -51,26 +51,15 @@ const PLATFORMS: &[PlatformSpec] = &[
         lib_file: "android-arm64.node",
         triple: "aarch64-linux-android",
     },
-    PlatformSpec {
-        id: "ios-arm64",
-        package_dir: "wae-ios-arm64",
-        lib_file: "ios-arm64.node",
-        triple: "aarch64-apple-ios",
-    },
+    PlatformSpec { id: "ios-arm64", package_dir: "wae-ios-arm64", lib_file: "ios-arm64.node", triple: "aarch64-apple-ios" },
 ];
 
 pub fn platform_by_id(id: &str) -> Result<&'static PlatformSpec> {
-    PLATFORMS
-        .iter()
-        .find(|p| p.id == id)
-        .ok_or_else(|| BuildError::UnknownPlatform(id.to_string()))
+    PLATFORMS.iter().find(|p| p.id == id).ok_or_else(|| BuildError::UnknownPlatform(id.to_string()))
 }
 
 pub fn platform_by_triple(triple: &str) -> Result<&'static PlatformSpec> {
-    PLATFORMS
-        .iter()
-        .find(|p| p.triple == triple)
-        .ok_or_else(|| BuildError::UnknownPlatform(triple.to_string()))
+    PLATFORMS.iter().find(|p| p.triple == triple).ok_or_else(|| BuildError::UnknownPlatform(triple.to_string()))
 }
 
 pub fn host_platform() -> Result<&'static PlatformSpec> {

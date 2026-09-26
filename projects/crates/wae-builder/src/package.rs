@@ -1,8 +1,8 @@
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
-use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
+use zip::write::SimpleFileOptions;
 
 use crate::error::{BuildError, Result};
 use crate::manifest::{load_product_manifest, resolve_native_path};
@@ -41,10 +41,7 @@ pub fn package_product(options: &PackageOptions) -> Result<PackageOutput> {
         PackageMode::FullProduct => package_full_tree(&options.product_root, &options.archive_path)?,
     };
 
-    Ok(PackageOutput {
-        archive_path: options.archive_path.clone(),
-        entries,
-    })
+    Ok(PackageOutput { archive_path: options.archive_path.clone(), entries })
 }
 
 fn package_native_only(product_root: &Path, archive_path: &Path) -> Result<usize> {
@@ -53,17 +50,12 @@ fn package_native_only(product_root: &Path, archive_path: &Path) -> Result<usize
     if !native.is_file() {
         return Err(BuildError::MissingPath(native));
     }
-    let file_name = native
-        .file_name()
-        .ok_or_else(|| BuildError::Package("native path has no file name".into()))?
-        .to_owned();
+    let file_name = native.file_name().ok_or_else(|| BuildError::Package("native path has no file name".into()))?.to_owned();
 
     let file = File::create(archive_path).map_err(|e| BuildError::io(archive_path, e))?;
     let mut zip = ZipWriter::new(file);
-    let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
-    zip.start_file(file_name.to_string_lossy(), options)
-        .map_err(|e| BuildError::Package(e.to_string()))?;
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    zip.start_file(file_name.to_string_lossy(), options).map_err(|e| BuildError::Package(e.to_string()))?;
     let mut src = File::open(&native).map_err(|e| BuildError::io(&native, e))?;
     std::io::copy(&mut src, &mut zip).map_err(|e| BuildError::Package(e.to_string()))?;
     zip.finish().map_err(|e| BuildError::Package(e.to_string()))?;
@@ -73,8 +65,7 @@ fn package_native_only(product_root: &Path, archive_path: &Path) -> Result<usize
 fn package_full_tree(product_root: &Path, archive_path: &Path) -> Result<usize> {
     let file = File::create(archive_path).map_err(|e| BuildError::io(archive_path, e))?;
     let mut zip = ZipWriter::new(file);
-    let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     let mut count = 0usize;
     add_dir_to_zip(product_root, product_root, &mut zip, options, &mut count)?;
     zip.finish().map_err(|e| BuildError::Package(e.to_string()))?;
@@ -95,12 +86,9 @@ fn add_dir_to_zip(
             add_dir_to_zip(base, &path, zip, options, count)?;
             continue;
         }
-        let rel = path
-            .strip_prefix(base)
-            .map_err(|e| BuildError::Package(e.to_string()))?;
+        let rel = path.strip_prefix(base).map_err(|e| BuildError::Package(e.to_string()))?;
         let name = rel.to_string_lossy().replace('\\', "/");
-        zip.start_file(name, options)
-            .map_err(|e| BuildError::Package(e.to_string()))?;
+        zip.start_file(name, options).map_err(|e| BuildError::Package(e.to_string()))?;
         let mut src = File::open(&path).map_err(|e| BuildError::io(&path, e))?;
         std::io::copy(&mut src, zip).map_err(|e| BuildError::Package(e.to_string()))?;
         *count += 1;

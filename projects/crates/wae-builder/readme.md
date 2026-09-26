@@ -5,7 +5,7 @@ Rust builder for **`wae build` products**: compile native addons, stage icons, v
 | Step | API / CLI | Description |
 |------|-----------|-------------|
 | **Compile** | `compile_native` / `wae-builder compile` | `cargo build -p wae-napi` for a platform triple, optionally copy into `lib/` |
-| **Icons** | `stage_icons` / `wae-builder icons` | Validate `.ico` / `.icns` / `.png` and write `assets/icons/` + `icon-manifest.json` |
+| **Icons** | `stage_icons` / `wae-builder icons` | Rasterize `.png` / `.svg`, auto-resize, emit `.ico` / `.icns` / multi-size `.png` |
 | **Verify** | `Builder::verify_product_tree` / `wae-builder verify` | Check `wae-product.json`, `frontend/`, `lib/*.node` |
 | **Package** | `package_product` / `wae-builder package` | Zip native-only (updater) or full product tree |
 
@@ -13,20 +13,31 @@ Pairs with [`wae-updater`](../wae-updater/readme.md): `PackageMode::NativeOnly` 
 
 ## Icon config (`wae-builder.json`)
 
-At the app project root:
+Provide **one** master icon as PNG or SVG. `wae-builder` center-crops to square, scales to standard sizes, and writes platform formats automatically.
 
 ```json
 {
-  "icons": {
-    "windows": "assets/icon.ico",
-    "macos": "assets/icon.icns",
-    "linux": "assets/icon.png",
-    "png": "assets/icon.png"
-  }
+  "icons": "assets/icon.svg"
 }
 ```
 
-Staged under `dist/<platform>/assets/icons/` in the built product.
+Or:
+
+```json
+{
+  "icons": { "source": "assets/icon.png" }
+}
+```
+
+Generated under `dist/<platform>/assets/icons/`:
+
+| Output | Purpose |
+|--------|---------|
+| `app.ico` | Windows (16–256 px) |
+| `app.icns` | macOS (16–512 px) |
+| `app-linux.png` | Linux desktop entry (256 px) |
+| `app.png` | Generic / manifest (512 px) |
+| `sizes/{n}.png` | Full size ladder for installers or UI |
 
 ## CLI
 

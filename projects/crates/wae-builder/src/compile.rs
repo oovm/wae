@@ -37,10 +37,7 @@ pub fn compile_native(options: &CompileOptions) -> Result<CompileOutput> {
     }
     let status = cmd.status().map_err(|e| BuildError::Cargo(e.to_string()))?;
     if !status.success() {
-        return Err(BuildError::Cargo(format!(
-            "cargo build -p wae-napi exited with {}",
-            status.code().unwrap_or(-1)
-        )));
+        return Err(BuildError::Cargo(format!("cargo build -p wae-napi exited with {}", status.code().unwrap_or(-1))));
     }
 
     let artifact = resolve_cargo_artifact(&options.workspace_root, target, options.release)?;
@@ -54,17 +51,12 @@ pub fn compile_native(options: &CompileOptions) -> Result<CompileOutput> {
         None
     };
 
-    Ok(CompileOutput {
-        artifact,
-        installed_lib,
-    })
+    Ok(CompileOutput { artifact, installed_lib })
 }
 
 fn rustup_target_add(target: &str) -> Result<()> {
-    let status = Command::new("rustup")
-        .args(["target", "add", target])
-        .status()
-        .map_err(|e| BuildError::Cargo(e.to_string()))?;
+    let status =
+        Command::new("rustup").args(["target", "add", target]).status().map_err(|e| BuildError::Cargo(e.to_string()))?;
     if !status.success() {
         return Err(BuildError::Cargo(format!("rustup target add {target} failed")));
     }
@@ -85,11 +77,7 @@ fn resolve_cargo_artifact(workspace_root: &Path, triple: &str, release: bool) ->
     let host = wae_updater::host_triple();
     let profile = if release { "release" } else { "debug" };
     let base = workspace_root.join("target");
-    let dir = if triple == host {
-        base.join(profile)
-    } else {
-        base.join(triple).join(profile)
-    };
+    let dir = if triple == host { base.join(profile) } else { base.join(triple).join(profile) };
     let file = dir.join(dylib_basename(triple));
     if file.is_file() {
         return Ok(file);

@@ -48,6 +48,11 @@ flate2 = "1"
 tar = "0.4"
 zip = "8.6.0"
 tempfile = "3"
+image = { version = "0.25", default-features = false, features = ["png"] }
+ico = "0.4"
+icns = "0.3"
+resvg = "0.44"
+usvg = "0.44"
 napi = { version = "3.13.0", default-features = false, features = ["napi4"] }
 napi-derive = "3.6.9"
 napi-build = "2"

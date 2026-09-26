@@ -24,13 +24,9 @@ pub fn load_product_manifest(product_root: &Path) -> Result<ProductManifest> {
         return Err(BuildError::MissingManifest(path));
     }
     let text = fs::read_to_string(&path).map_err(|e| BuildError::io(&path, e))?;
-    let manifest: ProductManifest =
-        serde_json::from_str(&text).map_err(|e| BuildError::InvalidManifest(e.to_string()))?;
+    let manifest: ProductManifest = serde_json::from_str(&text).map_err(|e| BuildError::InvalidManifest(e.to_string()))?;
     if manifest.schema_version != 1 {
-        return Err(BuildError::InvalidManifest(format!(
-            "unsupported schemaVersion {}",
-            manifest.schema_version
-        )));
+        return Err(BuildError::InvalidManifest(format!("unsupported schemaVersion {}", manifest.schema_version)));
     }
     Ok(manifest)
 }
@@ -40,9 +36,7 @@ pub fn resolve_native_path(product_root: &Path, manifest: &ProductManifest) -> R
         .native_path
         .as_deref()
         .filter(|s| !s.is_empty())
-        .ok_or_else(|| {
-            BuildError::InvalidManifest("nativePath missing for native product".into())
-        })?;
+        .ok_or_else(|| BuildError::InvalidManifest("nativePath missing for native product".into()))?;
     Ok(product_root.join(rel))
 }
 

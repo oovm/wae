@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use std::process;
 
 use wae_builder::{
-    Builder, BuilderConfig, CompileOptions, PackageMode, PackagePlan, PackageOptions, compile_native,
-    default_native_archive_name, host_platform, load_icon_sources, load_product_manifest,
-    package_product, platform_by_id, resolve_native_path, stage_icons,
+    Builder, BuilderConfig, CompileOptions, PackageMode, PackageOptions, PackagePlan, compile_native,
+    default_native_archive_name, host_platform, load_icon_sources, load_product_manifest, package_product, platform_by_id,
+    resolve_native_path, stage_icons,
 };
 
 fn main() {
@@ -64,20 +64,11 @@ fn cmd_compile(args: &[String]) -> wae_builder::Result<()> {
         None
     };
 
-    let output = compile_native(&CompileOptions {
-        workspace_root: workspace,
-        platform: *platform,
-        release,
-        dest_lib: dest,
-    })?;
+    let output = compile_native(&CompileOptions { workspace_root: workspace, platform: *platform, release, dest_lib: dest })?;
     println!(
         "compiled {} {}",
         output.artifact.display(),
-        output
-            .installed_lib
-            .as_ref()
-            .map(|p| format!("→ {}", p.display()))
-            .unwrap_or_default()
+        output.installed_lib.as_ref().map(|p| format!("→ {}", p.display())).unwrap_or_default()
     );
     Ok(())
 }
@@ -86,7 +77,7 @@ fn cmd_icons(args: &[String]) -> wae_builder::Result<()> {
     let project = arg_path(args, "--project")?;
     let product_root = arg_path(args, "--product-root")?;
     let sources = load_icon_sources(&project)?.ok_or_else(|| {
-        wae_builder::BuildError::Icon("missing wae-builder.json icons section".into())
+        wae_builder::BuildError::Icon("missing wae-builder.json with icons path (.png or .svg source)".into())
     })?;
     let result = stage_icons(&project, &product_root, &sources)?;
     println!("staged {} icon file(s) → {}", result.staged.len(), result.manifest_path.display());
@@ -101,19 +92,10 @@ fn cmd_package(args: &[String]) -> wae_builder::Result<()> {
     };
     let manifest = load_product_manifest(&product_root)?;
     let platform = platform_by_id(&manifest.platform)?;
-    let archive = optional_path(args, "--out").unwrap_or_else(|| {
-        PathBuf::from(default_native_archive_name(&manifest.name, platform.triple))
-    });
-    let output = package_product(&PackageOptions {
-        product_root,
-        mode,
-        archive_path: archive,
-    })?;
-    println!(
-        "packaged {} entries → {}",
-        output.entries,
-        output.archive_path.display()
-    );
+    let archive = optional_path(args, "--out")
+        .unwrap_or_else(|| PathBuf::from(default_native_archive_name(&manifest.name, platform.triple)));
+    let output = package_product(&PackageOptions { product_root, mode, archive_path: archive })?;
+    println!("packaged {} entries → {}", output.entries, output.archive_path.display());
     Ok(())
 }
 
@@ -132,10 +114,7 @@ fn cmd_verify(args: &[String]) -> wae_builder::Result<()> {
         package: None,
     });
     let manifest = builder.verify_product_tree()?;
-    println!(
-        "ok {}@{} platform={}",
-        manifest.name, manifest.version, manifest.platform
-    );
+    println!("ok {}@{} platform={}", manifest.name, manifest.version, manifest.platform);
     Ok(())
 }
 
@@ -145,10 +124,8 @@ fn cmd_all(args: &[String]) -> wae_builder::Result<()> {
     let product_root = arg_path(args, "--product-root")?;
     let manifest = load_product_manifest(&product_root)?;
     let platform = platform_by_id(&manifest.platform)?;
-    let package_out = arg_string(args, "--package-out").map(|name| PackagePlan {
-        mode: PackageMode::NativeOnly,
-        archive_path: PathBuf::from(name),
-    });
+    let package_out = arg_string(args, "--package-out")
+        .map(|name| PackagePlan { mode: PackageMode::NativeOnly, archive_path: PathBuf::from(name) });
 
     let icon_sources = load_icon_sources(&project).ok().flatten();
     let stage_icons = icon_sources.is_some();
@@ -184,15 +161,11 @@ fn cmd_all(args: &[String]) -> wae_builder::Result<()> {
 }
 
 fn arg_string(args: &[String], flag: &str) -> Option<String> {
-    args.iter()
-        .position(|a| a == flag)
-        .and_then(|i| args.get(i + 1))
-        .cloned()
+    args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
 }
 
 fn arg_path(args: &[String], flag: &str) -> wae_builder::Result<PathBuf> {
-    optional_path(args, flag)
-        .ok_or_else(|| wae_builder::BuildError::Other(format!("missing {flag}")))
+    optional_path(args, flag).ok_or_else(|| wae_builder::BuildError::Other(format!("missing {flag}")))
 }
 
 fn optional_path(args: &[String], flag: &str) -> Option<PathBuf> {

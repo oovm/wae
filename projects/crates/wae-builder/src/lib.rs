@@ -8,6 +8,7 @@
 mod compile;
 mod error;
 mod icon;
+mod icon_pipeline;
 mod manifest;
 mod package;
 mod platform;
@@ -16,9 +17,7 @@ pub use compile::{CompileOptions, CompileOutput, compile_native};
 pub use error::{BuildError, Result};
 pub use icon::{IconManifest, IconSources, IconStageResult, load_icon_sources, stage_icons};
 pub use manifest::{ProductManifest, WAE_PRODUCT_MANIFEST, load_product_manifest, resolve_frontend_dir, resolve_native_path};
-pub use package::{
-    PackageMode, PackageOptions, PackageOutput, default_native_archive_name, package_product,
-};
+pub use package::{PackageMode, PackageOptions, PackageOutput, default_native_archive_name, package_product};
 pub use platform::{PlatformSpec, host_platform, platform_by_id, platform_by_triple};
 
 use std::path::PathBuf;
@@ -108,11 +107,7 @@ impl Builder {
                 .clone()
                 .or_else(|| load_icon_sources(&self.config.project_root).ok().flatten())
                 .ok_or_else(|| BuildError::Icon("no icon sources in config or wae-builder.json".into()))?;
-            report.icons = Some(stage_icons(
-                &self.config.project_root,
-                &self.config.product_root,
-                &sources,
-            )?);
+            report.icons = Some(stage_icons(&self.config.project_root, &self.config.product_root, &sources)?);
         }
 
         if let Some(plan) = &self.config.package {
