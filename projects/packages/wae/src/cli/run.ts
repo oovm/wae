@@ -1,10 +1,10 @@
 /** `wae run` / `wae dev`：按平台启动应用。web / desktop 默认常用 Vite（可换）。 */
 
-import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import type { ClientPlatformId, FrontendFramework, WaeConfig } from "../index.js";
 import { loadWaeConfig } from "./load-config.js";
+import { isNativeShellPlatform, platformPackageName, resolvePlatformId } from "./platform.js";
+import { hasViteConfig, loadFrameworkPlugins, resolveVite } from "./vite-helpers.js";
 
 export type RunMode = "run" | "dev";
 
@@ -48,99 +48,14 @@ function parseFlags(args: string[]): FlagMap {
     return out;
 }
 
-function hostDesktopPlatform(): ClientPlatformId {
-    const { platform, arch } = process;
-    if (platform === "win32") return arch === "arm64" ? "win32-arm64" : "win32-x64";
-    if (platform === "darwin") return arch === "arm64" ? "darwin-arm64" : "darwin-x64";
-    if (platform === "linux") return arch === "arm64" ? "linux-arm64" : "linux-x64";
-    return "win32-x64";
-}
-
-function resolvePlatformId(flags: FlagMap, config: WaeConfig): ClientPlatformId {
-    if (flags.platform) return flags.platform as ClientPlatformId;
-    if (config.platform?.client) return config.platform.client;
-    if (config.target === "desktop") return hostDesktopPlatform();
-    if (config.target === "mobile") {
-        return process.platform === "darwin" ? "ios-arm64" : "android-arm64";
-    }
-    return "web";
-}
-
-function isNativeShellPlatform(id: ClientPlatformId): boolean {
-    return id !== "web" && id !== "unknown-wasm32";
-}
-
-function platformPackageName(id: ClientPlatformId): string {
-    return `@wae/wae-${id}`;
-}
-
-async function resolveVite(cwd: string) {
-    try {
-        return await import("vite");
-    } catch {
-        const fromCwd = pathToFileURL(path.join(cwd, "node_modules", "vite", "dist", "node", "index.js")).href;
-        try {
-            return await import(fromCwd);
-        } catch {
-            throw new Error(
-                "未找到 `vite`。请在工程中安装：pnpm add -D vite@^7，或在仓库根保证 workspace 已安装。",
-            );
-        }
-    }
-}
-
-async function loadFrameworkPlugins(framework: FrontendFramework, cwd: string): Promise<unknown[]> {
-    if (framework === "none") return [];
-
-    const tryImport = async (spec: string) => {
-        try {
-            return await import(spec);
-        } catch {
-            const local = path.join(cwd, "node_modules", spec);
-            if (fs.existsSync(local)) {
-                return await import(pathToFileURL(path.join(local, "dist", "index.js")).href);
-            }
-            const { createRequire } = await import("node:module");
-            const req = createRequire(path.join(cwd, "package.json"));
-            const resolved = req.resolve(spec);
-            return await import(pathToFileURL(resolved).href);
-        }
-    };
-
-    if (framework === "vue") {
-        const mod = await tryImport("@vitejs/plugin-vue");
-        const plugin = mod.default ?? mod;
-        return [typeof plugin === "function" ? plugin() : plugin];
-    }
-    if (framework === "react") {
-        const mod = await tryImport("@vitejs/plugin-react");
-        const plugin = mod.default ?? mod;
-        return [typeof plugin === "function" ? plugin() : plugin];
-    }
-    if (framework === "svelte") {
-        const mod = await tryImport("@sveltejs/vite-plugin-svelte");
-        const plugin = mod.svelte ?? mod.default ?? mod;
-        return [typeof plugin === "function" ? plugin() : plugin];
-    }
-    if (framework === "solid") {
-        const mod = await tryImport("vite-plugin-solid");
-        const plugin = mod.default ?? mod;
-        return [typeof plugin === "function" ? plugin() : plugin];
-    }
-    return [];
-}
-
 async function startVite(cwd: string, config: WaeConfig, flags: FlagMap, openBrowser: boolean): Promise<ViteHandle> {
     const vite = await resolveVite(cwd);
     const framework = config.frontend?.framework ?? "none";
-    const hasViteConfig = ["vite.config.ts", "vite.config.mts", "vite.config.js", "vite.config.mjs"].some((n) =>
-        fs.existsSync(path.join(cwd, n)),
-    );
-    const plugins = hasViteConfig ? undefined : await loadFrameworkPlugins(framework, cwd);
+    const plugins = hasViteConfig(cwd) ? undefined : await loadFrameworkPlugins(framework, cwd);
 
     const server = await vite.createServer({
         root: cwd,
-        configFile: hasViteConfig ? undefined : false,
+        configFile: hasViteConfig(cwd) ? undefined : false,
         plugins: plugins as never,
         server: {
             host: flags.host ?? "127.0.0.1",

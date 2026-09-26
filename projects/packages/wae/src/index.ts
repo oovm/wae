@@ -1,16 +1,18 @@
 /** @wae/wae — Node CLI 与工程编排（不含 Rust runtime；不替代框架 CLI）。 */
 
-export type ClientPlatformId =
-    | "web"
-    | "unknown-wasm32"
-    | "win32-x64"
-    | "win32-arm64"
-    | "darwin-x64"
-    | "darwin-arm64"
-    | "linux-x64"
-    | "linux-arm64"
-    | "android-arm64"
-    | "ios-arm64";
+import type { ClientPlatformId, WaeProductManifest, WaeProductUpdateConfig } from "@wae/types";
+
+export type { ClientPlatformId, WaeProductManifest, WaeProductUpdateConfig };
+export { WAE_PRODUCT_MANIFEST } from "@wae/types";
+export {
+    loadProductManifest,
+    resolveNativeAbsolutePath,
+    type ResolvedProductMeta,
+} from "./product/manifest.js";
+export {
+    applyProductUpdateFromManifest,
+    checkProductUpdateFromManifest,
+} from "./product/self-update.js";
 
 export type ServerAdapterId = "node" | "deno" | "cloudflare" | "bun";
 
@@ -54,6 +56,28 @@ export type WaeConfig = {
         client?: ClientPlatformId;
         server?: ServerAdapterId;
     };
+    /**
+     * Shipped **product** metadata (`wae build` → `wae-product.json`).
+     * WAE toolchain itself is not a product — only your built app is.
+     */
+    product?: {
+        /** Defaults to `package.json` `name`. */
+        name?: string;
+        /** Defaults to `package.json` `version`. */
+        version?: string;
+        /** Base output directory. Default `dist` (per-platform subdir is added). */
+        outDir?: string;
+        /** Frontend bundle folder inside the product tree. Default `frontend`. */
+        frontendDir?: string;
+        native?: {
+            /** Default `lib`. */
+            dir?: string;
+            /** Platform-specific name (e.g. `win32-x64-msvc.node`). */
+            fileName?: string;
+        };
+        /** GitHub Releases self-update for the **built product** (native addon). */
+        update?: WaeProductUpdateConfig;
+    };
 };
 
 /**
@@ -72,5 +96,15 @@ export function defineConfig(config: WaeConfig): WaeConfig {
         server: config.server,
         target: config.target ?? "web",
         platform: config.platform,
+        product: config.product
+            ? {
+                  name: config.product.name,
+                  version: config.product.version,
+                  outDir: config.product.outDir,
+                  frontendDir: config.product.frontendDir,
+                  native: config.product.native,
+                  update: config.product.update,
+              }
+            : undefined,
     };
 }

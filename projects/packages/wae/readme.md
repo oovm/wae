@@ -1,27 +1,28 @@
 # `@wae/wae`
 
-唯一项目 CLI 与 `defineConfig`。编排前端工具链 / Cargo / 平台包，**不**内置 TSX 编译器，也**不**把 Rust runtime 塞进前端。
+The sole project CLI and `defineConfig`. Orchestrates frontend toolchain / Cargo / platform packages; does **not** embed
+a TSX compiler and does **not** put Rust runtime into the frontend.
 
-## 与 Vite 的关系
+## Relationship with Vite
 
-与 Tauri 常见模板类似：**常用 Vite，但不绑死 Vite**。
+Like common Tauri templates: **Vite is typical but not hard-wired to Vite**.
 
-| 配置 | 行为 |
-|------|------|
-| `frontend.bundler: "vite"`（**默认**） | `wae run` / `wae dev` 代启 Vite；`vite` 为 optional peer |
-| `frontend.bundler: "custom"` | 不代启任何 bundler；你用 Webpack / Rspack / Parcel 等，并用 `frontend.devUrl` 标明开发地址 |
+| Config                                   | Behavior                                                                                 |
+|------------------------------------------|------------------------------------------------------------------------------------------|
+| `frontend.bundler: "vite"` (**default**) | `wae run` / `wae dev` starts Vite; `vite` is an optional peer                            |
+| `frontend.bundler: "custom"`             | Does not start any bundler; use Webpack / Rspack / Parcel etc. and set `frontend.devUrl` |
 
-换工具链时改的是工程脚本与 `bundler` / `devUrl`，不是换掉 `@wae/client` 或 adapter。
+When swapping toolchains, change project scripts and `bundler` / `devUrl`, not `@wae/client` or adapters.
 
-## 安装
+## Install
 
 ```bash
 pnpm add -D @wae/wae@0.0.0
-# 常用路径再装 Vite
+# Common path also installs Vite
 pnpm add -D vite@^7
 ```
 
-安装后会按平台尝试拉取 `@wae/wae-*`（`optionalDependencies`）。二进制名：`wae`。
+Installing pulls `@wae/wae-*` by platform (`optionalDependencies`). Binary name: `wae`.
 
 ## CLI
 
@@ -37,24 +38,38 @@ wae generate [types]
 wae help
 ```
 
-### 已接线：`run` / `dev`
+### Wired: `run` / `dev`
 
 ```bash
 pnpm exec wae run
 pnpm exec wae run --platform web --port 5173
 ```
 
-行为：
+Behavior:
 
-1. 用 esbuild 加载 `wae.config.*`（经 `defineConfig` 规范化）。
-2. 解析 `platform` / `target` 为客户端平台 id（默认 `web`）。
-3. **`web` + `bundler: "vite"`**：启动 Vite。有 `vite.config.*` 则沿用；否则按 `frontend.framework` 注入官方插件。
-4. **`web` + `bundler: "custom"`**：不启 Vite，打印 `devUrl` 提示。
-5. **其它平台**：调用对应 `@wae/wae-*` 的 `platform.run()`（0.0.0 多为空实现）。
+1. Load `wae.config.*` with esbuild (normalized via `defineConfig`).
+2. Resolve `platform` / `target` to client platform id (default `web`).
+3. **`web` + `bundler: "vite"`**: Start Vite. Uses existing `vite.config.*` if present; otherwise injects official
+   plugins from `frontend.framework`.
+4. **`web` + `bundler: "custom"`**: Does not start Vite; prints `devUrl` hint.
+5. **Other platforms**: Call `platform.run()` on the matching `@wae/wae-*` (mostly no-op in 0.0.0).
 
-`dev` 与 `run` 当前同一实现。`create` / `build` / `preview` / `check` / `test` / `generate` 尚未接线。
+`dev` and `run` share the same implementation today.
 
-仓库内调试：
+### Wired: `build`
+
+Produces the **shipped product** under `dist/<platform>/`:
+
+```text
+dist/win32-x64/
+  frontend/                 # Vite build output
+  lib/win32-x64-msvc.node   # platform-specific native addon
+  wae-product.json          # name, version, update.github, nativePath
+```
+
+`create` / `preview` / `check` / `test` / `generate` are not wired yet.
+
+Debug in repo:
 
 ```bash
 pnpm --filter @wae/wae run build
@@ -71,7 +86,7 @@ export default defineConfig({
     framework: "vue", // vue | react | svelte | solid | none
     // adapter: vue(),
     entry: "./src/main.ts",
-    bundler: "vite", // 默认；换工具链时用 "custom" + devUrl
+    bundler: "vite", // default; use "custom" + devUrl when swapping toolchains
     // bundler: "custom",
     // devUrl: "http://127.0.0.1:8080",
   },
@@ -84,21 +99,44 @@ export default defineConfig({
     client: "web",
     server: "node",
   },
+  product: {
+    update: { github: "your-org/your-app" },
+  },
 });
 ```
 
-规范化：`framework` 默认 `"none"`，`bundler` 默认 `"vite"`，`target` 默认 `"web"`。
+### Self-update (built product)
 
-## 失败时查什么
+Configure `product.update.github` to your **app** repo. After `wae build`, ship `wae-product.json` with the tree.
+Runtime (desktop):
 
-1. 当前目录是否有 `wae.config.ts`。
-2. `bundler: "vite"` 时是否已安装 `vite`（以及对应框架插件）。
-3. 是否缺少 `index.html`（Vite 根入口）。
-4. `bundler: "custom"` 时是否已自启工具链，且 `devUrl` 可访问。
-5. 非 web 平台 optional 依赖是否因 `os`/`cpu` 未安装。
+```ts
+import {
+  loadProductManifest,
+  checkProductUpdateFromManifest,
+} from "@wae/wae";
 
-## 相关
+const root = "/path/to/dist/win32-x64";
+const manifest = loadProductManifest(root);
+const status = checkProductUpdateFromManifest(manifest, root);
+```
 
-- 应用区：[`../readme.md`](../readme.md)
-- 可跑示例：[`vue-app`](../../examples/integration/vue-app/) · [`react-app`](../../examples/integration/react-app/)
-- 平台：[`../readme.md`](../readme.md)
+Upgrade `@wae/wae` via npm — that is the toolchain, not the product.
+```
+
+Normalization: `framework` defaults to `"none"`, `bundler` to `"vite"`, `target` to `"web"`.
+
+## When things fail, check
+
+1. Is there a `wae.config.ts` in the current directory?
+2. With `bundler: "vite"`, is `vite` installed (and the framework plugin)?
+3. Is `index.html` missing (Vite root entry)?
+4. With `bundler: "custom"`, did you start the toolchain and is `devUrl` reachable?
+5. For non-web platforms, did optional deps fail to install due to `os`/`cpu`?
+
+## Related
+
+- Application area: [`../readme.md`](../readme.md)
+- Runnable examples: [`vue-app`](../../examples/integration/vue-app/) · [
+  `react-app`](../../examples/integration/react-app/)
+- Platforms: [`../readme.md`](../readme.md)

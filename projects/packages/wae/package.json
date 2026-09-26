@@ -24,6 +24,8 @@
         "prepublishOnly": "tsc -p tsconfig.json"
     },
     "dependencies": {
+        "@wae/commander": "workspace:*",
+        "@wae/types": "workspace:*",
         "esbuild": "^0.25.0"
     },
     "peerDependencies": {
@@ -51,7 +53,6 @@
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "optionalDependencies": {
-        "@wae/wae-web": "workspace:*",
         "@wae/wae-unknown-wasm32": "workspace:*",
         "@wae/wae-win32-x64": "workspace:*",
         "@wae/wae-win32-arm64": "workspace:*",

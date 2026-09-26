@@ -10,4 +10,7 @@ export default defineConfig({
         adapter: "cloudflare",
     },
     target: "web",
+    // product: {
+    //     update: { github: "your-org/your-app" },
+    // },
 });

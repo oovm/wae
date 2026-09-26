@@ -1,0 +1,39 @@
+{
+    "name": "@wae/commander",
+    "version": "0.0.0",
+    "description": "WAE CLI command tree (Commander.js); no product orchestration",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "check": "tsc -p tsconfig.json --noEmit",
+        "prepublishOnly": "tsc -p tsconfig.json"
+    },
+    "dependencies": {
+        "commander": "^14.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "typescript": "catalog:"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/oovm/wae.git"
+    },
+    "homepage": "https://github.com/oovm/wae",
+    "publishConfig": {
+        "access": "public"
+    }
+}
