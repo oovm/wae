@@ -13,12 +13,14 @@
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "lib"
     ],
     "scripts": {
         "build": "tsc -p tsconfig.json",
         "check": "tsc -p tsconfig.json --noEmit",
-        "prepublishOnly": "tsc -p tsconfig.json"
+        "prepublishOnly": "tsc -p tsconfig.json",
+        "build:native": "node ../../../scripts/build-platform-native.mjs"
     },
     "license": "MIT",
     "wae": {
@@ -36,6 +38,10 @@
         "arm64"
     ],
     "devDependencies": {
+        "@types/node": "^22.0.0",
         "typescript": "catalog:"
+    },
+    "dependencies": {
+        "@wae/types": "workspace:*"
     }
 }

@@ -1,35 +1,29 @@
-/** @wae/wae-win32-x64 — Windows x64 native host +（规划）嵌入 WASM */
+/** @wae/wae-win32-x64 — native host shell (lib/win32-x64-msvc.node). */
 
-import { spawn } from "node:child_process";
-import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { WaeNativeAddon } from "@wae/types";
+import { spawn } from "node:child_process";
+import fs from "node:fs";
 
-export type StartOptions = {
-    entry?: string;
-    url?: string;
-};
+const PACKAGE_NAME = "@wae/wae-win32-x64";
+const NATIVE_LIB = "win32-x64-msvc.node";
 
-export type BuildOptions = {
-    outDir?: string;
-};
+const require = createRequire(import.meta.url);
+const nativePath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "lib", NATIVE_LIB);
 
-export type RunOptions = {
-    entry?: string;
-    /** 前端开发服务器地址（Vite 等） */
-    url?: string;
-    title?: string;
-};
+let cachedNative: WaeNativeAddon | null | undefined;
 
-export type WaeApp = {
-    close(): Promise<void>;
-};
-
-export interface WaePlatform {
-    readonly id: "win32-x64";
-    start(options: StartOptions): Promise<WaeApp>;
-    build(options: BuildOptions): Promise<void>;
-    run(options: RunOptions): Promise<void>;
+function loadNative(): WaeNativeAddon | null {
+    if (cachedNative !== undefined) return cachedNative;
+    try {
+        cachedNative = require(nativePath) as WaeNativeAddon;
+        return cachedNative;
+    } catch {
+        cachedNative = null;
+        return null;
+    }
 }
 
 function findWorkspaceRoot(start: string): string | null {
@@ -71,20 +65,17 @@ function spawnDesktop(url: string, title: string): Promise<void> {
     const root = findWorkspaceRoot(here);
     if (!root) {
         throw new Error(
-            "找不到含 `wae-desktop` 的 workspace 根。请在 WAE 仓库内开发，或先 `cargo build -p wae-desktop`。",
+            "找不到含 wae-desktop 的 workspace 根。请在 WAE 仓库内开发，或先 cargo build -p wae-desktop。",
         );
     }
     const { cmd, args, cwd } = resolveDesktopBinary(root);
     const fullArgs = [...args, "--url", url];
-    console.log(`[wae-win32-x64] spawn ${cmd} ${fullArgs.join(" ")}`);
+    console.log(`[${PACKAGE_NAME}] spawn ${cmd} ${fullArgs.join(" ")}`);
     return new Promise((resolve, reject) => {
         const child = spawn(cmd, fullArgs, {
             cwd,
             stdio: "inherit",
-            env: {
-                ...process.env,
-                WAE_WINDOW_TITLE: title,
-            },
+            env: { ...process.env, WAE_WINDOW_TITLE: title },
             windowsHide: false,
         });
         child.on("error", reject);
@@ -95,11 +86,47 @@ function spawnDesktop(url: string, title: string): Promise<void> {
     });
 }
 
+async function runDesktop(url: string, title: string, undecorated = false): Promise<void> {
+    const native = loadNative();
+    if (native) {
+        console.log(`[${PACKAGE_NAME}] openDesktop ${url}`);
+        native.openDesktop({ url, title, undecorated });
+        return;
+    }
+    await spawnDesktop(url, title);
+}
+
+export type StartOptions = {
+    entry?: string;
+    url?: string;
+};
+
+export type BuildOptions = {
+    outDir?: string;
+};
+
+export type RunOptions = {
+    entry?: string;
+    url?: string;
+    title?: string;
+};
+
+export type WaeApp = {
+    close(): Promise<void>;
+};
+
+export interface WaePlatform {
+    readonly id: "win32-x64";
+    start(options: StartOptions): Promise<WaeApp>;
+    build(options: BuildOptions): Promise<void>;
+    run(options: RunOptions): Promise<void>;
+}
+
 export const platform: WaePlatform = {
     id: "win32-x64",
     async start(options) {
         const url = options.url ?? "http://127.0.0.1:5173/";
-        const runPromise = spawnDesktop(url, "WAE");
+        const runPromise = runDesktop(url, "WAE");
         return {
             async close() {
                 await runPromise.catch(() => {});
@@ -110,7 +137,7 @@ export const platform: WaePlatform = {
     async run(options) {
         const url = options.url ?? "http://127.0.0.1:5173/";
         const title = options.title ?? "WAE Desktop";
-        await spawnDesktop(url, title);
+        await runDesktop(url, title);
     },
 };
 

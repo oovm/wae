@@ -1,37 +1,37 @@
 # `@wae/wae-ios-arm64`
 
-iOS arm64 移动壳入口。与 macOS darwin-arm64 桌面包不同。
+iOS arm64 mobile shell entry. Different from macOS darwin-arm64 desktop package.
 
-## 给应用用户
+## For application users
 
-| 项 | 内容 |
-|----|------|
-| npm 包 | `@wae/wae-ios-arm64` @ `0.0.0` |
-| 平台 id | `ios-arm64` |
-| 谁需要 | iOS WebView 壳 |
-| 安装 | 优先安装 `@wae/wae`，由 `optionalDependencies` 按机器拉取；也可显式 `pnpm add @wae/wae-ios-arm64@0.0.0` |
-| os/cpu | os: darwin · cpu: arm64（包管理器字段；真机仍是 iOS） |
-| 产物 | `dist/index.js` + 类型声明（TypeScript 壳） |
-| 运行前提 | iOS；最低版本未公布；需 Xcode。 |
-| 不支持 / 未完成 | 无 .ipa / xcframework。 |
-| 与 host 关系 | 桌面/移动：经 Rust `host/bridge` IPC；web：无 host；wasm：显式 Wasm 路径 |
+| Item                       | Details                                                                                                 |
+|----------------------------|---------------------------------------------------------------------------------------------------------|
+| npm package                | `@wae/wae-ios-arm64` @ `0.0.0`                                                                          |
+| Platform id                | `ios-arm64`                                                                                             |
+| Who needs it               | iOS WebView shell                                                                                       |
+| Install                    | Prefer `@wae/wae`; pulled via `optionalDependencies`; or explicitly `pnpm add @wae/wae-ios-arm64@0.0.0` |
+| os/cpu                     | os: darwin · cpu: arm64 (package manager field; device is still iOS)                                    |
+| Artifacts                  | `dist/index.js` + type declarations (TypeScript shell)                                                  |
+| Runtime requirements       | iOS; minimum version not published; requires Xcode.                                                     |
+| Not supported / incomplete | No .ipa / xcframework.                                                                                  |
+| Host relationship          | Desktop/mobile: via Rust `host/bridge` IPC; web: no host; wasm: explicit Wasm path                      |
 
-验证加载（壳层）：
+Verify loading (shell layer):
 
 ```ts
 import platform from "@wae/wae-ios-arm64";
 console.log(platform.id);
 ```
 
-`start` / `build` / `run` 在 0.0.0 为 no-op，成功仅表示 API 可调用，不表示窗口已打开。
+`start` / `build` / `run` are no-op in 0.0.0; success only means API is callable, not that a window opened.
 
-## 给维护者
+## For maintainers
 
-仅在 macOS + Xcode 环境维护；当前仅 TS 壳。
+Maintain on macOS + Xcode only; TS shell today.
 
-不要把应用安装步骤与原生交叉编译混在同一段「快速开始」里。
+Do not mix application install steps with native cross-compilation in the same "quick start" section.
 
-## 相关
+## Related
 
-- 总览：[platform 区](../../readme.md)
-- Host：[wae-bridge](../../crates/wae-bridge/readme.md)
+- Overview: [platform area](../../readme.md)
+- Host: [wae-bridge](../../crates/wae-bridge/readme.md)
