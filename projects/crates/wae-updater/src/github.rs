@@ -62,7 +62,7 @@ impl GitHubClient {
             "X-GitHub-Api-Version",
             "2022-11-28".parse().expect("api version"),
         );
-        headers.insert(reqwest::header::USER_AGENT, "wae-self-update".parse().expect("ua"));
+        headers.insert(reqwest::header::USER_AGENT, "wae-updater".parse().expect("ua"));
         if let Some(token) = &self.token {
             headers.insert(
                 reqwest::header::AUTHORIZATION,

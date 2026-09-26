@@ -1,5 +1,5 @@
 [package]
-name = "wae-self-update"
+name = "wae-updater"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,8 +7,8 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme = "readme.md"
-description = "GitHub Releases self-update for wae build products (native wae-napi addon)"
-keywords = ["wae", "self-update", "github", "release"]
+description = "Version, channel, and download orchestration for wae build product updates"
+keywords = ["wae", "updater", "self-update", "github", "release"]
 categories = ["os", "api-bindings"]
 
 [dependencies]

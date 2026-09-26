@@ -10,7 +10,8 @@ members = [
     "projects/crates/wae-host",
     "projects/crates/wae-desktop",
     "projects/crates/wae-napi",
-    "projects/crates/wae-self-update",
+    "projects/crates/wae-updater",
+    "projects/crates/wae-builder",
 ]
 default-members = [
     "projects/crates/wae-types",
@@ -22,7 +23,8 @@ default-members = [
     "projects/crates/wae-host",
     "projects/crates/wae-desktop",
     "projects/crates/wae-napi",
-    "projects/crates/wae-self-update",
+    "projects/crates/wae-updater",
+    "projects/crates/wae-builder",
 ]
 
 [workspace.package]
@@ -57,7 +59,8 @@ wae-platform-darwin = { path = "projects/crates/wae-platform-darwin", version = 
 wae-platform-linux = { path = "projects/crates/wae-platform-linux", version = "0.1.0" }
 wae-host = { path = "projects/crates/wae-host", version = "0.1.0" }
 wae-napi = { path = "projects/crates/wae-napi", version = "0.1.0" }
-wae-self-update = { path = "projects/crates/wae-self-update", version = "0.1.0" }
+wae-updater = { path = "projects/crates/wae-updater", version = "0.1.0" }
+wae-builder = { path = "projects/crates/wae-builder", version = "0.1.0" }
 
 [profile.release]
 lto = true

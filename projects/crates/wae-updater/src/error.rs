@@ -8,6 +8,10 @@ pub enum UpdateError {
     Semver(#[from] semver::Error),
     #[error("invalid repo slug `{0}` (expected owner/repo)")]
     InvalidRepo(String),
+    #[error("unknown release channel `{0}`")]
+    InvalidChannel(String),
+    #[error("unknown download policy `{0}`")]
+    InvalidDownloadPolicy(String),
     #[error("release {tag} has no asset for product `{product}` on target `{triple}`")]
     MissingAsset {
         tag: String,

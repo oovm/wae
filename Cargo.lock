@@ -1724,6 +1724,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "wae-builder"
+version = "0.1.0"
+dependencies = [
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "wae-updater",
+ "zip",
+]
+
+[[package]]
 name = "wae-desktop"
 version = "0.1.0"
 dependencies = [
@@ -1755,7 +1768,7 @@ dependencies = [
  "semver",
  "wae-host",
  "wae-platform",
- "wae-self-update",
+ "wae-updater",
 ]
 
 [[package]]
@@ -1789,7 +1802,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "wae-self-update"
+name = "wae-types"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "wae-updater"
 version = "0.1.0"
 dependencies = [
  "flate2",
@@ -1801,14 +1822,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "zip",
-]
-
-[[package]]
-name = "wae-types"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
 ]
 
 [[package]]
