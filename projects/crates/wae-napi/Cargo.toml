@@ -19,7 +19,7 @@ napi-derive = { workspace = true }
 semver = { workspace = true }
 wae-host = { workspace = true }
 wae-platform = { workspace = true }
-wae-self-update = { workspace = true }
+wae-updater = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }

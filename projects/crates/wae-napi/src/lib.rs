@@ -3,16 +3,17 @@
 #![warn(missing_docs)]
 #![deny(clippy::all)]
 
-mod self_update;
+mod updater;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use wae_host::{run_desktop, DesktopIpcOutcome, HostIpcRouter};
 use wae_platform::DesktopOpenOptions;
 
-pub use self_update::{
+pub use updater::{
     apply_product_update,
     check_product_update,
+    download_product_update,
     ProductUpdateOptions,
     ProductUpdateStatus,
 };

@@ -9,7 +9,7 @@ Built into each `@wae/wae-*` platform package as `lib/<platform>-<toolchain>.nod
 | `hostVersion()` | Crate version |
 | `handleClientMessage(json)` | Protocol router (no WebView) |
 | `openDesktop({ url, title?, undecorated? })` | Blocking desktop shell |
-| `checkProductUpdate` / `applyProductUpdate` | Product self-update (GitHub Releases) |
+| `checkProductUpdate` / `downloadProductUpdate` / `applyProductUpdate` | Product updater via [`wae-updater`](../wae-updater/readme.md) |
 
 Build for the current host:
 
