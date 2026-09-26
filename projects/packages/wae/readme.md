@@ -3,6 +3,8 @@
 The sole project CLI and `defineConfig`. Orchestrates frontend toolchain / Cargo / platform packages; does **not** embed
 a TSX compiler and does **not** put Rust runtime into the frontend.
 
+CLI parsing lives in [`@wae/commander`](../commander/readme.md) (Commander.js). This package injects `run` / `build`
+handlers — no duplicate flag parsing.
 ## Relationship with Vite
 
 Like common Tauri templates: **Vite is typical but not hard-wired to Vite**.
@@ -105,24 +107,32 @@ export default defineConfig({
 });
 ```
 
-### Self-update (built product)
+### Product updater (built app)
 
-Configure `product.update.github` to your **app** repo. After `wae build`, ship `wae-product.json` with the tree.
-Runtime (desktop):
+Configure `product.update.github` to your **app** repo. Optional `channel` (`stable` | `beta` | tag) and
+`downloadPolicy` (`checkOnly` | `downloadIfAvailable` | `downloadAndApply`). After `wae build`, ship
+`wae-product.json` with the tree. Runtime (desktop):
 
 ```ts
 import {
   loadProductManifest,
   checkProductUpdateFromManifest,
+  downloadProductUpdateFromManifest,
+  applyProductUpdateFromManifest,
 } from "@wae/wae";
 
 const root = "/path/to/dist/win32-x64";
 const manifest = loadProductManifest(root);
-const status = checkProductUpdateFromManifest(manifest, root);
+
+// Explicit: check → user confirms → download → apply
+const check = checkProductUpdateFromManifest(manifest, root);
+if (!check.upToDate) {
+  const staged = downloadProductUpdateFromManifest(manifest, root);
+  applyProductUpdateFromManifest(manifest, root, undefined, staged.stagedNativePath);
+}
 ```
 
 Upgrade `@wae/wae` via npm — that is the toolchain, not the product.
-```
 
 Normalization: `framework` defaults to `"none"`, `bundler` to `"vite"`, `target` to `"web"`.
 

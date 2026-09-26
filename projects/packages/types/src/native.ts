@@ -6,13 +6,26 @@ export type OpenDesktopOptions = {
     undecorated?: boolean;
 };
 
+export type ProductUpdateChannel = "stable" | "beta" | (string & {});
+
+export type ProductDownloadPolicy =
+    | "checkOnly"
+    | "downloadIfAvailable"
+    | "downloadAndApply";
+
 export type ProductUpdateOptions = {
     repo: string;
     productName: string;
     nativePath: string;
     currentVersion: string;
-    tag?: string;
+    channel?: ProductUpdateChannel;
+    downloadPolicy?: ProductDownloadPolicy;
+    /** @deprecated Use `channel: "beta"`. */
     allowPrerelease?: boolean;
+    /** @deprecated Use `channel: "<tag>"`. */
+    tag?: string;
+    /** From a prior `downloadProductUpdate` call. */
+    stagedNativePath?: string;
 };
 
 export type ProductUpdateStatus = {
@@ -22,6 +35,9 @@ export type ProductUpdateStatus = {
     tag?: string;
     releaseUrl?: string;
     assetName?: string;
+    channel?: string;
+    downloadPolicy?: string;
+    stagedNativePath?: string;
 };
 
 export type WaeNativeAddon = {
@@ -29,5 +45,6 @@ export type WaeNativeAddon = {
     handleClientMessage(json: string): string | null;
     openDesktop(options: OpenDesktopOptions): void;
     checkProductUpdate(options: ProductUpdateOptions): ProductUpdateStatus;
+    downloadProductUpdate(options: ProductUpdateOptions): ProductUpdateStatus;
     applyProductUpdate(options: ProductUpdateOptions): ProductUpdateStatus;
 };

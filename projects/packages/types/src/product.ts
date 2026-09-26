@@ -12,10 +12,24 @@ export type ClientPlatformId =
     | "android-arm64"
     | "ios-arm64";
 
+export type WaeProductUpdateChannel = "stable" | "beta" | (string & {});
+
+export type WaeProductDownloadPolicy =
+    | "checkOnly"
+    | "downloadIfAvailable"
+    | "downloadAndApply";
+
 export type WaeProductUpdateConfig = {
     /** GitHub `owner/repo` for **your app** releases. */
     github: string;
+    /** Release channel. Default `stable`. Use a tag string for pinned/nightly builds. */
+    channel?: WaeProductUpdateChannel;
+    /** `checkOnly` (explicit UI), `downloadIfAvailable` (silent fetch), `downloadAndApply` (full auto). */
+    downloadPolicy?: WaeProductDownloadPolicy;
+    /** @deprecated Use `channel: "beta"` instead. */
     allowPrerelease?: boolean;
+    /** @deprecated Use `channel: "<tag>"` instead. */
+    tag?: string;
 };
 
 export type WaeProductManifest = {

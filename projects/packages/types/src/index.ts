@@ -5,7 +5,9 @@
 
 export type {
     ClientPlatformId,
+    WaeProductDownloadPolicy,
     WaeProductManifest,
+    WaeProductUpdateChannel,
     WaeProductUpdateConfig,
 } from "./product.js";
 export { WAE_PRODUCT_MANIFEST } from "./product.js";
@@ -17,6 +19,8 @@ export {
 } from "./platform-native.js";
 export type {
     OpenDesktopOptions,
+    ProductDownloadPolicy,
+    ProductUpdateChannel,
     ProductUpdateOptions,
     ProductUpdateStatus,
     WaeNativeAddon,

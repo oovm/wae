@@ -1,8 +1,20 @@
 /** @wae/wae — Node CLI 与工程编排（不含 Rust runtime；不替代框架 CLI）。 */
 
-import type { ClientPlatformId, WaeProductManifest, WaeProductUpdateConfig } from "@wae/types";
+import type {
+    ClientPlatformId,
+    WaeProductDownloadPolicy,
+    WaeProductManifest,
+    WaeProductUpdateChannel,
+    WaeProductUpdateConfig,
+} from "@wae/types";
 
-export type { ClientPlatformId, WaeProductManifest, WaeProductUpdateConfig };
+export type {
+    ClientPlatformId,
+    WaeProductDownloadPolicy,
+    WaeProductManifest,
+    WaeProductUpdateChannel,
+    WaeProductUpdateConfig,
+};
 export { WAE_PRODUCT_MANIFEST } from "@wae/types";
 export {
     loadProductManifest,
@@ -12,6 +24,7 @@ export {
 export {
     applyProductUpdateFromManifest,
     checkProductUpdateFromManifest,
+    downloadProductUpdateFromManifest,
 } from "./product/self-update.js";
 
 export type ServerAdapterId = "node" | "deno" | "cloudflare" | "bun";
