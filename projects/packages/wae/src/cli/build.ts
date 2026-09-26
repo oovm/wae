@@ -4,16 +4,16 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
+import type { WaeBuildOptions } from "@wae/commander";
 import type { ClientPlatformId } from "@wae/types";
 import type { WaeConfig } from "../index.js";
 import { resolveProductMeta, writeProductManifest } from "../product/manifest.js";
 import { loadWaeConfig } from "./load-config.js";
-import { isNativeShellPlatform, parsePlatformFlags, platformPackageName, resolvePlatformId } from "./platform.js";
+import { isNativeShellPlatform, platformPackageName, resolvePlatformId } from "./platform.js";
 import { hasViteConfig, loadFrameworkPlugins, resolveVite } from "./vite-helpers.js";
 
-export async function cmdBuild(args: string[]): Promise<void> {
+export async function cmdBuild(flags: WaeBuildOptions): Promise<void> {
     const cwd = process.cwd();
-    const flags = parsePlatformFlags(args);
     const { path: configPath, config } = await loadWaeConfig(cwd);
     const platformId = resolvePlatformId(flags, config);
     const meta = resolveProductMeta(cwd, config, platformId);

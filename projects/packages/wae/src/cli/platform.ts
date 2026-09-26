@@ -1,28 +1,9 @@
 /** Shared platform resolution for `wae run` / `wae build`. */
 
+import type { WaeBuildOptions, WaeRunOptions } from "@wae/commander";
 import type { ClientPlatformId, WaeConfig } from "../index.js";
 
-export type PlatformFlags = {
-    platform?: string;
-    outDir?: string;
-};
-
-export function parsePlatformFlags(args: string[]): PlatformFlags {
-    const out: PlatformFlags = {};
-    for (let i = 0; i < args.length; i++) {
-        const a = args[i];
-        if (a === "--platform" || a === "-p") {
-            out.platform = args[++i];
-        } else if (a === "--out-dir") {
-            out.outDir = args[++i];
-        } else if (typeof a === "string" && a.startsWith("--platform=")) {
-            out.platform = a.slice("--platform=".length);
-        } else if (typeof a === "string" && a.startsWith("--out-dir=")) {
-            out.outDir = a.slice("--out-dir=".length);
-        }
-    }
-    return out;
-}
+export type PlatformFlags = Pick<WaeRunOptions, "platform"> | Pick<WaeBuildOptions, "platform" | "outDir">;
 
 export function hostDesktopPlatform(): ClientPlatformId {
     const { platform, arch } = process;

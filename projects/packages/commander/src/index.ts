@@ -2,8 +2,24 @@
 
 import { Command } from "commander";
 
-export type RunDevHandler = (args: string[], mode: "run" | "dev") => Promise<void>;
-export type BuildHandler = (args: string[]) => Promise<void>;
+export type WaeRunOptions = {
+    platform?: string;
+    port?: number;
+    host?: string;
+    /** Web default true; `--no-open` sets false. */
+    open: boolean;
+    /** Positional args after options (forwarded when needed). */
+    extraArgs: string[];
+};
+
+export type WaeBuildOptions = {
+    platform?: string;
+    outDir?: string;
+    extraArgs: string[];
+};
+
+export type RunDevHandler = (options: WaeRunOptions, mode: "run" | "dev") => Promise<void>;
+export type BuildHandler = (options: WaeBuildOptions) => Promise<void>;
 export type StubHandler = (cmd: string, args: string[]) => void | Promise<void>;
 
 export type WaeCommandHandlers = {
@@ -28,12 +44,12 @@ export function createWaeProgram(handlers: WaeCommandHandlers = {}): Command {
         .showHelpAfterError("(use wae help for usage)");
 
     const runAction = async (mode: "run" | "dev", _opts: unknown, cmd: Command) => {
-        const args = rebuildRunArgv(cmd);
+        const options = readRunOptions(cmd);
         if (handlers.run) {
-            await handlers.run(args, mode);
+            await handlers.run(options, mode);
             return;
         }
-        (handlers.stub ?? defaultStub)(mode, args);
+        (handlers.stub ?? defaultStub)(mode, options.extraArgs);
     };
 
     attachRunOptions(
@@ -56,12 +72,12 @@ export function createWaeProgram(handlers: WaeCommandHandlers = {}): Command {
         .option("-p, --platform <id>", "client platform id (web, win32-x64, …)")
         .option("--out-dir <dir>", "override product output base directory")
         .action(async (_opts, cmd) => {
-            const args = rebuildBuildArgv(cmd);
+            const options = readBuildOptions(cmd);
             if (handlers.build) {
-                await handlers.build(args);
+                await handlers.build(options);
                 return;
             }
-            (handlers.stub ?? defaultStub)("build", args);
+            (handlers.stub ?? defaultStub)("build", options.extraArgs);
         });
 
     for (const name of ["create", "preview", "check", "test", "generate"] as const) {
@@ -81,32 +97,29 @@ function defaultStub(cmd: string, args: string[]): void {
     console.log(`wae ${cmd} ${args.join(" ")}（尚未接线）`.trim());
 }
 
-/** argv tail for `cmdRun` / `parseFlags` in `@wae/wae`. */
-export function rebuildRunArgv(cmd: Command): string[] {
+export function readRunOptions(cmd: Command): WaeRunOptions {
     const opts = cmd.opts() as {
         platform?: string;
         port?: string;
         host?: string;
         open?: boolean;
     };
-    const out: string[] = [];
-    if (opts.platform != null) out.push("--platform", opts.platform);
-    if (opts.port != null) out.push("--port", String(opts.port));
-    if (opts.host != null) out.push("--host", opts.host);
-    if (opts.open === false) out.push("--no-open");
-    else if (opts.open === true) out.push("--open");
-    out.push(...cmd.args);
-    return out;
+    return {
+        platform: opts.platform,
+        port: opts.port != null ? Number(opts.port) : undefined,
+        host: opts.host,
+        open: opts.open !== false,
+        extraArgs: cmd.args.slice(),
+    };
 }
 
-/** argv tail for `cmdBuild`. */
-export function rebuildBuildArgv(cmd: Command): string[] {
+export function readBuildOptions(cmd: Command): WaeBuildOptions {
     const opts = cmd.opts() as { platform?: string; outDir?: string };
-    const out: string[] = [];
-    if (opts.platform != null) out.push("--platform", opts.platform);
-    if (opts.outDir != null) out.push("--out-dir", opts.outDir);
-    out.push(...cmd.args);
-    return out;
+    return {
+        platform: opts.platform,
+        outDir: opts.outDir,
+        extraArgs: cmd.args.slice(),
+    };
 }
 
 /** Parse argv with the WAE command tree. */

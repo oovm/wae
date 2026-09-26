@@ -1,20 +1,13 @@
 /** `wae run` / `wae dev`：按平台启动应用。web / desktop 默认常用 Vite（可换）。 */
 
 import path from "node:path";
+import type { WaeRunOptions } from "@wae/commander";
 import type { ClientPlatformId, FrontendFramework, WaeConfig } from "../index.js";
 import { loadWaeConfig } from "./load-config.js";
 import { isNativeShellPlatform, platformPackageName, resolvePlatformId } from "./platform.js";
 import { hasViteConfig, loadFrameworkPlugins, resolveVite } from "./vite-helpers.js";
 
 export type RunMode = "run" | "dev";
-
-type FlagMap = {
-    platform?: string;
-    port?: number;
-    host?: string;
-    /** web 时默认打开系统浏览器；desktop 忽略 */
-    open: boolean;
-};
 
 type ViteHandle = {
     // biome-ignore lint/suspicious/noExplicitAny: Vite 类型随 peer 版本变化
@@ -23,32 +16,7 @@ type ViteHandle = {
     framework: FrontendFramework;
 };
 
-function parseFlags(args: string[]): FlagMap {
-    const out: FlagMap = { open: true };
-    for (let i = 0; i < args.length; i++) {
-        const a = args[i];
-        if (a === "--platform" || a === "-p") {
-            out.platform = args[++i];
-        } else if (a === "--port") {
-            out.port = Number(args[++i]);
-        } else if (a === "--host") {
-            out.host = args[++i];
-        } else if (a === "--open") {
-            out.open = true;
-        } else if (a === "--no-open") {
-            out.open = false;
-        } else if (typeof a === "string" && a.startsWith("--platform=")) {
-            out.platform = a.slice("--platform=".length);
-        } else if (typeof a === "string" && a.startsWith("--port=")) {
-            out.port = Number(a.slice("--port=".length));
-        } else if (typeof a === "string" && a.startsWith("--host=")) {
-            out.host = a.slice("--host=".length);
-        }
-    }
-    return out;
-}
-
-async function startVite(cwd: string, config: WaeConfig, flags: FlagMap, openBrowser: boolean): Promise<ViteHandle> {
+async function startVite(cwd: string, config: WaeConfig, flags: WaeRunOptions, openBrowser: boolean): Promise<ViteHandle> {
     const vite = await resolveVite(cwd);
     const framework = config.frontend?.framework ?? "none";
     const plugins = hasViteConfig(cwd) ? undefined : await loadFrameworkPlugins(framework, cwd);
@@ -75,7 +43,7 @@ async function startVite(cwd: string, config: WaeConfig, flags: FlagMap, openBro
     return { server, url: local, framework };
 }
 
-async function runWeb(cwd: string, config: WaeConfig, configPath: string, flags: FlagMap): Promise<void> {
+async function runWeb(cwd: string, config: WaeConfig, configPath: string, flags: WaeRunOptions): Promise<void> {
     const { server, url, framework } = await startVite(cwd, config, flags, flags.open);
     console.log(`[wae] platform=web framework=${framework}`);
     console.log(`[wae] config=${path.relative(cwd, configPath) || path.basename(configPath)}`);
@@ -102,7 +70,7 @@ async function runDesktopShell(
     cwd: string,
     config: WaeConfig,
     configPath: string,
-    flags: FlagMap,
+    flags: WaeRunOptions,
 ): Promise<void> {
     const bundler = config.frontend?.bundler ?? "vite";
     let vite: ViteHandle | null = null;
@@ -152,9 +120,8 @@ async function runDesktopShell(
     }
 }
 
-export async function cmdRun(args: string[], _opts: { mode: RunMode }): Promise<void> {
+export async function cmdRun(flags: WaeRunOptions, _opts: { mode: RunMode }): Promise<void> {
     const cwd = process.cwd();
-    const flags = parseFlags(args);
     const { path: configPath, config } = await loadWaeConfig(cwd);
     const platformId = resolvePlatformId(flags, config);
 

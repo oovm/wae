@@ -6,10 +6,10 @@ import { cmdRun } from "./cli/run.js";
 
 export async function runCli(argv: string[]): Promise<void> {
     await runWaeCli(argv, {
-        run: (args, mode) => cmdRun(args, { mode }),
-        build: async (args) => {
+        run: (options, mode) => cmdRun(options, { mode }),
+        build: async (options) => {
             try {
-                await cmdBuild(args);
+                await cmdBuild(options);
             } catch (err) {
                 console.error(err instanceof Error ? err.message : err);
                 process.exitCode = 1;
