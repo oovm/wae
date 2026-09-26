@@ -1,27 +1,29 @@
 # `@wae/adapter-solid`
 
-把 `@wae/client` 注入 **Solid** 树。Solid 使用细粒度响应式，**不要**假设 React 的重渲染模型；本包只规划 Provider / `useWae` 边界。
+Injects `@wae/client` into a **Solid** tree. Solid uses fine-grained reactivity; **do not** assume React re-render
+model. This package only plans Provider / `useWae` boundary.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/client@0.0.0 @wae/adapter-solid@0.0.0
 pnpm add solid-js   # peer
 ```
 
-## 提供什么
+## What it provides
 
-| 导出 | 角色 |
-|------|------|
-| `solid()` | `{ name: "solid" }`，给 `defineConfig` |
-| `WaeProvider` | 预期用 Solid `createContext` 提供 client |
-| `useWae()` | 在子树中取 `WaeClient` |
+| Export        | Role                                      |
+|---------------|-------------------------------------------|
+| `solid()`     | `{ name: "solid" }` for `defineConfig`    |
+| `WaeProvider` | Expected Solid `createContext` for client |
+| `useWae()`    | Read `WaeClient` in subtree               |
 
-与 React adapter **同名不同实现**：Solid 的 JSX 与 `createSignal` 生命周期不同，禁止混用 `@wae/adapter-react`。
+Same names as React adapter **different implementation**: Solid JSX and `createSignal` lifecycle differ; do not mix
+`@wae/adapter-react`.
 
-## 最小结构（接线完成后）
+## Minimal structure (when wired)
 
-以下展示调用关系；**0.0.0 中 `WaeProvider` 返回 `null`，`useWae` 抛错**。
+Shows call relationships; **in 0.0.0 `WaeProvider` returns `null` and `useWae` throws**.
 
 ```tsx
 import { createClient } from "@wae/client";
@@ -45,15 +47,15 @@ export function App() {
 export default solid;
 ```
 
-## SSR / hydration / 响应式
+## SSR / hydration / reactivity
 
-| 能力 | 0.0.0 |
-|------|-------|
-| SolidStart SSR | 未实现 |
-| hydration | 未实现 |
-| 与 `createResource` | 未封装；请自行包一层异步资源 |
+| Capability            | 0.0.0                            |
+|-----------------------|----------------------------------|
+| SolidStart SSR        | Not implemented                  |
+| hydration             | Not implemented                  |
+| With `createResource` | Not wrapped; wrap async yourself |
 
-## 相关
+## Related
 
 - [`@wae/client`](../client/readme.md)
-- 示例：[`examples/integration/solid`](../../examples/integration/solid/readme.md)
+- Example: [`examples/integration/solid`](../../examples/integration/solid/readme.md)

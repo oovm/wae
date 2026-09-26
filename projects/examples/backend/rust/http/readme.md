@@ -1,45 +1,53 @@
 # backend/rust/http
 
-## 这个示例展示什么
+## What this example demonstrates
 
-Rust HTTP 服务占位目录：说明「独立 Rust HTTP 服务」与「WAE TS `@wae/server`」不是同一层。
+Rust HTTP service placeholder directory: “standalone Rust HTTP service” is not the same layer as WAE TS `@wae/server`.
 
-## 运行前提
+## Prerequisites
 
-本目录目前**只有 README**，没有 `Cargo.toml` / 源码，**不能** `cargo run`，也没有 npm `package.json`。
+This directory currently **only has README**—no `Cargo.toml` / source; **cannot** `cargo run`, no npm `package.json`.
 
-## 启动命令
+## Startup commands
 
-无本目录启动命令。相关可检查的宿主 crate 例如：
+No startup commands in this directory. Related host crates you can check:
 
 ```bash
+
 cargo check -p wae-bridge
+
 ```
 
+## Access URL
 
-## 访问地址
+None.
 
-无。
+## Key files
 
-## 关键文件
+- This README only (project TBD)
 
-- 仅本 README（待补工程）
-
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
+
 HTTP
-  → Rust service（非 @wae/server）
+
+  → Rust service (not @wae/server)
+
   → Response
+
 ```
 
-## 练习点
+## Exercises
 
-- 读 [`projects/crates`](../../../../crates/readme.md) 与 [`@wae/server`](../../../../packages/server/readme.md)，写清二者职责边界。
-- 可 `cargo check -p wae-bridge` 熟悉仓库 Rust 侧，但那是 host，不是本目录服务。
+- Read [`projects/crates`](../../../../crates/readme.md) and [`@wae/server`](../../../../packages/server/readme.md);
+  write clear responsibility boundary.
 
-## 与生产应用的差异
+- `cargo check -p wae-bridge` familiarizes Rust side—that is host, not this directory’s service.
 
-生产 Rust 服务是独立部署单元；WAE host 是本地壳。二者都叫「后端」时务必写清。
+## Differences from production apps
 
-依赖说明：无本目录依赖。不参与 examples 的 pnpm filter。
+Production Rust services are separate deploy units; WAE host is local shell. When both are “backend”, label which.
+
+Dependencies: none in this directory. Not in examples pnpm filter.
+

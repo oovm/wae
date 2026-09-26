@@ -1,29 +1,29 @@
 # @wae-example/integration-svelte-app
 
-## 这个示例展示什么
+## What this example demonstrates
 
-**桌面 WebView + Svelte 5**：`target: "desktop"` → `wae run` 先起 Vite，再拉起 `wae-desktop`。
+**Desktop WebView + Svelte 5**: `target: "desktop"` → `wae run` starts Vite first, then launches `wae-desktop`.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
+- Repo root has `pnpm install`
 - `pnpm --filter @wae/wae run build`
 - `pnpm --filter @wae/adapter-svelte run build`
-- `cargo build -p wae-desktop`（首次）
-- Windows：已装 WebView2 Runtime
+- `cargo build -p wae-desktop` (first time)
+- Windows: WebView2 Runtime installed
 
-## 启动命令
+## Startup commands
 
 ```bash
 pnpm --filter @wae-example/integration-svelte-app exec wae run --port 5175
 ```
 
-仅浏览器：`wae run --platform web`。
+Browser only: `wae run --platform web`.
 
-## 关键文件
+## Key files
 
 - `wae.config.ts` — `framework: "svelte"` + desktop
 - `src/App.svelte` · `src/styles.css`
-- 宿主：`projects/crates/wae-desktop`
+- Host: `projects/crates/wae-desktop`
 
-依赖：`@wae/client` · `@wae/adapter-svelte` · `svelte` · Vite。
+Dependencies: `@wae/client` · `@wae/adapter-svelte` · `svelte` · Vite.

@@ -1,59 +1,60 @@
 # @wae-example/native-mobile-shell
 
-## 这个示例展示什么
+## What this example demonstrates
 
-移动壳意图目录。注意：当前 `src/main.ts` 仍写着 `target: "desktop"`（与其它 native 骨架相同），**尚未**改成 mobile——以源码为准。
+Mobile shell intent directory. Note: current `src/main.ts` still has `target: "desktop"` (same as other native
+skeletons), **not** mobile yet—trust source over directory name.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
-- 诚实状态：env 字符串未反映 mobile；仅目录与包名表达意图。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
+- Honest status: env string does not reflect mobile; directory and package name express intent only.
 
-## 启动命令
+## Startup commands
 
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/native-mobile-shell run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
-- `src/main.ts` — 今日仍为 desktop + `hasNativeBridge`
+- `src/main.ts` — today still desktop + `hasNativeBridge`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-移动壳
+Mobile shell
   → WebView
   → bridge → host
-  → 移动系统能力（目标）
+  → mobile system capabilities (target)
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 把 `env.target` 改成文档中的 mobile 取值（若类型允许）并跑 `check`，观察类型约束。
-- 对照 `frontend/mobile`（页面）与本目录（壳 / bridge）。
-- 路径练习仍应围绕 bridge→host，而不是 `createServer`。
+- Change `env.target` to documented mobile value if types allow; run `check` and observe constraints.
+- Contrast `frontend/mobile` (page) with this directory (shell / bridge).
+- Path practice should stay bridge→host, not `createServer`.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产需 Android/iOS 壳与商店分发；本示例无设备运行。
+Production needs Android/iOS shells and store distribution; this example does not run on device.
 
-依赖（本示例）：`@wae/client`。
+Dependencies (this example): `@wae/client`.

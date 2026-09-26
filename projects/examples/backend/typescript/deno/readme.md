@@ -1,59 +1,60 @@
 # @wae-example/backend-ts-deno
 
-## 这个示例展示什么
+## What this example demonstrates
 
-Deno 部署面：依赖 `@wae/server-deno`，目标是导出适配后的 `fetch`。源码仍只构造 `createServer()`。
+Deno deployment surface: depends on `@wae/server-deno`, target is export adapted `fetch`. Source still only constructs
+`createServer()`.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
-- 本仓日常用 Node 22 跑 `tsc`；真正 `deno run` 需本机另装 Deno，且当前示例未提供 Deno 入口文件。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
+- Repo daily uses Node 22 for `tsc`; real `deno run` needs Deno installed; no Deno entry file in this example yet.
 
-## 启动命令
+## Startup commands
 
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/backend-ts-deno run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
-- `package.json` — 含 `@wae/server-deno`
+- `package.json` — includes `@wae/server-deno`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 createServer
-  → @wae/server-deno 适配
-  → Deno.serve / 导出 fetch(request)
+  → @wae/server-deno adapter
+  → Deno.serve / export fetch(request)
   → Response
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 用 `app.fetch` 在 Node 侧先测路由（类型检查仍走本包 `check`）。
-- 阅读 `@wae/server-deno` 导出符号，写一个最小 `export default { fetch }` 草稿（可放本地临时文件）。
-- 不要假设示例目录已含 `deno.json`。
+- Test routes with `app.fetch` on Node side first (types still via this package `check`).
+- Read `@wae/server-deno` exports; draft minimal `export default { fetch }` in a temp file.
+- Do not assume this directory has `deno.json`.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产在 Deno Deploy / 自建 Deno 进程上跑；本示例未启动 Deno。
+Production runs on Deno Deploy / self-hosted Deno; this example does not start Deno.
 
-依赖（本示例）：`@wae/server`、`@wae/serverless`、`@wae/server-deno`。
+Dependencies (this example): `@wae/server`, `@wae/serverless`, `@wae/server-deno`.

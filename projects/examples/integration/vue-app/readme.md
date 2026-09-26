@@ -1,54 +1,55 @@
 # @wae-example/integration-vue-app
 
-## 这个示例展示什么
+## What this example demonstrates
 
-**桌面 WebView + Vue**：`target: "desktop"` → `wae run` 先起 Vite，再拉起 `wae-desktop` 原生窗口加载该页。
+**Desktop WebView + Vue**: `target: "desktop"` → `wae run` starts Vite first, then launches `wae-desktop` native window
+loading that page.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
+- Repo root has `pnpm install`
 - `pnpm --filter @wae/wae run build`
-- `cargo build -p wae-desktop`（首次）
-- Windows：已装 WebView2 Runtime
+- `cargo build -p wae-desktop` (first time)
+- Windows: WebView2 Runtime installed
 - Node.js 22 + pnpm 10
 
-## 启动命令
+## Startup commands
 
 ```bash
-# 仓库根或本目录 cwd 指向本包
+# From repo root or with cwd in this package
 pnpm --filter @wae-example/integration-vue-app exec wae run --port 5173
 ```
 
-默认读 `wae.config.ts` 的 `target: "desktop"` / `platform.client: "win32-x64"`。  
-仅浏览器试跑：`wae run --platform web`。
+Default reads `wae.config.ts` `target: "desktop"` / `platform.client: "win32-x64"`.  
+Browser-only try: `wae run --platform web`.
 
-## 访问地址
+## Access URL
 
-原生窗口标题「WAE · vue」，内容与 Vite 页相同（「WAE + Vue」/ ping）。**不是**系统默认浏览器标签页。
+Native window title "WAE · vue", same content as Vite page ("WAE + Vue" / ping). **Not** the system default browser tab.
 
-## 关键文件
+## Key files
 
 - `wae.config.ts` — `target: "desktop"`
 - `src/App.vue` · `src/main.ts`
-- 宿主：`projects/crates/wae-desktop`（`wae-desktop`）
+- Host: `projects/crates/wae-desktop` (`wae-desktop`)
 
-## 请求 / 事件路径
+## Request / event path
 
 ```text
 wae run
-  → Vite（frontend）
+  → Vite (frontend)
   → @wae/wae-win32-x64.run({ url })
-  → cargo/二进制 wae-desktop --url …
-  → WebView2 窗口
+  → cargo/binary wae-desktop --url …
+  → WebView2 window
 ```
 
-## 练习点
+## Exercises
 
-- 关窗口应顺带结束 Vite。
-- 改 `target: "web"` 对比浏览器路径。
+- Closing window should also stop Vite.
+- Change `target: "web"` to compare browser path.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产会捆预构建静态资源进壳；本示例开发期旁路 Vite URL。
+Production bundles prebuilt static assets into shell; this example dev-bypasses Vite URL.
 
-依赖：`@wae/client` · `@wae/adapter-vue` · `vue` · `@wae/wae` · `vite` · 本机 `wae-desktop`。
+Dependencies: `@wae/client` · `@wae/adapter-vue` · `vue` · `@wae/wae` · `vite` · local `wae-desktop`.

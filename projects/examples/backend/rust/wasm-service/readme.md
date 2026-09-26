@@ -1,45 +1,44 @@
 # backend/rust/wasm-service
 
-## 这个示例展示什么
+## What this example demonstrates
 
-Rust 编译为 Wasm 的服务占位：强调 Wasm 服务与「页面里的 `@wae/client`」不同。
+Rust compiled to Wasm service placeholder: Wasm service differs from “`@wae/client` in a page”.
 
-## 运行前提
+## Prerequisites
 
-本目录目前**只有 README**，没有 `Cargo.toml` / 源码，**不能** `cargo run`，也没有 npm `package.json`。
+This directory currently **only has README**—no `Cargo.toml` / source; **cannot** `cargo run`, no npm `package.json`.
 
-## 启动命令
+## Startup commands
 
-无本目录启动命令。相关可检查的宿主 crate 例如：
+No startup commands in this directory. Related host crates you can check:
 
 ```bash
 cargo check -p wae-bridge
 ```
 
+## Access URL
 
-## 访问地址
+None.
 
-无。
+## Key files
 
-## 关键文件
+- This README only (project TBD)
 
-- 仅本 README（待补工程）
-
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-调用方
-  → Wasm 导出 / WASI 或 Host 嵌入
-  → Rust wasm-service 逻辑
+Caller
+  → Wasm export / WASI or host embed
+  → Rust wasm-service logic
 ```
 
-## 练习点
+## Exercises
 
-- 对照 `frontend/wasm`：那边是前端 opt-in；这边是服务侧 Wasm。
-- 阅读平台 Wasm 包说明，勿假定本目录已有 `wasm-bindgen` 工程。
+- Contrast `frontend/wasm`: that is frontend opt-in; this is service-side Wasm.
+- Read platform Wasm package docs; do not assume this directory has wasm-bindgen project.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产 Rust 服务是独立部署单元；WAE host 是本地壳。二者都叫「后端」时务必写清。
+Production Rust services are separate deploy units; WAE host is local shell. When both are “backend”, label which.
 
-依赖说明：无本目录依赖。不参与 examples 的 pnpm filter。
+Dependencies: none in this directory. Not in examples pnpm filter.

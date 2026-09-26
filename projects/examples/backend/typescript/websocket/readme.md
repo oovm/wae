@@ -1,60 +1,60 @@
 # @wae-example/backend-ts-websocket
 
-## 这个示例展示什么
+## What this example demonstrates
 
-后端 WebSocket 意图（无 WAE 前端）：依赖面同泛化 server/serverless。源码未建立 WS 服务器。
+Backend WebSocket intent (no WAE frontend): same generic server/serverless dependency surface. Source does not create WS
+server.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
 
+## Startup commands
 
-## 启动命令
-
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/backend-ts-websocket run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-WS 客户端
-  → 后端升级或独立 WS listener（目标）
-  → 帧处理
-  → 回推
-（今日仅有 createServer 占位）
+WS client
+  → backend upgrade or separate WS listener (target)
+  → frame handling
+  → push back
+(today only createServer placeholder)
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 先完成 HTTP `route` 自测，再查所选运行时（Node/Deno）的 WS API 如何与 `fetch` 应用并存。
-- 对照 `fullstack/websocket`：本目录没有 `@wae/client`。
-- 避免把空的 `createServer()` 说成「已支持 WS」。
+- Complete HTTP `route` self-test first; then check how your runtime (Node/Deno) coexists WS with `fetch` app.
+- Contrast `fullstack/websocket`: no `@wae/client` here.
+- Avoid claiming empty `createServer()` supports WS.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产要连接管理与水平扩展；本示例无监听。
+Production needs connection management and horizontal scale; this example has no listener.
 
-依赖（本示例）：`@wae/server`、`@wae/serverless`。
+Dependencies (this example): `@wae/server`, `@wae/serverless`.

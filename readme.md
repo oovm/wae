@@ -1,91 +1,87 @@
 # WAE
 
-WAE 是一个由 **Rust host** 驱动、以 **TypeScript** 为应用层的 WebView 全栈框架。它提供框架无关的 `client` / `server`
-、通信协议与平台适配器；应用按目标环境组合浏览器、Wasm、桌面或移动壳。Rust 负责本地宿主与原生能力，不进入默认前端 bundle；Wasm
-为显式 opt-in。
+WAE is a full-stack WebView framework driven by a **Rust host** with **TypeScript** as the application layer. It provides framework-agnostic `client` / `server`, communication protocols, and platform adapters; applications compose browser, Wasm, desktop, or mobile shells by target environment. Rust handles the local host and native capabilities and does not enter the default frontend bundle; Wasm is an explicit opt-in.
 
-**没有** `@wae/ui`， **没有** `@wae/adapter-vanilla`。纯 TS / DOM 直接用 `@wae/client`。
+There is **no** `@wae/ui` and **no** `@wae/adapter-vanilla`. For plain TS / DOM, use `@wae/client` directly.
 
-当前 npm 版本为 `0.0.0`（占位首发）：库 API 与包面已对齐，CLI / 多数 adapter / 平台壳仍是骨架，不要按生产完备度理解。
+The current npm version is `0.0.0` (placeholder initial release): library APIs and package surfaces are aligned, but the CLI, most adapters, and platform shells remain skeletons—do not treat them as production-ready.
 
-## 产品组成（用户视角）
+## Product composition (user view)
 
 ```text
-应用配置（@wae/wae · defineConfig）
-  ├─ frontend / client（@wae/client）
-  │   └─ adapter：Vue / React / Svelte / Solid（可选）
-  ├─ backend / server（@wae/server）
+App config (@wae/wae · defineConfig)
+  ├─ frontend / client (@wae/client)
+  │   └─ adapter: Vue / React / Svelte / Solid (optional)
+  ├─ backend / server (@wae/server)
   │   └─ serverless → Node / Deno / Cloudflare
-  ├─ communication（@wae/types · @wae/core · @wae/protocol）
+  ├─ communication (@wae/types · @wae/core · @wae/protocol)
   └─ host / platform
-      ├─ @wae/wae-web
       ├─ @wae/wae-unknown-wasm32
-      ├─ desktop：wae-win32-* / wae-darwin-* / wae-linux-*
-      └─ mobile：wae-android-arm64 / wae-ios-arm64
+      ├─ desktop: wae-win32-* / wae-darwin-* / wae-linux-*
+      └─ mobile: wae-android-arm64 / wae-ios-arm64
 ```
 
-| 概念                         | 做什么                                                   | 不是什么                                 |
-|------------------------------|----------------------------------------------------------|------------------------------------------|
-| **client**                   | 前端运行时：`createClient`、HTTP/action、session、bridge | 不是 UI 框架                             |
-| **adapter**                  | 把已有 `WaeClient` 接到 Vue/React/Svelte/Solid           | 不是第二套 runtime                       |
-| **bundler**                  | 默认 Vite（`wae run` 代启）；可设 `custom` 换 Webpack 等 | 不是 WAE 内核；可换                      |
-| **server**                   | 平台无关 `fetch` 应用与路由                              | 不是 Node 进程本身                       |
-| **serverless**               | 把 server 适配成 `(request, env, ctx) => Response`       | 不是具体云厂商 API                       |
-| **server-\***                | 绑定 Node / Deno / Cloudflare                            | 不可互相假设文件系统/定时器              |
-| **protocol / types / core**  | 跨端消息与共享原语                                       | 不是业务 handler                         |
-| **host（Rust）**             | 本地壳 ↔ 前端 bridge                                     | 不是远程业务后端                         |
-| **platform（`@wae/wae-*`）** | 目标 OS/运行时发行包                                     | 不是普通业务依赖（经 CLI optional 拉取） |
+| Concept | What it does | What it is not |
+|---------|--------------|----------------|
+| **client** | Frontend runtime: `createClient`, HTTP/action, session, bridge | Not a UI framework |
+| **adapter** | Connects an existing `WaeClient` to Vue/React/Svelte/Solid | Not a second runtime |
+| **bundler** | Default Vite (`wae run` starts it); set `custom` to swap Webpack, etc. | Not WAE core; swappable |
+| **server** | Platform-agnostic `fetch` app and routing | Not the Node process itself |
+| **serverless** | Adapts server to `(request, env, ctx) => Response` | Not a specific cloud vendor API |
+| **server-\*** | Binds Node / Deno / Cloudflare | Must not assume filesystem/timers across runtimes |
+| **protocol / types / core** | Cross-end messages and shared primitives | Not business handlers |
+| **host (Rust)** | Local shell ↔ frontend bridge | Not a remote business backend |
+| **platform (`@wae/wae-*`)** | Target OS/runtime distribution packages | Not ordinary business deps (pulled via CLI optional) |
 
-## 选包
+## Package selection
 
-| 包                                                       | 何时安装                                                                 |
-|----------------------------------------------------------|--------------------------------------------------------------------------|
-| `@wae/wae`                                               | 需要 CLI 与 `defineConfig`                                               |
-| `@wae/client`                                            | 任何前端（含无框架）                                                     |
-| `@wae/adapter-vue` / `react` / `svelte` / `solid`        | 只用对应框架时                                                           |
-| `@wae/server`                                            | 写跨运行时 handler                                                       |
-| `@wae/serverless`                                        | 需要 Worker 风格 `fetch` 导出                                            |
-| `@wae/server-node` / `server-deno` / `server-cloudflare` | 部署到对应运行时                                                         |
-| `@wae/types` / `@wae/core` / `@wae/protocol`             | 协议/类型/ID 与编解码                                                    |
-| `@wae/wae-*`                                             | 一般**不要**手装；装 `@wae/wae` 时作为 `optionalDependencies` 按平台拉取 |
+| Package | When to install |
+|---------|-----------------|
+| `@wae/wae` | Need CLI and `defineConfig` |
+| `@wae/client` | Any frontend (including no framework) |
+| `@wae/adapter-vue` / `react` / `svelte` / `solid` | Only when using that framework |
+| `@wae/server` | Write cross-runtime handlers |
+| `@wae/serverless` | Need Worker-style `fetch` export |
+| `@wae/server-node` / `server-deno` / `server-cloudflare` | Deploy to that runtime |
+| `@wae/types` / `@wae/core` / `@wae/protocol` | Protocol/types/IDs and encode-decode |
+| `@wae/wae-*` | Generally **do not** install manually; pulled as `optionalDependencies` when installing `@wae/wae` |
 
-不要安装：`@wae/ui`、`@wae/adapter-vanilla`（不存在且不会回来）。
+Do not install: `@wae/ui`, `@wae/adapter-vanilla` (they do not exist and will not return).
 
-## 与 Vite
+## With Vite
 
-**常用 Vite，可换**（接近 Tauri 模板习惯，而不是把 Vite 写进 WAE 内核）。
+**Vite is common and swappable** (similar to Tauri template habits, not baked into WAE core).
 
-- 默认：`frontend.bundler: "vite"` → `wae run` 代启 Vite（`vite` 为 optional peer）。
-- 换工具链：`frontend.bundler: "custom"` + `frontend.devUrl`，自行用 Webpack / Rspack 等。
+- Default: `frontend.bundler: "vite"` → `wae run` starts Vite (`vite` is an optional peer).
+- Swap toolchain: `frontend.bundler: "custom"` + `frontend.devUrl`, run Webpack / Rspack yourself.
 
-详见 [`@wae/wae`](projects/packages/wae/readme.md)。
+See [`@wae/wae`](projects/packages/wae/readme.md) for details.
 
-## 按目标怎么选
+## Choosing by target
 
-- **只做浏览器前端**：`@wae/client` + 可选 adapter；平台用 `@wae/wae-web`（随 CLI）。
-- **需要 Node HTTP 服务**：`@wae/server` + `@wae/server-node`（当前 `serve` 为骨架，未真正 `listen`）。
-- **Deno**：`@wae/server` + `@wae/server-deno`（导出适配后的 `fetch`）。
-- **Cloudflare Worker**：`@wae/server` + `@wae/server-cloudflare`（`createCloudflareApp` / `createWorker`）。
-- **Wasm 客户端**：`@wae/wae-unknown-wasm32`；构建与加载方式见该包 README（当前为占位 API）。
-- **桌面 WebView**：`target: "desktop"` + 对应 `@wae/wae-win32-*` / `darwin-*` / `linux-*` + Rust host；原生二进制尚未打进
-  npm。
-- **移动壳**：`@wae/wae-android-arm64` / `@wae/wae-ios-arm64` + host；同样为占位。
+- **Browser frontend only**: `@wae/client` + optional adapter; `wae run` starts Vite (no `@wae/wae-*` platform package).
+- **Node HTTP service**: `@wae/server` + `@wae/server-node` (current `serve` is skeleton, does not actually `listen`).
+- **Deno**: `@wae/server` + `@wae/server-deno` (exports adapted `fetch`).
+- **Cloudflare Worker**: `@wae/server` + `@wae/server-cloudflare` (`createCloudflareApp` / `createWorker`).
+- **Wasm client**: `@wae/wae-unknown-wasm32`; build/load details in that package README (placeholder API today).
+- **Desktop WebView**: `target: "desktop"` + matching `@wae/wae-win32-*` / `darwin-*` / `linux-*` + Rust host; native binaries not yet in npm.
+- **Mobile shell**: `@wae/wae-android-arm64` / `@wae/wae-ios-arm64` + host; also placeholders.
 
-## 十分钟能验证什么
+## What you can verify in ten minutes
 
-### A. `wae run`（Vue / React 页）
+### A. `wae run` (Vue / React page)
 
 ```bash
 pnpm install
 pnpm --filter @wae/wae run build
 pnpm --filter @wae-example/integration-vue-app exec wae run --port 5173
-# 另开终端：
+# In another terminal:
 pnpm --filter @wae-example/integration-react-app exec wae run --port 5174
 ```
 
-浏览器打开终端打印的 Local URL，应看到标题与「ping client」按钮。
+Open the Local URL printed in the terminal; you should see a title and a "ping client" button.
 
-### B. 库 API（无需进程）
+### B. Library API (no process needed)
 
 ```ts
 import {createServer, route} from "@wae/server";
@@ -102,61 +98,61 @@ pnpm run check:ts
 pnpm exec wae help
 ```
 
-`wae create` / `build` / `generate` 等仍是骨架。
+`wae create` / `build` / `generate` etc. remain skeletons.
 
-## 请求如何流动
+## How requests flow
 
-**浏览器 ↔ 远程 server（HTTP）**
+**Browser ↔ remote server (HTTP)**
 
 ```text
 createClient → server.fetch / action
   → HTTP
-  → createServer 路由 handler
+  → createServer route handler
   → Response
-  → client 解码（action 期望 JSON）
+  → client decode (action expects JSON)
 ```
 
-**前端 ↔ Rust host（WebView / native）**
+**Frontend ↔ Rust host (WebView / native)**
 
 ```text
-ClientMessage（@wae/protocol）
+ClientMessage (@wae/protocol)
   → bridge / IPC
-  → host（wae-bridge）
-  → HostMessage（domPatch / rpc / error）
+  → host (wae-bridge)
+  → HostMessage (domPatch / rpc / error)
 ```
 
-**Worker 部署**
+**Worker deployment**
 
 ```text
 createServer → adaptFetch / createCloudflareApp
-  → runtime 的 fetch(request, env, ctx)
+  → runtime fetch(request, env, ctx)
 ```
 
-## 仓库布局
+## Repository layout
 
 ```text
 wae/
   projects/
-    crates/      # Rust：wae-types · wae-bridge · wae-desktop
-    packages/    # npm：@wae/* 全部库与平台壳
-    examples/    # 按用途分类的示例（不发布）
+    crates/      # Rust: wae-types · wae-bridge · wae-desktop
+    packages/    # npm: all @wae/* libraries and platform shells
+    examples/    # Examples by use case (not published)
 ```
 
-## 下一步读哪份 README
+## Which README to read next
 
-| 你要做的事     | 去读 |
-|----------------|------|
-| 总览           | [`projects`](projects/readme.md) |
-| 配置工程 / CLI | [`packages/wae`](projects/packages/wae/readme.md) |
-| 前端 runtime   | [`@wae/client`](projects/packages/client/readme.md) |
-| 框架接入       | [`packages`](projects/packages/readme.md) |
-| 服务端         | [`@wae/server`](projects/packages/server/readme.md) |
-| 通信与协议     | [`packages/types`](projects/packages/types/readme.md) |
-| Rust host      | [`projects/crates`](projects/crates/readme.md) |
-| 平台包         | [`packages`](projects/packages/readme.md)（`wae-*` 目录） |
-| 可对照示例     | [`examples`](projects/examples/readme.md) |
+| What you want to do | Read |
+|---------------------|------|
+| Overview | [`projects`](projects/readme.md) |
+| Project config / CLI | [`packages/wae`](projects/packages/wae/readme.md) |
+| Frontend runtime | [`@wae/client`](projects/packages/client/readme.md) |
+| Framework integration | [`packages`](projects/packages/readme.md) |
+| Server side | [`@wae/server`](projects/packages/server/readme.md) |
+| Communication & protocol | [`packages/types`](projects/packages/types/readme.md) |
+| Rust host | [`projects/crates`](projects/crates/readme.md) |
+| Platform packages | [`packages`](projects/packages/readme.md) (`wae-*` dirs) |
+| Runnable examples | [`examples`](projects/examples/readme.md) |
 
-## 仓库检查与发布
+## Repository checks and publishing
 
 ```bash
 pnpm run check:boundary
@@ -164,4 +160,4 @@ pnpm run fmt:check
 pnpm run publish:dry
 ```
 
-`0.0.0` 发布范围：产品面、通信、后端适配、框架 adapter、全部 `@wae/wae-*`。不发布 examples。
+`0.0.0` publish scope: product surface, communication, backend adapters, framework adapters, all `@wae/wae-*`. Examples are not published.

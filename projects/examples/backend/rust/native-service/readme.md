@@ -1,46 +1,45 @@
 # backend/rust/native-service
 
-## 这个示例展示什么
+## What this example demonstrates
 
-面向本机能力的 Rust native service 占位（文件、设备等），与 WebView host 相关但不是 TS server。
+Rust native service placeholder for local capabilities (files, devices), related to WebView host but not TS server.
 
-## 运行前提
+## Prerequisites
 
-本目录目前**只有 README**，没有 `Cargo.toml` / 源码，**不能** `cargo run`，也没有 npm `package.json`。
+This directory currently **only has README**—no `Cargo.toml` / source; **cannot** `cargo run`, no npm `package.json`.
 
-## 启动命令
+## Startup commands
 
-无本目录启动命令。相关可检查的宿主 crate 例如：
+No startup commands in this directory. Related host crates you can check:
 
 ```bash
 cargo check -p wae-bridge
 ```
 
+## Access URL
 
-## 访问地址
+None.
 
-无。
+## Key files
 
-## 关键文件
+- This README only (project TBD)
 
-- 仅本 README（待补工程）
-
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-前端 / 其它进程
-  → IPC 或本地协议
+Frontend / other process
+  → IPC or local protocol
   → Rust native service
-  → 系统调用
+  → system calls
 ```
 
-## 练习点
+## Exercises
 
-- 对照 `native/filesystem` 等 TS 示例：页面侧意图 vs 本目录「服务进程」意图。
-- 真正可测的桥在 `wae-bridge` / host crates。
+- Contrast TS examples like `native/filesystem` (page side) with this directory (service process intent).
+- Testable bridge lives in `wae-bridge` / host crates.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产 Rust 服务是独立部署单元；WAE host 是本地壳。二者都叫「后端」时务必写清。
+Production Rust services are separate deploy units; WAE host is local shell. When both are “backend”, label which.
 
-依赖说明：无本目录依赖。不参与 examples 的 pnpm filter。
+Dependencies: none in this directory. Not in examples pnpm filter.

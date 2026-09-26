@@ -1,59 +1,60 @@
 # @wae-example/frontend-wasm
 
-## 这个示例展示什么
+## What this example demonstrates
 
-Wasm 客户端意图：前端可显式 opt-in Wasm 相关平台包。本示例依赖仍只有 `@wae/client`，**没有**加载 `.wasm` 的代码。
+Wasm client intent: frontend may explicitly opt into Wasm platform packages. Dependencies are still only `@wae/client`;
+**no** `.wasm` loading code.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
-- Wasm 为显式 opt-in；不要假定默认 bundle 含 Rust/Wasm。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
+- Wasm is explicit opt-in; do not assume default bundle includes Rust/Wasm.
 
-## 启动命令
+## Startup commands
 
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/frontend-wasm run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
-- `src/main.ts` — 仅 `createClient`
+- `src/main.ts` — only `createClient`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-页面 / Worker
-  →（可选）加载 @wae/wae-unknown-wasm32 能力
-  → createClient 仍走 TS API
-  → 远程 HTTP 或其它 transport
+Page / Worker
+  → (optional) load @wae/wae-unknown-wasm32 capabilities
+  → createClient still uses TS API
+  → remote HTTP or other transport
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 阅读 `@wae/wae-unknown-wasm32` 包 README，分清「平台占位 API」与本示例的 client 构造。
-- 确认本 `package.json` **未**依赖 wasm 平台包——这是刻意的最小面。
-- 练习保持在 TS `check`；不要假装已有 wasm-pack 流水线。
+- Read `@wae/wae-unknown-wasm32` README: separate “platform placeholder API” from this example’s client construction.
+- Confirm this `package.json` **does not** depend on wasm platform package—intentional minimal surface.
+- Keep practice at TS `check`; do not pretend wasm-pack pipeline exists.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产需构建与加载 Wasm 产物；当前平台 API 多为占位，本示例更不会跑 Wasm。
+Production builds and loads Wasm artifacts; platform API is mostly placeholder; this example does not run Wasm.
 
-依赖（本示例）：`@wae/client`。
+Dependencies (this example): `@wae/client`.

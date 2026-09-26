@@ -1,60 +1,60 @@
 # @wae-example/backend-ts-node
 
-## 这个示例展示什么
+## What this example demonstrates
 
-无 WAE 前端的 Node 后端面：依赖 `@wae/server` + `@wae/serverless` + `@wae/server-node`。`src/main.ts` 目前只 `createServer()`，未调用 `serve`。
+Node backend surface without WAE frontend: depends on `@wae/server` + `@wae/serverless` + `@wae/server-node`.
+`src/main.ts` only `createServer()` today; does not call `serve`.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
 
+## Startup commands
 
-## 启动命令
-
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/backend-ts-node run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
-- `package.json` — 含 `@wae/server-node`
+- `package.json` — includes `@wae/server-node`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 createServer
-  →（目标）@wae/server-node serve(app)
-  → Node HTTP 进程
-  → app.fetch 处理 Request
-（0.0.0 的 serve 为骨架，可能不 listen）
+  → (target) @wae/server-node serve(app)
+  → Node HTTP process
+  → app.fetch handles Request
+(0.0.0 serve is skeleton, may not listen)
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 先 `route` + `app.fetch` 不经过 Node 进程验证 handler。
-- 阅读 `@wae/server-node` README，看 `serve` 当前是否仍打印骨架。
-- 本示例**没有** `createClient`——不要照抄 fullstack 练习。
+- Verify handlers with `route` + `app.fetch` without Node process first.
+- Read `@wae/server-node` README whether `serve` still prints skeleton.
+- This example **has no** `createClient`—do not copy fullstack exercises.
 
-## 与生产应用的差异
+## Differences from production apps
 
-接线后预期长驻 Node 进程与真实端口；当前无端口。
+When wired, expect long-lived Node process and real port; currently no port.
 
-依赖（本示例）：`@wae/server`、`@wae/serverless`、`@wae/server-node`。
+Dependencies (this example): `@wae/server`, `@wae/serverless`, `@wae/server-node`.

@@ -1,53 +1,53 @@
 # @wae-example/integration-react-app
 
-## 这个示例展示什么
+## What this example demonstrates
 
-可在浏览器打开的 **React + `wae run`** 工程：`defineConfig({ framework: "react" })`、`WaeProvider` / `useWae`、Vite。
+Browser-openable **React + `wae run`** project: `defineConfig({ framework: "react" })`, `WaeProvider` / `useWae`, Vite.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
+- Repo root has `pnpm install`
 - `pnpm --filter @wae/wae run build`
 - Node.js 22 + pnpm 10
 
-## 启动命令
+## Startup commands
 
 ```bash
 pnpm exec wae run --port 5174
 
-# 或仓库根
+# Or from repo root
 pnpm --filter @wae-example/integration-react-app exec wae run --port 5174
 ```
 
-cwd 须为本目录（含 `wae.config.ts`）。
+cwd must be this directory (contains `wae.config.ts`).
 
-## 访问地址
+## Access URL
 
-`http://127.0.0.1:5174/` — 应看到「WAE + React」与 ping 按钮。
+`http://127.0.0.1:5174/` — should show "WAE + React" and ping button.
 
-## 关键文件
+## Key files
 
 - `wae.config.ts` — `framework: "react"` + `adapter: react()`
 - `index.html` / `src/main.tsx`
 - `vite.config.ts` — `@vitejs/plugin-react`
 
-## 请求 / 事件路径
+## Request / event path
 
 ```text
 wae run
   → load wae.config.ts
   → Vite (web)
   → createClient + <WaeProvider>
-  → useWae() 于 Panel
+  → useWae() in Panel
 ```
 
-## 练习点
+## Exercises
 
-- 不要与 `@wae/adapter-vue` 的 provide 模型混用。
-- 对比占位示例 [`../react`](../react/readme.md)。
+- Do not mix with `@wae/adapter-vue` provide model.
+- Compare placeholder example [`../react`](../react/readme.md).
 
-## 与生产应用的差异
+## Differences from production apps
 
-无 SSR、无真实 HTTP 后端；只验证 CLI 与 React 注入。
+No SSR, no real HTTP backend; only verifies CLI and React injection.
 
-依赖：`@wae/client` · `@wae/adapter-react` · `react` · `@wae/wae` · `vite`。
+Dependencies: `@wae/client` · `@wae/adapter-react` · `react` · `@wae/wae` · `vite`.

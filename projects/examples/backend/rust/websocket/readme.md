@@ -1,45 +1,45 @@
 # backend/rust/websocket
 
-## 这个示例展示什么
+## What this example demonstrates
 
-Rust WebSocket 服务占位：文档提醒 WS 也可在 Rust 侧实现，但本目录无工程。
+Rust WebSocket service placeholder: docs note WS can live in Rust, but this directory has no project.
 
-## 运行前提
+## Prerequisites
 
-本目录目前**只有 README**，没有 `Cargo.toml` / 源码，**不能** `cargo run`，也没有 npm `package.json`。
+This directory currently **only has README**—no `Cargo.toml` / source; **cannot** `cargo run`, no npm `package.json`.
 
-## 启动命令
+## Startup commands
 
-无本目录启动命令。相关可检查的宿主 crate 例如：
+No startup commands in this directory. Related host crates you can check:
 
 ```bash
 cargo check -p wae-bridge
 ```
 
+## Access URL
 
-## 访问地址
+None.
 
-无。
+## Key files
 
-## 关键文件
+- This README only (project TBD)
 
-- 仅本 README（待补工程）
-
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 WS
   → Rust service
-  → 帧 / 推送
+  → frames / push
 ```
 
-## 练习点
+## Exercises
 
-- 对比 `backend/typescript/websocket`：语言与部署单元不同，语义都是「无 WAE 前端的后端」。
-- 不要从本目录复制不存在的 `Cargo.toml`。
+- Compare `backend/typescript/websocket`: different language and deploy unit, same “backend without WAE frontend”
+  semantics.
+- Do not copy a nonexistent `Cargo.toml` from this directory.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产 Rust 服务是独立部署单元；WAE host 是本地壳。二者都叫「后端」时务必写清。
+Production Rust services are separate deploy units; WAE host is local shell. When both are “backend”, label which.
 
-依赖说明：无本目录依赖。不参与 examples 的 pnpm filter。
+Dependencies: none in this directory. Not in examples pnpm filter.

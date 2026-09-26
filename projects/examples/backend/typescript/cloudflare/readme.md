@@ -1,41 +1,42 @@
 # @wae-example/backend-ts-cloudflare
 
-## 这个示例展示什么
+## What this example demonstrates
 
-Cloudflare Workers 面：依赖 `@wae/server-cloudflare`（`createCloudflareApp` / `createWorker` 一类 API）。源码尚未调用这些工厂。
+Cloudflare Workers surface: depends on `@wae/server-cloudflare` (`createCloudflareApp` / `createWorker` APIs). Source
+does not call those factories yet.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
-- 无 `wrangler.toml`、无 `wrangler dev` 脚本；不要发明已接线的 Workers 流程。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
+- No `wrangler.toml`, no `wrangler dev` script; do not invent wired Workers flow.
 
-## 启动命令
+## Startup commands
 
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/backend-ts-cloudflare run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
-- `package.json` — 含 `@wae/server-cloudflare`
+- `package.json` — includes `@wae/server-cloudflare`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 createServer
@@ -44,16 +45,16 @@ createServer
   → Response
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- `route` + `app.fetch` 验证 handler 与平台无关。
-- 阅读 `@wae/server-cloudflare` README，对照 Worker 签名与 `env` 绑定。
-- 与 `backend/typescript/fetch` 对比：那边更泛化 serverless，这边钉死 CF。
+- Verify platform-agnostic handlers with `route` + `app.fetch`.
+- Read `@wae/server-cloudflare` README; match Worker signature and `env` bindings.
+- Versus `backend/typescript/fetch`: that one is generic serverless, this pins CF.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产用 Wrangler 发布与 KV/R2 绑定；本示例无 Worker 打包。
+Production uses Wrangler publish and KV/R2 bindings; this example has no Worker bundle.
 
-依赖（本示例）：`@wae/server`、`@wae/serverless`、`@wae/server-cloudflare`。
+Dependencies (this example): `@wae/server`, `@wae/serverless`, `@wae/server-cloudflare`.

@@ -1,8 +1,9 @@
 # `@wae/core`
 
-client 与 server **共用的小型 runtime**：生成 ID、识别 `WaeError`、提取错误消息。不含 HTTP app、不含协议 JSON、不含 DOM/UI。
+Small **shared runtime** for client and server: generate IDs, recognize `WaeError`, extract error messages. No HTTP app,
+no protocol JSON, no DOM/UI.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/core@0.0.0
@@ -10,25 +11,25 @@ pnpm add @wae/core@0.0.0
 
 ## API
 
-| 函数 | 行为 |
-|------|------|
-| `createRequestId()` | 返回 `req_<time>_<rand>` |
-| `createNodeId()` | 返回 `node_<rand>` |
-| `isWaeError(value)` | 结构判别（含 `code` + `message`） |
-| `toErrorMessage(error)` | `WaeError` / `Error` / 其它 → 字符串 |
+| Function                | Behavior                                  |
+|-------------------------|-------------------------------------------|
+| `createRequestId()`     | Returns `req_<time>_<rand>`               |
+| `createNodeId()`        | Returns `node_<rand>`                     |
+| `isWaeError(value)`     | Structural check (has `code` + `message`) |
+| `toErrorMessage(error)` | `WaeError` / `Error` / other → string     |
 
-## 消息语义（本包范围）
+## Message semantics (this package)
 
-| 问题 | 答案（0.0.0） |
-|------|----------------|
-| request 是否有 ID | 由调用方或 `@wae/protocol.createRpcRequest` 生成；本包只提供生成器 |
-| 取消 | **不**实现 Abort 编排；用标准 `AbortSignal` 自行传递 |
-| 送达保证 | **无**；本包不负责传输 |
-| 顺序 / 并发 | **无**队列语义 |
+| Question                 | Answer (0.0.0)                                                                              |
+|--------------------------|---------------------------------------------------------------------------------------------|
+| Does request have an ID? | Caller or `@wae/protocol.createRpcRequest` generates; this package only provides generators |
+| Cancellation             | **Does not** implement Abort orchestration; pass standard `AbortSignal` yourself            |
+| Delivery guarantee       | **None**; this package does not transport                                                   |
+| Ordering / concurrency   | **No** queue semantics                                                                      |
 
-传输与至少一次送达属于 transport / host，不在 core。
+Transport and at-least-once delivery belong to transport / host, not core.
 
-## 相关
+## Related
 
-- 类型：[`@wae/types`](../public-types/readme.md)
-- 编解码：[`@wae/protocol`](../protocol/readme.md)
+- Types: [`@wae/types`](../public-types/readme.md)
+- Encode/decode: [`@wae/protocol`](../protocol/readme.md)

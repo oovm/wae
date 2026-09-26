@@ -1,15 +1,15 @@
 # `@wae/server-deno`
 
-把 `@wae/server` 接到 **Deno** 的请求入口：返回 `(request) => Response`，底层经 `@wae/serverless` 的 `adaptFetch`。
+Connects `@wae/server` to **Deno** request entry: returns `(request) => Response`, via `@wae/serverless` `adaptFetch`.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/server@0.0.0 @wae/server-deno@0.0.0
-# 或在 Deno 工程中按你的包管理方式解析 npm:@wae/server-deno@0.0.0
+# Or resolve npm:@wae/server-deno@0.0.0 in a Deno project per your package manager
 ```
 
-## 入口
+## Entry
 
 ```ts
 import { createServer, route } from "@wae/server";
@@ -21,23 +21,23 @@ const app = createServer({
 
 const handler = serve(app);
 export default { fetch: handler };
-// 或：Deno.serve(handler)
+// or: Deno.serve(handler)
 ```
 
-`serve(app)` 返回的函数签名为 `(request: Request) => Promise<Response>`；`env` 目前传入空对象。
+`serve(app)` returns `(request: Request) => Promise<Response>`; `env` is currently an empty object.
 
-## 环境与限制
+## Environment and limits
 
-| 项 | 说明 |
-|----|------|
-| Deno 版本 | 未在本仓 CI 固定；请用较新的 Deno 1.x / 2.x 自行验证 |
-| 文件系统 | 走 Deno 权限模型（`--allow-read` 等），不要假设 Node `fs` |
-| WebSocket | 用 Deno 原生 API；本包未封装 |
-| 定时器 | 可用；与 Worker 的 `waitUntil` 语义不同 |
+| Item         | Notes                                                                |
+|--------------|----------------------------------------------------------------------|
+| Deno version | Not pinned in repo CI; verify on recent Deno 1.x / 2.x               |
+| Filesystem   | Deno permission model (`--allow-read` etc.); do not assume Node `fs` |
+| WebSocket    | Use Deno native APIs; not wrapped here                               |
+| Timers       | Available; semantics differ from Worker `waitUntil`                  |
 
-部署：由你自己的 `deno run` / Deploy 配置完成；本包只提供 handler 工厂。
+Deploy via your own `deno run` / Deploy config; this package only provides a handler factory.
 
-## 相关
+## Related
 
 - [`@wae/serverless`](../serverless/readme.md)
-- 示例：[`examples/backend/typescript/deno`](../../examples/backend/typescript/deno/readme.md)
+- Example: [`examples/backend/typescript/deno`](../../examples/backend/typescript/deno/readme.md)

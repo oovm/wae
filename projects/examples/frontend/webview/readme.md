@@ -1,60 +1,60 @@
 # @wae-example/frontend-webview
 
-## 这个示例展示什么
+## What this example demonstrates
 
-强调「跑在 WebView 里的前端」这一形态：与纯浏览器页共享 `@wae/client`，但后续常接到 host bridge。当前仍是构造-only 骨架。
+Emphasizes “frontend running in WebView”: shares `@wae/client` with pure browser pages but often connects to host bridge
+later. Still construct-only skeleton today.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
 
+## Startup commands
 
-## 启动命令
-
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/frontend-webview run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-WebView 文档
+WebView document
   → createClient
-  → postMessage / bridge（目标）
+  → postMessage / bridge (target)
   → host
   → HostMessage
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 把本目录当成「页面侧」，把 `minimal/bridge-only` / `native/ipc` 当成「桥与 host 侧」对照读。
-- 在类型层面查看 `client.native` 是否在无 `hasNativeBridge` 时仍可用（以实际类型为准）。
-- 勿把本示例当成已内嵌 WebView 控件的 demo。
+- Treat this as “page side”; `minimal/bridge-only` / `native/ipc` as “bridge and host side”.
+- At type level check whether `client.native` is usable without `hasNativeBridge` (per actual types).
+- Do not treat this as an embedded WebView control demo.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产 WebView 由桌面/移动壳提供；本示例没有窗口、没有 transport。
+Production WebView is provided by desktop/mobile shell; this example has no window or transport.
 
-依赖（本示例）：`@wae/client`。
+Dependencies (this example): `@wae/client`.

@@ -1,30 +1,31 @@
 # `@wae/adapter-svelte`
 
-把 `@wae/client` 放进 **Svelte** context（`setContext` / `getContext` 方向）。不提供 `.svelte` UI 组件包。
+Puts `@wae/client` in **Svelte** context (`setContext` / `getContext` direction). No `.svelte` UI component package.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/client@0.0.0 @wae/adapter-svelte@0.0.0
 pnpm add svelte   # peer
 ```
 
-## 提供什么
+## What it provides
 
-| 导出 | 角色 |
-|------|------|
-| `svelte()` | `{ name: "svelte" }`，给 `defineConfig` |
-| `setWaeContext(client)` | 预期在根组件 `onMount`/初始化时写入 context |
-| `getWaeContext()` | 子组件读取 `WaeClient` |
+| Export                  | Role                                        |
+|-------------------------|---------------------------------------------|
+| `svelte()`              | `{ name: "svelte" }` for `defineConfig`     |
+| `setWaeContext(client)` | Expected in root component init / `onMount` |
+| `getWaeContext()`       | Child reads `WaeClient`                     |
 
-Svelte 的 context **不能跨组件树随意提升**；必须在父组件设置后，子组件才能 `get`。这与 React Provider 包裹、Vue 应用级 provide 都不同。
+Svelte context **cannot be lifted arbitrarily** across the tree; parent must set before children can `get`. Unlike React
+Provider wrap or Vue app-level provide.
 
-## 最小结构（接线完成后）
+## Minimal structure (when wired)
 
-以下展示调用关系；**0.0.0 中 `setWaeContext` 为空实现，`getWaeContext` 抛错**。
+Shows call relationships; **in 0.0.0 `setWaeContext` is no-op and `getWaeContext` throws**.
 
 ```svelte
-<!-- App.svelte（示意） -->
+<!-- App.svelte (illustrative) -->
 <script lang="ts">
   import { createClient } from "@wae/client";
   import { setWaeContext, getWaeContext } from "@wae/adapter-svelte";
@@ -38,15 +39,15 @@ import svelte from "@wae/adapter-svelte";
 export default svelte;
 ```
 
-## SSR / hydration / 响应式
+## SSR / hydration / reactivity
 
-| 能力 | 0.0.0 |
-|------|-------|
-| SvelteKit SSR | 未实现 |
-| hydration | 未实现 |
-| 与 `$state` / stores | 未绑定；请自行把请求结果写入 store |
+| Capability             | 0.0.0                                      |
+|------------------------|--------------------------------------------|
+| SvelteKit SSR          | Not implemented                            |
+| hydration              | Not implemented                            |
+| With `$state` / stores | Not bound; write results to store yourself |
 
-## 相关
+## Related
 
 - [`@wae/client`](../client/readme.md)
-- 示例：[`examples/integration/svelte`](../../examples/integration/svelte/readme.md)
+- Example: [`examples/integration/svelte`](../../examples/integration/svelte/readme.md)

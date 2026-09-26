@@ -1,60 +1,60 @@
 # @wae-example/native-ipc
 
-## 这个示例展示什么
+## What this example demonstrates
 
-原生 IPC 边界：`createClient` 时设置 `env: { target: "desktop", hasNativeBridge: true }`，假定走 native bridge，而不是纯浏览器 HTTP 后端。
+Native IPC boundary: `createClient` with `env: { target: "desktop", hasNativeBridge: true }`, assumes native bridge not
+pure browser HTTP backend.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
 
+## Startup commands
 
-## 启动命令
-
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/native-ipc run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts` — `hasNativeBridge: true`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-前端 ClientMessage
+Frontend ClientMessage
   → bridge / IPC
-  → Rust host（wae-bridge）
+  → Rust host (wae-bridge)
   → native capability
-  → HostMessage 回前端
+  → HostMessage back to frontend
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 对照 `minimal/bridge-only` 的路径图，确认「bridge → host」而不是 `createServer`。
-- 在类型上查看 `client.native`；不要把未鉴权的 native 消息当成已授权系统调用。
-- **不要**在本示例练习点里加 HTTP `route`——那会混进错误分层。
+- Compare path diagram with `minimal/bridge-only`: “bridge → host” not `createServer`.
+- Inspect `client.native` at type level; do not treat untrusted native messages as authorized system calls.
+- **Do not** add HTTP `route` in exercises here—that mixes wrong layers.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产需真实 postMessage transport、host 鉴权与壳进程；本示例未打开窗口。
+Production needs real postMessage transport, host authorization, shell process; this example does not open a window.
 
-依赖（本示例）：`@wae/client`。
+Dependencies (this example): `@wae/client`.

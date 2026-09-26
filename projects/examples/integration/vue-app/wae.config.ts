@@ -10,4 +10,9 @@ export default defineConfig({
     },
     target: "desktop",
     platform: { client: "win32-x64" },
+    product: {
+        update: {
+            github: "oovm/wae-example-vue-app",
+        },
+    },
 });

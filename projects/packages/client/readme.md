@@ -1,34 +1,35 @@
 # `@wae/client`
 
-框架无关前端运行时。纯 TS / DOM 直接使用；Vue / React / Svelte / Solid 经独立 `@wae/adapter-*` 注入，**不要**在本包找组件或 hooks。
+Framework-agnostic frontend runtime. Use directly for plain TS / DOM; Vue / React / Svelte / Solid inject via separate
+`@wae/adapter-*`. **Do not** look here for components or hooks.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/client@0.0.0
 ```
 
-## `createClient` 创建什么
+## What `createClient` creates
 
 ```ts
 import { createClient } from "@wae/client";
 
 const client = createClient({
-  server: { baseUrl: "/api" }, // 必填
+  server: { baseUrl: "/api" }, // required
 });
 
-// client.env          运行环境探测结果
-// client.server       HTTP / action 客户端
-// client.native.bridge 浏览器或 native IPC bridge
-// client.session      默认内存 session
-// client.lifecycle    应用生命周期钩子
-// client.navigation   默认浏览器导航
-// client.connectWs(url) → WebSocket 客户端
+// client.env          runtime environment detection
+// client.server       HTTP / action client
+// client.native.bridge browser or native IPC bridge
+// client.session      default in-memory session
+// client.lifecycle    app lifecycle hooks
+// client.navigation   default browser navigation
+// client.connectWs(url) → WebSocket client
 ```
 
-可选覆盖：`env`、`session`、`lifecycle`、`navigation`、`bridge`。
+Optional overrides: `env`, `session`, `lifecycle`, `navigation`, `bridge`.
 
-## 怎样发请求
+## How to send requests
 
 ```ts
 const res = await client.server.fetch("/hello");
@@ -36,33 +37,36 @@ const data = await res.json();
 
 const greet = client.server.action<{ name: string }, { ok: boolean }>("greet");
 const out = await greet.execute({ name: "wae" });
-// POST {baseUrl}/__wae/action/greet ，JSON body；非 2xx 抛错
+// POST {baseUrl}/__wae/action/greet with JSON body; throws on non-2xx
 ```
 
-自定义 `fetch`：`createClient({ server: { baseUrl, fetchImpl } })`。
+Custom `fetch`: `createClient({ server: { baseUrl, fetchImpl } })`.
 
-服务端错误：HTTP 层看 `Response.ok` / status；`action` 在非 ok 时抛 `Error`。协议级 `WaeError` 见 `@wae/types` / `@wae/protocol`（经 bridge 的路径）。
+Server errors: HTTP layer uses `Response.ok` / status; `action` throws `Error` when not ok. Protocol-level `WaeError`
+see `@wae/types` / `@wae/protocol` (bridge path).
 
-## 浏览器 vs WebView
+## Browser vs WebView
 
-| | 浏览器 | WebView / native |
-|--|--------|------------------|
-| 默认 bridge | `createBrowserBridge` | `createNativeIpcBridge`（探测到 native 时） |
-| 原生能力 | 无 | 经 host；前端不可默认可信 |
-| 手动注入 | `bridge: createBrowserBridge()` | 自备 `postMessage` / `onMessage` 的 transport |
+|                     | Browser                         | WebView / native                                  |
+|---------------------|---------------------------------|---------------------------------------------------|
+| Default bridge      | `createBrowserBridge`           | `createNativeIpcBridge` (when native detected)    |
+| Native capabilities | None                            | Via host; frontend must not be trusted by default |
+| Manual injection    | `bridge: createBrowserBridge()` | Supply transport with `postMessage` / `onMessage` |
 
-## adapter 负责什么
+## What adapters do
 
-adapter 只负责把**已创建的** `WaeClient` 放进框架上下文。本包不负责 React hooks 或 Vue inject。
+Adapters only put an **already created** `WaeClient` into framework context. This package does not provide React hooks
+or Vue inject.
 
-## 公开导出（摘要）
+## Public exports (summary)
 
-值：`createClient`、`createServerClient`、`createBrowserBridge`、`createNativeIpcBridge`、`createBrowserNavigation`、`createLifecycle`、`createMemorySession`、`createWebSocketClient`、`detectEnvironment`。
+Values: `createClient`, `createServerClient`, `createBrowserBridge`, `createNativeIpcBridge`, `createBrowserNavigation`,
+`createLifecycle`, `createMemorySession`, `createWebSocketClient`, `detectEnvironment`.
 
-`createRuntime` 为 `createClient` 的弃用别名。
+`createRuntime` is a deprecated alias for `createClient`.
 
-## 相关
+## Related
 
-- 区说明：[`../readme.md`](../readme.md)
-- adapters：[`../adapters/readme.md`](../adapters/readme.md)
-- server：[`../server/readme.md`](../server/readme.md)
+- Area overview: [`../readme.md`](../readme.md)
+- Adapters: [`../adapters/readme.md`](../adapters/readme.md)
+- Server: [`../server/readme.md`](../server/readme.md)

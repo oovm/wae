@@ -1,30 +1,31 @@
 # `@wae/protocol`
 
-协议 **runtime**：把 client / host 消息编成 JSON 字符串，并构造 RPC 请求与响应信封。类型定义在 `@wae/types`；ID 生成依赖 `@wae/core`。
+Protocol **runtime**: encode client / host messages to JSON strings, construct RPC request/response envelopes. Types
+live in `@wae/types`; ID generation uses `@wae/core`.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/protocol@0.0.0
 ```
 
-## 消息种类
+## Message kinds
 
-**Client → Host（`ClientMessage`）**
+**Client → Host (`ClientMessage`)**
 
-| `type` | 含义 |
-|--------|------|
-| `uiEvent` | UI 事件 |
-| `rpc` | RPC 请求（含 `RpcRequest`） |
-| `native` | 原生 capability 调用 |
+| `type`    | Meaning                             |
+|-----------|-------------------------------------|
+| `uiEvent` | UI event                            |
+| `rpc`     | RPC request (includes `RpcRequest`) |
+| `native`  | Native capability call              |
 
-**Host → Client（`HostMessage`）**
+**Host → Client (`HostMessage`)**
 
-| `type` | 含义 |
-|--------|------|
-| `domPatch` | DOM 补丁列表 |
-| `rpc` | RPC 响应 |
-| `error` | `WaeError` |
+| `type`     | Meaning        |
+|------------|----------------|
+| `domPatch` | DOM patch list |
+| `rpc`      | RPC response   |
+| `error`    | `WaeError`     |
 
 ## API
 
@@ -44,26 +45,27 @@ const wire = encodeMessage({ type: "rpc", request: req });
 const back = decodeClientMessage(wire);
 ```
 
-| 函数 | 说明 |
-|------|------|
-| `encodeMessage` | `JSON.stringify` |
-| `decode*` | `JSON.parse`（**无** schema 校验） |
-| `createRpcRequest` | 自动 `createRequestId()` |
-| `okRpcResponse` / `errRpcResponse` | 构造响应 |
-| `hostDomPatches` | 包装 `DomPatch[]` |
+| Function                           | Description                             |
+|------------------------------------|-----------------------------------------|
+| `encodeMessage`                    | `JSON.stringify`                        |
+| `decode*`                          | `JSON.parse` (**no** schema validation) |
+| `createRpcRequest`                 | Auto `createRequestId()`                |
+| `okRpcResponse` / `errRpcResponse` | Build responses                         |
+| `hostDomPatches`                   | Wrap `DomPatch[]`                       |
 
-## 版本 / 握手 / 兼容（现状）
+## Version / handshake / compatibility (current)
 
-| 项 | 0.0.0 |
-|----|-------|
-| 协议版本字段 | **无** 独立 version 帧 |
-| 握手 | **无** |
-| 兼容策略 | 依赖 JSON 形状；未知字段由 `JSON.parse` 保留但 TypeScript 类型不描述 |
-| 运行时校验 | **无**；错误形状靠约定 |
+| Item                   | 0.0.0                                                                              |
+|------------------------|------------------------------------------------------------------------------------|
+| Protocol version field | **No** separate version frame                                                      |
+| Handshake              | **None**                                                                           |
+| Compatibility          | Relies on JSON shape; unknown fields preserved by `JSON.parse` but not in TS types |
+| Runtime validation     | **None**; wrong shapes rely on convention                                          |
 
-扩展字段：在实现握手前，不要依赖未写入 `@wae/types` 的字段做生产兼容。
+Extension fields: before handshake exists, do not rely on fields not written in `@wae/types` for production
+compatibility.
 
-## 相关
+## Related
 
 - [`@wae/types`](../public-types/readme.md)
-- Host：[`host/bridge`](../../crates/wae-bridge/readme.md)
+- Host: [`host/bridge`](../../crates/wae-bridge/readme.md)

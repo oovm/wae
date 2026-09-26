@@ -1,49 +1,51 @@
 # @wae-example/integration-react
 
-## 这个示例展示什么
+## What this example demonstrates
 
-React 注入边界：依赖 `@wae/client` + `@wae/adapter-react`。正式注入是 JSX **`WaeProvider`** + hook **`useWae`**。本目录只构造 client 并 import adapter，**没有** React 组件树、也没有 `react-dom` 挂载。
+React injection boundary: depends on `@wae/client` + `@wae/adapter-react`. Formal injection is JSX **`WaeProvider`** +
+hook **`useWae`**. This directory only constructs client and imports adapter; **no** React tree or `react-dom` mount.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
+- Repo root has `pnpm install`
 - Node.js 22 + pnpm 10
-- peer：`react` / `react-dom`（包声明 React 19 量级；自行安装）
-- 0.0.0：`WaeProvider` 可返回 `null`，`useWae` 抛错——属骨架预期
+- peer: `react` / `react-dom` (React 19 class; install yourself)
+- 0.0.0: `WaeProvider` may return `null`, `useWae` throws—expected skeleton
 
-## 启动命令
+## Startup commands
 
 ```bash
 pnpm --filter @wae-example/integration-react run check
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 成功标准：`tsc --noEmit` 通过。
+**None.** Success: `tsc --noEmit` passes.
 
-## 关键文件
+## Key files
 
 - `src/main.ts` — `createClient` + `import * as adapter from "@wae/adapter-react"`
-- 包说明：[`@wae/adapter-react`](../../../frontend/adapters/react/readme.md)
+- Package docs: [`@wae/adapter-react`](../../../frontend/adapters/react/readme.md)
 
-## 请求 / 事件路径
+## Request / event path
 
 ```text
 createClient
-  → <WaeProvider client={client}>   ← React 特有入口
-  → useWae() 于子组件
-  → client.server.fetch / action → HTTP → 远程 server
+  → <WaeProvider client={client}>   ← React-specific entry
+  → useWae() in child components
+  → client.server.fetch / action → HTTP → remote server
 ```
 
-## 练习点
+## Exercises
 
-- 打开 `@wae/adapter-react` README：导出是 `WaeProvider` / `useWae` / `react()`。
-- **禁止**与 `@wae/adapter-solid` 混用同名 API（实现不同）。
-- Strict Mode 双调用、并发下的 Provider 行为要在真实实现里单独处理；骨架未覆盖。
-- loading / 错误：用组件内 `useState` 包 `server.action`，adapter 不内置。
+- Open `@wae/adapter-react` README: exports are `WaeProvider` / `useWae` / `react()`.
+- **Do not** mix with `@wae/adapter-solid` same-name APIs (different implementation).
+- Strict Mode double invoke and concurrent Provider behavior need handling in real implementation; skeleton does not
+  cover.
+- loading / error: wrap `server.action` with `useState` in components; adapter has none built-in.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产有完整 React 工程；SSR / hydration 未实现。本示例无 JSX 运行。
+Production has full React project; SSR / hydration not implemented. No JSX runtime here.
 
-依赖：`@wae/client`、`@wae/adapter-react`。
+Dependencies: `@wae/client`, `@wae/adapter-react`.

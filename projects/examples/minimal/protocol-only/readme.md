@@ -1,58 +1,79 @@
 # protocol-only
 
-## 这个示例展示什么
+## What this example demonstrates
 
-只关注 `@wae/protocol` / `@wae/types` / `@wae/core` 的消息形状与编解码，不构造 client 或 server。
+Focus only on `@wae/protocol` / `@wae/types` / `@wae/core` message shapes and encode/decode—no client or server
+construction.
 
-## 运行前提
+## Prerequisites
 
-本目录**没有** `package.json` 与源码，不能对本文件夹 `pnpm run check`。需在仓库根已安装产品包，或临时 `pnpm add` 后自测。
+This directory **has no** `package.json` or source; you cannot `pnpm run check` here. Requires product packages
+installed at repo root, or temporary `pnpm add` for self-test.
 
-## 启动命令
+## Startup commands
 
-无本目录脚本。可在临时文件中：
+No scripts in this directory. In a temporary file:
 
 ```bash
+
 pnpm add @wae/protocol@0.0.0 @wae/types@0.0.0 @wae/core@0.0.0
+
 ```
 
 ```ts
+
 import { createRpcRequest, encodeMessage, decodeClientMessage } from "@wae/protocol";
 
+
+
 const req = createRpcRequest("ping", { n: 1 });
+
 const wire = encodeMessage({ type: "rpc", request: req });
+
 const back = decodeClientMessage(wire);
+
 void back;
+
 ```
 
+## Access URL
 
-## 访问地址
+No browser URL. Success: encode/decode runs in your script (or product package tests).
 
-无浏览器地址。成功标准：上述编解码在你的脚本里跑通（或产品包自身测试）。
+## Key files
 
-## 关键文件
+- This README only for now
 
-- 目前仅本 README
-- 实现见 [`@wae/protocol`](../../packages/protocol/readme.md)
+- Implementation: [`@wae/protocol`](../../packages/protocol/readme.md)
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
+
 createRpcRequest / ClientMessage
+
   → encodeMessage
+
   → bytes / JSON wire
+
   → decode*Message
+
   → HostMessage / RpcResponse
+
 ```
 
-## 练习点
+## Exercises
 
-- 对照 `@wae/types` 里 `RpcRequest`、`HostMessage` 字段。
-- 与 [`host/bridge`](../../../crates/wae-bridge/readme.md) 的 `handle` 对照：协议是形状，bridge 是投递。
-- 不要把编解码示例误当成 HTTP `createServer` 路由练习。
+- Compare fields in `@wae/types` `RpcRequest`, `HostMessage`.
 
-## 与生产应用的差异
+- Contrast with [`host/bridge`](../../../crates/wae-bridge/readme.md) `handle`: protocol is shape, bridge is delivery.
 
-生产编解码须与 schema / Rust 侧类型同步；本目录不是可发布示例包，也不走 pnpm filter。
+- Do not treat encode/decode as HTTP `createServer` routing practice.
 
-依赖说明：无本目录依赖清单。练习时使用 `@wae/protocol`、`@wae/types`、`@wae/core`。
+## Differences from production apps
+
+Production encode/decode must stay in sync with schema / Rust types; this directory is not a publishable example package
+and does not use pnpm filter.
+
+Dependencies: no manifest in this directory. For practice use `@wae/protocol`, `@wae/types`, `@wae/core`.
+

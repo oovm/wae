@@ -1,21 +1,22 @@
 # bridge-only
 
-## 这个示例展示什么
+## What this example demonstrates
 
-只关注前端 bridge 与 Rust host 之间的边界：消息进 host，而不是进远程 `@wae/server`。
+Focus on the boundary between frontend bridge and Rust host: messages enter the host, not remote `@wae/server`.
 
-## 运行前提
+## Prerequisites
 
-本目录**没有** `package.json` / `src`。可测的是 crate `wae-bridge`，以及其它示例里 `env.hasNativeBridge` 的类型面。
+This directory **has no** `package.json` / `src`. Testable pieces are crate `wae-bridge`, and `env.hasNativeBridge`
+typing in other examples.
 
-## 启动命令
+## Startup commands
 
 ```bash
 cargo test -p wae-bridge
 cargo check -p wae-bridge
 ```
 
-前端侧可在临时文件或 [`native/ipc`](../native/ipc/readme.md) 对照：
+Frontend side in a temp file or compare [`native/ipc`](../native/ipc/readme.md):
 
 ```ts
 import { createClient } from "@wae/client";
@@ -27,35 +28,35 @@ const client = createClient({
 void client.native.bridge;
 ```
 
+## Access URL
 
-## 访问地址
+None. Success: `cargo test -p wae-bridge`; frontend today only verifies types and default bridge selection.
 
-无。成功标准：`cargo test -p wae-bridge`；前端侧今天只能验证类型与默认 bridge 选择。
+## Key files
 
-## 关键文件
-
-- 本 README
+- This README
 - [`host/bridge`](../../../crates/wae-bridge/readme.md)
-- 有代码的相近示例：[`native/ipc`](../native/ipc/readme.md)
+- Closest example with code: [`native/ipc`](../native/ipc/readme.md)
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 ClientMessage
-  → MessageTransport / IPC（bridge）
-  → host（wae-bridge）handle
+  → MessageTransport / IPC (bridge)
+  → host (wae-bridge) handle
   → Option<HostMessage>
-  → 前端解码
+  → frontend decode
 ```
 
-## 练习点
+## Exercises
 
-- 分清「远程 `@wae/server`」与「本地 host」：二者都不是对方的别名。
-- 跟读 `native/ipc` 的 `hasNativeBridge: true`，再回来对照本 README 的路径图。
-- 0.0.0 的 `handle` 可能恒返回 `None`——练习目标是边界，不是功能清单。
+- Separate “remote `@wae/server`” from “local host”—neither is an alias for the other.
+- Read `native/ipc` with `hasNativeBridge: true`, then return to this README path diagram.
+- In 0.0.0 `handle` may always return `None`—goal is boundary, not feature checklist.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产需要真实 WebView `postMessage` transport 与平台壳二进制；本目录本身无可运行前端。
+Production needs real WebView `postMessage` transport and platform shell binaries; this directory has no runnable
+frontend.
 
-依赖说明：无本目录 npm 包。Rust 侧看 `wae-bridge`；TS 侧练习依赖 `@wae/client`。
+Dependencies: no npm package here. Rust: `wae-bridge`; TS practice: `@wae/client`.

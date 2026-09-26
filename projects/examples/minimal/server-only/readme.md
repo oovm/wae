@@ -1,59 +1,59 @@
 # @wae-example/minimal-server-only
 
-## 这个示例展示什么
+## What this example demonstrates
 
-最小服务端边界：只 `createServer()`，不挂 `@wae/client`、不绑定 Node/Deno/Cloudflare 适配器。
+Minimal server boundary: only `createServer()`, no `@wae/client`, no Node/Deno/Cloudflare adapter binding.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
 
+## Startup commands
 
-## 启动命令
-
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/minimal-server-only run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
-- `src/main.ts` — `createServer()` 后 `void app`
-- `package.json` — 仅依赖 `@wae/server`
+- `src/main.ts` — `createServer()` then `void app`
+- `package.json` — depends only on `@wae/server`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 createServer({ routes? })
   → WaeServerApp.fetch(Request)
   → Response
-（本示例未调用 fetch，也未 listen）
+(this example does not call fetch or listen)
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 用 `route("GET", "/hello", …)` 声明路由，再 `app.fetch(new Request("http://x/hello"))` 断言 JSON。
-- 对比根 README「十分钟能验证什么」里的 server 片段。
-- 需要进程监听时再看 `backend/typescript/node`，不要在本目录假造 `wae dev`。
+- Declare routes with `route("GET", "/hello", …)`, then `app.fetch(new Request("http://x/hello"))` and assert JSON.
+- Compare with the server snippet in root README “What you can verify in ten minutes”.
+- For process listen, see `backend/typescript/node`; do not fake `wae dev` in this directory.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产会声明完整 routes / middleware，并用 `@wae/server-node` 等接到运行时。本示例停在平台无关 `createServer`。
+Production declares full routes / middleware and connects via `@wae/server-node` etc. This example stops at
+platform-agnostic `createServer`.
 
-依赖（本示例）：`@wae/server`。
+Dependencies (this example): `@wae/server`.

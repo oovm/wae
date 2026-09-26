@@ -1,59 +1,59 @@
 # @wae-example/fullstack-auth
 
-## 这个示例展示什么
+## What this example demonstrates
 
-全栈鉴权意图：client + server 同仓占位，后续应挂 session / cookie / token 相关 handler。当前源码与其它 fullstack 一样只是双构造。
+Full-stack auth intent: client + server co-located placeholder for session / cookie / token handlers. Source like other
+fullstack examples is dual construction only.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
 
+## Startup commands
 
-## 启动命令
-
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/fullstack-auth run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts` — `createClient` + `createServer`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-登录表单 / client
-  → POST /auth/…（目标）
-  → server 校验 → Set-Cookie / token
-  → 后续请求带凭证 → 受保护路由
+Login form / client
+  → POST /auth/… (target)
+  → server validates → Set-Cookie / token
+  → later requests carry credentials → protected routes
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 设计一条公开 `route` 与一条需鉴权的 `route`，先用 `app.fetch` + 手写 Header 模拟。
-- 阅读 `@wae/client` session 相关类型（若有），不要假设已有完整 OAuth。
-- 与 `fullstack/rpc` 对比：鉴权是横切，不是另一种 transport。
+- Design one public `route` and one protected `route`; simulate with `app.fetch` + hand-written Header first.
+- Read `@wae/client` session-related types if any; do not assume full OAuth exists.
+- Versus `fullstack/rpc`: auth is cross-cutting, not another transport.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产有真实 IdP、密钥轮换与 CSRF；本示例无登录页、无 cookie 实现。
+Production has real IdP, key rotation, CSRF; this example has no login page or cookie implementation.
 
-依赖（本示例）：`@wae/client`、`@wae/server`、`@wae/serverless`。
+Dependencies (this example): `@wae/client`, `@wae/server`, `@wae/serverless`.

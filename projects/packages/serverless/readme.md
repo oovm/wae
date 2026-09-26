@@ -1,24 +1,25 @@
 # `@wae/serverless`
 
-把 `@wae/server` 的 `WaeServerApp` 适配成 **标准 Fetch 导出** `{ fetch }`。适合 Worker / Edge / 任何「导出 fetch」的宿主；不是另一套业务 API。
+Adapts `@wae/server` `WaeServerApp` to a **standard Fetch export** `{ fetch }`. For Worker / Edge / any host that
+exports `fetch`; not a separate business API.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/server@0.0.0 @wae/serverless@0.0.0
 ```
 
-## 生命周期差异
+## Lifecycle differences
 
-| | `@wae/server` | `@wae/serverless` |
-|--|---------------|-------------------|
-| 入口 | `app.fetch(request, context?)` | `adaptFetch(app).fetch(request, env, ctx?)` |
-| env | 由调用方塞进 context | 第二参数 `env` 传入 |
-| `waitUntil` | `execution.waitUntil` | `ctx.waitUntil` |
+|             | `@wae/server`                  | `@wae/serverless`                           |
+|-------------|--------------------------------|---------------------------------------------|
+| Entry       | `app.fetch(request, context?)` | `adaptFetch(app).fetch(request, env, ctx?)` |
+| env         | Caller puts in context         | Second param `env`                          |
+| `waitUntil` | `execution.waitUntil`          | `ctx.waitUntil`                             |
 
-serverless **没有**长驻进程句柄；每次请求独立。长驻请用 `@wae/server-node`。
+serverless has **no** long-lived process handle; each request is independent. For long-lived use `@wae/server-node`.
 
-## 用法
+## Usage
 
 ```ts
 import { createServer, route } from "@wae/server";
@@ -32,16 +33,16 @@ export const { fetch } = adaptFetch(app);
 // fetch(request, env, { waitUntil })
 ```
 
-`serverless` 是 `adaptFetch` 的 deprecated 别名，新代码请用 `adaptFetch`。
+`serverless` is a deprecated alias for `adaptFetch`; new code should use `adaptFetch`.
 
-## 其它导出
+## Other exports
 
-| API | 用途 |
-|-----|------|
-| `readBinding(map, name)` | 从 binding 映射取值 |
-| `runWithLifecycle(hooks, fn)` | 包装启动 / 关闭钩子（骨架辅助） |
+| API                           | Purpose                                         |
+|-------------------------------|-------------------------------------------------|
+| `readBinding(map, name)`      | Read from binding map                           |
+| `runWithLifecycle(hooks, fn)` | Wrap startup / shutdown hooks (skeleton helper) |
 
-## 相关
+## Related
 
-- Cloudflare：[`@wae/server-cloudflare`](../adapters/cloudflare/readme.md)
-- Deno：[`@wae/server-deno`](../adapters/deno/readme.md)
+- Cloudflare: [`@wae/server-cloudflare`](../adapters/cloudflare/readme.md)
+- Deno: [`@wae/server-deno`](../adapters/deno/readme.md)

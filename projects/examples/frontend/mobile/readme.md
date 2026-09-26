@@ -1,59 +1,60 @@
 # @wae-example/frontend-mobile
 
-## 这个示例展示什么
+## What this example demonstrates
 
-移动壳内前端意图：页面跑在 Android/iOS WebView。当前源码同样只是 `createClient` 骨架，未设置 mobile env。
+Mobile shell frontend intent: page runs in Android/iOS WebView. Source is still `createClient` skeleton; mobile env not
+set.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
-- 诚实状态：无移动模拟器流程；无 `@wae/wae-android-*` / `ios-*` 启动脚本。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
+- Honest status: no mobile simulator flow; no `@wae/wae-android-*` / `ios-*` startup scripts.
 
-## 启动命令
+## Startup commands
 
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/frontend-mobile run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
-移动壳 WebView
+Mobile shell WebView
   → createClient
-  → HTTP 与/或 native bridge → host
-  → HostMessage 回页面
+  → HTTP and/or native bridge → host
+  → HostMessage back to page
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 阅读平台包 README，弄清 mobile 包是 optional 发行物，不是本示例依赖。
-- 对照 `native/mobile-shell`（IPC/壳侧意图）与本目录（页面侧意图）。
-- 练习改 `baseUrl` 类型检查即可；不要编造 `adb`/`xcode` 启动命令。
+- Read platform package READMEs: mobile packages are optional distributions, not dependencies of this example.
+- Contrast `native/mobile-shell` (IPC/shell side) with this directory (page side).
+- Practice `baseUrl` type check only; do not invent `adb`/`xcode` startup commands.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产需真实移动壳与签名分发；0.0.0 平台包多为占位。
+Production needs real mobile shells and store distribution; 0.0.0 platform packages are mostly placeholders.
 
-依赖（本示例）：`@wae/client`。
+Dependencies (this example): `@wae/client`.

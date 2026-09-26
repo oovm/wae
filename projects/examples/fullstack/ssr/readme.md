@@ -1,59 +1,61 @@
 # @wae-example/fullstack-ssr
 
-## 这个示例展示什么
+## What this example demonstrates
 
-SSR 意图：server 渲染 HTML，再 hydrate 到 client。当前只有双构造骨架，**没有**模板引擎或 framework SSR 适配。
+SSR intent: server renders HTML, client hydrates. Dual construction skeleton only; **no** template engine or framework
+SSR adapter.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
-- adapter 文档写明框架 SSR 多未支持；本示例不证明 SSR 已可用。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
+- Adapter docs say framework SSR mostly unsupported; this example does not prove SSR works.
 
-## 启动命令
+## Startup commands
 
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/fullstack-ssr run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 Request
-  → createServer 渲染 HTML（目标）
+  → createServer renders HTML (target)
   → Response text/html
-  → 浏览器 hydrate → createClient 接管交互
+  → browser hydrate → createClient takes over interaction
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 用 `route` 返回 `new Response("<html>…</html>", { headers: { "content-type": "text/html" } })`，经 `app.fetch` 查看正文。
-- 分清「server 吐 HTML」与「integration adapter 的客户端注入」是两层。
-- 不要调用不存在的 `wae ssr` CLI。
+- Return `new Response("<html>…</html>", { headers: { "content-type": "text/html" } })` from a `route`, inspect body via
+  `app.fetch`.
+- Separate “server emits HTML” from “integration adapter client injection”—two layers.
+- Do not call nonexistent `wae ssr` CLI.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产需框架 SSR 管道、缓存与流式渲染；本示例无 HTML 出口。
+Production needs framework SSR pipeline, caching, streaming; this example has no HTML output.
 
-依赖（本示例）：`@wae/client`、`@wae/server`、`@wae/serverless`。
+Dependencies (this example): `@wae/client`, `@wae/server`, `@wae/serverless`.

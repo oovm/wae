@@ -1,23 +1,23 @@
 # `@wae/adapter-react`
 
-把已有的 `@wae/client` 注入 **React** 树。本包只做 Provider / hook，**不**提供 UI 组件。
+Injects an existing `@wae/client` into a **React** tree. Provider / hook only; **no** UI components.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/client@0.0.0 @wae/adapter-react@0.0.0
 pnpm add react react-dom   # peer ^19
 ```
 
-## 提供什么
+## What it provides
 
-| 导出 | 角色 |
-|------|------|
-| `react()` | `{ name: "react" }`，给 `defineConfig` |
-| `WaeProvider` | `client` + `children` 的 Context Provider |
-| `useWae()` | 子树取回 `WaeClient`；缺 Provider 时抛错 |
+| Export        | Role                                                 |
+|---------------|------------------------------------------------------|
+| `react()`     | `{ name: "react" }` for `defineConfig`               |
+| `WaeProvider` | Context Provider with `client` + `children`          |
+| `useWae()`    | Read `WaeClient` in subtree; throws without Provider |
 
-## 最小用法
+## Minimal usage
 
 ```tsx
 import { createClient } from "@wae/client";
@@ -41,15 +41,15 @@ export function App() {
 export default react;
 ```
 
-## SSR / hydration / 状态
+## SSR / hydration / state
 
-| 能力 | 现状 |
-|------|------|
-| SSR | 未实现 |
-| hydration | 未实现 |
-| 错误 / loading | 组件内自行处理 |
+| Capability      | Status               |
+|-----------------|----------------------|
+| SSR             | Not implemented      |
+| hydration       | Not implemented      |
+| Error / loading | Handle in components |
 
-## 相关
+## Related
 
 - [`@wae/client`](../client/readme.md)
-- 可跑示例：[`examples/integration/react-app`](../../examples/integration/react-app/readme.md)
+- Runnable example: [`examples/integration/react-app`](../../examples/integration/react-app/readme.md)

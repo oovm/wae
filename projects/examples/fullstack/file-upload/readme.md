@@ -1,59 +1,60 @@
 # @wae-example/fullstack-file-upload
 
-## 这个示例展示什么
+## What this example demonstrates
 
-文件上传意图：client 提交 multipart/body，server 接收并响应。源码未处理 `FormData` 或磁盘写入。
+File upload intent: client submits multipart/body, server receives and responds. Source does not handle `FormData` or
+disk writes.
 
-## 运行前提
+## Prerequisites
 
-- 仓库根已 `pnpm install`
-- Node.js 22 + pnpm 10（与本仓 `packageManager` 一致）
-- 骨架：`src/main.ts` 仅构造 API，无 HTTP 监听、无浏览器页、无 UI。
+- Repo root has `pnpm install`
+- Node.js 22 + pnpm 10 (matches repo `packageManager`)
+- Skeleton: `src/main.ts` only constructs API; no HTTP listen, browser page, or UI.
 
+## Startup commands
 
-## 启动命令
-
-在仓库根：
+From repo root:
 
 ```bash
 pnpm --filter @wae-example/fullstack-file-upload run check
 ```
 
-进入本目录亦可：
+From this directory:
 
 ```bash
 pnpm run check
-pnpm run build   # 当前打印 skeleton，不产出可部署包
+pnpm run build   # currently prints skeleton, no deployable output
 ```
 
-## 访问地址
+## Access URL
 
-**无。** 没有 localhost 端口，也没有可打开的静态页。今天能验收的只有 `pnpm run check`（`tsc --noEmit`）。
+**None.** No localhost port or openable static page. Today’s acceptance is only `pnpm run check` (`tsc --noEmit`).
 
-## 关键文件
+## Key files
 
 - `src/main.ts`
 - `package.json`
 
-## 请求 / 事件路径（目标语义）
+## Request / event path (target semantics)
 
 ```text
 client FormData / body
-  → POST /upload（目标）
-  → createServer handler 读 body
-  → 存储或回显元数据 → JSON Response
+  → POST /upload (target)
+  → createServer handler reads body
+  → store or echo metadata → JSON Response
 ```
 
-0.0.0 代码通常只停在「构造对象」一步，尚未把整条路径跑通。
+0.0.0 code usually stops at “construct object”; full path not run yet.
 
-## 练习点
+## Exercises
 
-- 写一个读 `request.arrayBuffer()` 或 `formData()` 的 `route`，用 `app.fetch` 喂 `new Request(..., { method:"POST", body })`。
-- 限制体积极限与 MIME——哪怕只在注释里写清。
-- 对比 `fullstack/rpc`：上传关心 body 形态，不只是 JSON action。
+- Write a `route` reading `request.arrayBuffer()` or `formData()`, feed `new Request(..., { method:"POST", body })` via
+  `app.fetch`.
+- Document size limits and MIME—even in comments.
+- Versus `fullstack/rpc`: upload cares about body shape, not just JSON action.
 
-## 与生产应用的差异
+## Differences from production apps
 
-生产有对象存储、病毒扫描与断点续传；本示例无文件落盘。
+Production has object storage, virus scan, resumable upload; this example has no file persistence.
 
-依赖（本示例）：`@wae/client`、`@wae/server`、`@wae/serverless`。
+Dependencies (this example): `@wae/client`, `@wae/server`, `@wae/serverless`.

@@ -1,14 +1,15 @@
 # `@wae/server`
 
-平台无关的 Fetch 应用核心：路由、中间件、`ctx.json` / `ctx.text`。不绑定 Node、Deno 或 Cloudflare；接到运行时用 `@wae/serverless` 或 `@wae/server-*`。
+Platform-agnostic Fetch app core: routing, middleware, `ctx.json` / `ctx.text`. Not bound to Node, Deno, or Cloudflare;
+connect to a runtime with `@wae/serverless` or `@wae/server-*`.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/server@0.0.0
 ```
 
-## 一次真实请求路径
+## One real request path
 
 ```ts
 import { createServer, route } from "@wae/server";
@@ -34,46 +35,46 @@ const res = await app.fetch(new Request("http://local/hello/world"));
 
 ```text
 Request
-  → 解析 method / pathname
-  → 依次 middleware（可调用 next）
-  → 匹配 route（支持 :param）
+  → parse method / pathname
+  → middleware in order (may call next)
+  → match route (supports :param)
   → handler(ctx)
   → Response
-未匹配 → 404 "Not Found"
-handler 抛错 → 500 + 错误消息文本
+No match → 404 "Not Found"
+handler throws → 500 + error message text
 ```
 
-## `ctx` 能力
+## `ctx` capabilities
 
-| 字段/方法 | 含义 |
-|-----------|------|
-| `request` | `method` / `url` / `headers` / `raw` / `params` |
-| `env` / `services` | 由调用方或 `services` 工厂注入 |
-| `signal` | AbortSignal |
-| `waitUntil` | 转给 execution（Worker 风格） |
-| `json` / `text` | 快捷 Response |
-| `platform` | 可选平台附加对象 |
+| Field/method       | Meaning                                         |
+|--------------------|-------------------------------------------------|
+| `request`          | `method` / `url` / `headers` / `raw` / `params` |
+| `env` / `services` | Injected by caller or `services` factory        |
+| `signal`           | AbortSignal                                     |
+| `waitUntil`        | Forward to execution (Worker style)             |
+| `json` / `text`    | Shortcut Response                               |
+| `platform`         | Optional platform attachment                    |
 
-`route(method, path, handler)` 或 `route(path, handler)`（method 为 `*`）。
+`route(method, path, handler)` or `route(path, handler)` (method is `*`).
 
-## 与 serverless / 运行时
+## With serverless / runtime
 
 ```ts
 import { adaptFetch } from "@wae/serverless";
 export default adaptFetch(app); // { fetch }
 
-// 或
+// or
 import { createCloudflareApp } from "@wae/server-cloudflare";
 export default createCloudflareApp(app);
 ```
 
-## 当前限制
+## Current limits
 
-- 无内置 WebSocket 升级、流式 body 助手、文件上传解析。
-- 无鉴权中间件内置实现。
-- 路由为简单段匹配，无正则/通配尾段。
+- No built-in WebSocket upgrade, streaming body helpers, or file upload parsing.
+- No built-in auth middleware.
+- Simple segment routing only; no regex/wildcard tail segments.
 
-## 相关
+## Related
 
 - [`../serverless/readme.md`](../serverless/readme.md)
 - [`../adapters/node/readme.md`](../adapters/node/readme.md)
