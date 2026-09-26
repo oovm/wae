@@ -1,35 +1,38 @@
 # `@wae/types`
 
-跨包共享的 **TypeScript 类型**。无 runtime、无副作用；不要把本包当序列化库。
+Cross-package **TypeScript types**. No runtime, no side effects; do not use this package as a serialization library.
 
-正式类型预期由 `wae generate types` 从 `projects/crates/wae-types`（crate `wae-types`）生成；**CLI 生成命令在 0.0.0 仍为骨架**，当前仓库内类型为手写对齐稿。
+Formal types are expected from `wae generate types` against `projects/crates/wae-types` (crate `wae-types`); **the CLI
+generate command is still a skeleton in 0.0.0**—types in the repo today are hand-aligned drafts.
 
-## 安装
+## Install
 
 ```bash
 pnpm add @wae/types@0.0.0
 ```
 
-## 稳定共享面（当前）
+## Stable shared surface (current)
 
-| 类型 | 用途 |
-|------|------|
-| `NodeId` / `RequestId` / `RouteId` / `SessionId` | 标识符字符串别名 |
-| `ErrorCode` / `WaeError` | 结构化错误 |
-| `DomPatch` | 宿主 → 前端 DOM 补丁操作 |
-| `UiEvent` | 前端 → 宿主 UI 事件 |
-| `RpcRequest` / `RpcResponse` | RPC 信封 |
-| `HostMessage` | 宿主下行消息联合类型 |
+| Type                                             | Purpose                              |
+|--------------------------------------------------|--------------------------------------|
+| `NodeId` / `RequestId` / `RouteId` / `SessionId` | Identifier string aliases            |
+| `ErrorCode` / `WaeError`                         | Structured errors                    |
+| `DomPatch`                                       | Host → frontend DOM patch operations |
+| `UiEvent`                                        | Frontend → host UI events            |
+| `RpcRequest` / `RpcResponse`                     | RPC envelopes                        |
+| `HostMessage`                                    | Host downstream message union        |
 
-## 能否直接上线传输？
+## Safe for wire transport?
 
-| 类型 | 网络 / 持久化 |
-|------|----------------|
-| `WaeError`、`RpcRequest`、`RpcResponse`、`HostMessage`、`DomPatch` | 设计为 JSON 可序列化；实际编解码用 `@wae/protocol` |
-| `NodeId` 等别名 | 仅 `string`；语义约束在应用层 |
+| Type                                                               | Network / persistence                                                    |
+|--------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `WaeError`, `RpcRequest`, `RpcResponse`, `HostMessage`, `DomPatch` | Designed JSON-serializable; use `@wae/protocol` for actual encode/decode |
+| Aliases like `NodeId`                                              | Just `string`; semantic constraints at app layer                         |
 
-仅应用内使用的领域模型 **不要**塞进本包；本包只放跨 client / server / host 的契约。
+Domain models used only in-app **should not** go in this package; only cross client / server / host contracts belong
+here.
 
-## 版本
+## Versioning
 
-字段集合随 `0.0.0` 占位发布；破坏性变更会走协议与 codegen 流程。升级时优先看 `WaeError.code` 与 `HostMessage.type` 是否仍可辨识。
+Field sets ship with `0.0.0` placeholder release; breaking changes go through protocol and codegen. On upgrade, check
+whether `WaeError.code` and `HostMessage.type` remain distinguishable.

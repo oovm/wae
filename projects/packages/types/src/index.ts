@@ -3,6 +3,25 @@
  * 正式产物由 `wae generate types` 从 `projects/crates/wae-types`（crate wae-types）生成。
  */
 
+export type {
+    ClientPlatformId,
+    WaeProductManifest,
+    WaeProductUpdateConfig,
+} from "./product.js";
+export { WAE_PRODUCT_MANIFEST } from "./product.js";
+export type { NativeShellPlatformId } from "./platform-native.js";
+export {
+    PLATFORM_NATIVE_LIB_FILE,
+    isNativeShellPlatform,
+    platformNativeLibFile,
+} from "./platform-native.js";
+export type {
+    OpenDesktopOptions,
+    ProductUpdateOptions,
+    ProductUpdateStatus,
+    WaeNativeAddon,
+} from "./native.js";
+
 export type NodeId = string;
 export type RequestId = string;
 export type RouteId = string;
